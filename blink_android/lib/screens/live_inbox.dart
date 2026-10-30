@@ -8,6 +8,7 @@ import '../core/live_api.dart';
 import '../core/blink_auth_api.dart';
 import '../core/theme.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_full_drawer.dart';
 
 class LiveInboxScreen extends StatefulWidget {
   const LiveInboxScreen({super.key});
@@ -34,6 +35,7 @@ class _LiveInboxState extends State<LiveInboxScreen> {
       return name.toLowerCase().contains(query.toLowerCase());
     }).toList();
     return Scaffold(
+      drawer: const BlinkFullDrawer(),
       bottomNavigationBar: const BlinkBottomBar(active: 'inbox'),
       appBar: AppBar(title: const Text('Inbox'), actions: [
         IconButton(tooltip:'New chat', icon:const Icon(Icons.edit_square),onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveNewChatScreen())).then((_){_load();})),

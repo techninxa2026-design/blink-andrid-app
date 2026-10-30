@@ -7,6 +7,7 @@ import '../core/blink_auth_api.dart';
 import '../core/blink_home_api.dart';
 import '../widgets/ui.dart';
 import '../widgets/home_navigation.dart';
+import '../widgets/blink_full_drawer.dart';
 import 'blink_live_moment_card.dart';
 import 'blink_real_capture.dart';
 
@@ -438,7 +439,7 @@ class _HomeScreenState extends State<HomeScreen>
       backgroundColor: BlinkColors.canvas,
 
       // ORIGINAL EXPLORE DRAWER
-      drawer: const BlinkExploreDrawer(),
+      drawer: const BlinkFullDrawer(),
 
       // ORIGINAL BLINK HOME HEADER
       appBar: AppBar(

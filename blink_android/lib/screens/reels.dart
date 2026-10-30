@@ -8,6 +8,7 @@ import '../core/blink_home_api.dart';
 import '../core/nav.dart';
 import '../core/theme.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_full_drawer.dart';
 import 'blink_real_capture.dart';
 
 /// Every signed-in Blink member sees the SAME global Reels feed, regardless
@@ -122,6 +123,7 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: BlinkColors.canvas,
+      drawer: const BlinkFullDrawer(),
       bottomNavigationBar: const BlinkBottomBar(active: 'reels'),
       body: SafeArea(
         bottom: false,
@@ -167,8 +169,13 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
               ),
             ),
           Positioned(
-            top: 12, left: 14, right: 12,
+            top: 12, left: 10, right: 12,
             child: Row(children: [
+              Builder(builder: (scaffoldContext) => IconButton(
+                tooltip: 'Open Blink navigation',
+                onPressed: () => Scaffold.of(scaffoldContext).openDrawer(),
+                icon: const Icon(Icons.menu_rounded, color: BlinkColors.orangeDark),
+              )),
               const Text('Reels', style: TextStyle(
                 color: BlinkColors.orangeDark, fontSize: 23, fontWeight: FontWeight.w900,
               )),

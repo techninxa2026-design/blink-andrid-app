@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'blink_full_drawer.dart';
 
 import '../core/theme.dart';
 import '../core/nav.dart';
@@ -65,6 +66,7 @@ class BlinkScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: background ?? Theme.of(context).scaffoldBackgroundColor,
+      drawer: const BlinkFullDrawer(),
       appBar: AppBar(
         title: logoTitle
             ? const BlinkLogo()
@@ -77,19 +79,15 @@ class BlinkScreen extends StatelessWidget {
         ),
         leading: showBack && canBack
             ? IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(
-            Icons.chevron_left_rounded,
-            size: 28,
-          ),
-        )
-            : IconButton(
-          onPressed: () => go(context, '/settings'),
-          icon: const Icon(
-            Icons.menu_rounded,
-            size: 23,
-          ),
-        ),
+                tooltip: 'Back',
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.chevron_left_rounded, size: 28),
+              )
+            : Builder(builder: (scaffoldContext) => IconButton(
+                tooltip: 'Open Blink navigation',
+                onPressed: () => Scaffold.of(scaffoldContext).openDrawer(),
+                icon: const Icon(Icons.menu_rounded, size: 23),
+              )),
         actions: [
           trailing ??
               IconButton(

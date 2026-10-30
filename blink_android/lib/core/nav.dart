@@ -25,6 +25,7 @@ class BlinkRoutes {
     '/explore': (_) => const ExploreScreen(),
     '/capture': (_) => const CaptureScreen(),
     '/moments': (_) => const MomentsFeedScreen(),
+    '/moments/mine': (_) => const MomentsFeedScreen(initialMine: true),
     '/moment/create': (_) => const CreateMomentScreen(),
     '/moment/edit': (_) => const EditMomentScreen(),
     '/moment/view': (_) => const MomentDetailScreen(),

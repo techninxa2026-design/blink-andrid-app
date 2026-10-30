@@ -102,6 +102,16 @@ class BlinkReel {
   }
 }
 
+/// Safety filter: public Reel recommendations contain every other author,
+/// irrespective of friendship. The backend enforces the same rule.
+List<BlinkReel> visibleReelsForViewer(List<BlinkReel> reels, String viewerId) {
+  if (viewerId.isEmpty) return <BlinkReel>[];
+  return reels.where((reel) =>
+      reel.id.isNotEmpty &&
+      reel.authorId.isNotEmpty &&
+      reel.authorId != viewerId).toList();
+}
+
 class BlinkReelPage {
   final List<BlinkReel> items;
   final int? nextOffset;
@@ -184,8 +194,11 @@ class BlinkHomeApi {
   }) async {
     // GET /moments remains compatible with the existing web client, while
     // optional skip/take allow Flutter to load more than the first 100 posts.
+    if (skip < 0 || take < 1 || take > 100) {
+      throw const BlinkHomeError('Invalid Moments page.');
+    }
     final data = await request('GET', mine
-        ? '/moments/mine'
+        ? '/moments/mine?skip=$skip&take=$take'
         : '/moments?skip=$skip&take=$take');
     if (data is! List) throw const BlinkHomeError('Unexpected Moments response.');
     // /moments/mine excludes sender objects. Fill author using cached current user.
