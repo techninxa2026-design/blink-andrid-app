@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 import '../core/live_api.dart';
 import '../core/blink_auth_api.dart';
 import '../core/theme.dart';
+import '../widgets/ui.dart';
 
 class LiveInboxScreen extends StatefulWidget {
   const LiveInboxScreen({super.key});
@@ -33,6 +34,7 @@ class _LiveInboxState extends State<LiveInboxScreen> {
       return name.toLowerCase().contains(query.toLowerCase());
     }).toList();
     return Scaffold(
+      bottomNavigationBar: const BlinkBottomBar(active: 'inbox'),
       appBar: AppBar(title: const Text('Inbox'), actions: [
         IconButton(tooltip:'New chat', icon:const Icon(Icons.edit_square),onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveNewChatScreen())).then((_){_load();})),
         IconButton(tooltip:'Create group', icon:const Icon(Icons.group_add_outlined),onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveCreateGroupScreen())).then((_){_load();})),
