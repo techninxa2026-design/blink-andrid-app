@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Blink light-orange native window, independent of Android dark mode. -->
+    <color name="blink_window">#FFF9F5</color>
+</resources>
