@@ -23,13 +23,13 @@ import 'blink_real_capture.dart';
 // NestJS currently returns only active,
 // non-expired public Moments.
 
-const int _momentPageSize = 100;
+const int _momentPageSize = 40;
 
 // ==================================================
 // SHARED MOMENTS FILTER
 // ==================================================
 
-List<BlinkMoment> _forUser(
+List<BlinkMoment> filterMomentsForViewer(
     List<BlinkMoment> moments,
     String userId, {
       required bool mine,
@@ -240,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen>
       }
 
       // Apply the real user-ID filter.
-      final visible = _forUser(
+      final visible = filterMomentsForViewer(
         page,
         userId,
         mine: mine,
@@ -265,9 +265,7 @@ class _HomeScreenState extends State<HomeScreen>
         // not only the filtered records.
         _serverOffset = page.length;
 
-        _hasMore =
-            !mine &&
-                page.length == _momentPageSize;
+        _hasMore = page.length == _momentPageSize;
 
         _activeCount = checkins;
         _emptySearchPages = 0;
@@ -301,7 +299,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _loadNext() async {
     if (!mounted ||
-        _mine ||
         _loading ||
         _loadingMore ||
         !_hasMore ||
@@ -310,6 +307,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     final request = _requestVersion;
+    final mine = _mine;
     final offset = _serverOffset;
 
     setState(() {
@@ -319,13 +317,14 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final page =
       await BlinkHomeApi.moments(
+        mine: mine,
         skip: offset,
         take: _momentPageSize,
       );
 
       if (!mounted ||
           request != _requestVersion ||
-          _mine) {
+          mine != _mine) {
         return;
       }
 
@@ -341,10 +340,10 @@ class _HomeScreenState extends State<HomeScreen>
       }).toList();
 
       // Exclude all of the current user's posts.
-      final visible = _forUser(
+      final visible = filterMomentsForViewer(
         unseen,
         _myId,
-        mine: false,
+        mine: mine,
       );
 
       setState(() {
@@ -367,9 +366,7 @@ class _HomeScreenState extends State<HomeScreen>
 
         _serverOffset += page.length;
 
-        _hasMore =
-            page.length == _momentPageSize &&
-                unseen.isNotEmpty;
+        _hasMore = page.length == _momentPageSize && unseen.isNotEmpty;
 
         _loadingMore = false;
 
@@ -419,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen>
     // from another tab, the wrong Moment
     // cannot appear in this tab.
 
-    final visible = _forUser(
+    final visible = filterMomentsForViewer(
       _moments,
       _myId,
       mine: _mine,
@@ -620,7 +617,7 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
 
                     label: const Text(
-                      'Load more public Moments',
+                      'Load more Moments',
                     ),
                   ),
                 ),
@@ -695,7 +692,8 @@ Widget _feedMessage(
 // ==================================================
 
 class MomentsFeedScreen extends StatefulWidget {
-  const MomentsFeedScreen({super.key});
+  const MomentsFeedScreen({super.key, this.initialMine = false});
+  final bool initialMine;
 
   @override
   State<MomentsFeedScreen> createState() =>
@@ -710,7 +708,7 @@ class _MomentsFeedScreenState
   final Set<String> _seenServerIds =
   <String>{};
 
-  bool _mine = false;
+  late bool _mine;
   bool _loading = true;
   bool _loadingMore = false;
   bool _hasMore = false;
@@ -729,6 +727,7 @@ class _MomentsFeedScreenState
   void initState() {
     super.initState();
 
+    _mine = widget.initialMine;
     _scroll.addListener(_onScroll);
     _load();
   }
@@ -823,7 +822,7 @@ class _MomentsFeedScreenState
         return;
       }
 
-      final visible = _forUser(
+      final visible = filterMomentsForViewer(
         page,
         userId,
         mine: mine,
@@ -844,9 +843,7 @@ class _MomentsFeedScreenState
 
         _serverOffset = page.length;
 
-        _hasMore =
-            !mine &&
-                page.length == _momentPageSize;
+        _hasMore = page.length == _momentPageSize;
 
         _emptySearchPages = 0;
         _loading = false;
@@ -876,7 +873,6 @@ class _MomentsFeedScreenState
 
   Future<void> _loadNext() async {
     if (!mounted ||
-        _mine ||
         _loading ||
         _loadingMore ||
         !_hasMore ||
@@ -885,6 +881,7 @@ class _MomentsFeedScreenState
     }
 
     final request = _requestVersion;
+    final mine = _mine;
     final offset = _serverOffset;
 
     setState(() {
@@ -894,13 +891,14 @@ class _MomentsFeedScreenState
     try {
       final page =
       await BlinkHomeApi.moments(
+        mine: mine,
         skip: offset,
         take: _momentPageSize,
       );
 
       if (!mounted ||
           request != _requestVersion ||
-          _mine) {
+          mine != _mine) {
         return;
       }
 
@@ -913,10 +911,10 @@ class _MomentsFeedScreenState
         },
       ).toList();
 
-      final visible = _forUser(
+      final visible = filterMomentsForViewer(
         unseen,
         _myId,
-        mine: false,
+        mine: mine,
       );
 
       setState(() {
@@ -939,9 +937,7 @@ class _MomentsFeedScreenState
 
         _serverOffset += page.length;
 
-        _hasMore =
-            page.length == _momentPageSize &&
-                unseen.isNotEmpty;
+        _hasMore = page.length == _momentPageSize && unseen.isNotEmpty;
 
         _loadingMore = false;
 
@@ -982,7 +978,7 @@ class _MomentsFeedScreenState
 
   @override
   Widget build(BuildContext context) {
-    final visible = _forUser(
+    final visible = filterMomentsForViewer(
       _items,
       _myId,
       mine: _mine,
@@ -1023,6 +1019,7 @@ class _MomentsFeedScreenState
             ),
 
             BlinkChips(
+              initial: widget.initialMine ? 1 : 0,
               labels: const [
                 'Public Moments',
                 'My Moments',
@@ -1093,8 +1090,7 @@ class _MomentsFeedScreenState
             // LOAD MORE
             if (!_loading &&
                 _error == null &&
-                _hasMore &&
-                !_mine)
+                _hasMore)
               Padding(
                 padding: const EdgeInsets.all(16),
 
@@ -1107,7 +1103,7 @@ class _MomentsFeedScreenState
                     onPressed: _loadNext,
 
                     child: const Text(
-                      'Load more public Moments',
+                      'Load more Moments',
                     ),
                   ),
                 ),
