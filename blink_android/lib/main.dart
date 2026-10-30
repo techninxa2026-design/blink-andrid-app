@@ -41,8 +41,7 @@ class BlinkApp extends StatelessWidget {
       title: 'Blink — Your people. Your moments.',
       debugShowCheckedModeBanner: false,
       theme: blinkTheme(),
-      darkTheme: blinkDarkTheme(),
-      themeMode: blinkAppearance.mode,
+      themeMode: ThemeMode.light,
       initialRoute: '/',
       onGenerateRoute: (settings) {
         final route = settings.name ?? '/';

@@ -648,8 +648,7 @@ class _HomeScreenState extends State<HomeScreen>
       ),
 
       // ORIGINAL BOTTOM NAVIGATION
-      bottomNavigationBar:
-      const BlinkHomeBottomBar(),
+      bottomNavigationBar: const BlinkBottomBar(active: 'home'),
     );
   }
 }

@@ -121,7 +121,7 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: BlinkColors.canvas,
       bottomNavigationBar: const BlinkBottomBar(active: 'reels'),
       body: SafeArea(
         bottom: false,
@@ -132,7 +132,7 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
             Center(child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Text(_error!, style: const TextStyle(color: Colors.white),
+                Text(_error!, style: const TextStyle(color: BlinkColors.ink),
                     textAlign: TextAlign.center),
                 TextButton.icon(
                   onPressed: _refresh,
@@ -146,7 +146,7 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
               const Icon(Icons.smart_display_outlined, color: BlinkColors.orange, size: 62),
               const SizedBox(height: 14),
               const Text('No public Reels yet',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17)),
+                style: TextStyle(color: BlinkColors.ink, fontWeight: FontWeight.w800, fontSize: 17)),
               const SizedBox(height: 12),
               TextButton(onPressed: () => go(context, '/reel/upload'),
                 child: const Text('Publish the first Reel')),
@@ -170,19 +170,18 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
             top: 12, left: 14, right: 12,
             child: Row(children: [
               const Text('Reels', style: TextStyle(
-                color: Colors.white, fontSize: 23, fontWeight: FontWeight.w900,
-                shadows: [Shadow(blurRadius: 12, color: Colors.black)],
+                color: BlinkColors.orangeDark, fontSize: 23, fontWeight: FontWeight.w900,
               )),
               const Spacer(),
               IconButton(
                 tooltip: 'Refresh public Reels',
                 onPressed: _refresh,
-                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                icon: const Icon(Icons.refresh_rounded, color: BlinkColors.orangeDark),
               ),
               IconButton(
                 tooltip: 'Publish a Reel',
                 onPressed: () => go(context, '/reel/upload'),
-                icon: const Icon(Icons.add_circle_outline, color: Colors.white),
+                icon: const Icon(Icons.add_circle_outline, color: BlinkColors.orangeDark),
               ),
             ]),
           ),
@@ -311,8 +310,8 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      builder: (_) => _LiveReelComments(reelId: widget.reel.id),
+      backgroundColor: BlinkColors.canvas,
+       builder: (_) => _LiveReelComments(reelId: widget.reel.id),
     );
     if (added == true && mounted) setState(() => _commentCount += 1);
   }
@@ -382,7 +381,7 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
   Widget build(BuildContext context) {
     final player = _player;
     return Stack(children: [
-      Positioned.fill(child: ColoredBox(color: Colors.black,
+      Positioned.fill(child: ColoredBox(color: BlinkColors.orangeSoft,
         child: Stack(fit: StackFit.expand, children: [
           if (player != null && player.value.isInitialized)
             FittedBox(fit: BoxFit.cover, child: SizedBox(
@@ -394,7 +393,7 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
             Image.network(
               BlinkHomeApi.mediaUrl(widget.reel.thumbnailUrl),
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const ColoredBox(color: Colors.black),
+              errorBuilder: (_, __, ___) => const ColoredBox(color: BlinkColors.orangeSoft),
             ),
           if (player == null || !player.value.isInitialized)
             Center(child: _playbackError != null
@@ -571,14 +570,14 @@ class _ReelDetailState extends State<ReelDetailScreen> {
     ]);
   }
   @override Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Colors.black,
-    appBar: AppBar(backgroundColor: Colors.black,
-      foregroundColor: Colors.white, title: const Text('Reel')),
+    backgroundColor: BlinkColors.canvas,
+    appBar: AppBar(backgroundColor: BlinkColors.surface,
+      foregroundColor: BlinkColors.orangeDark, title: const Text('Reel')),
     body: FutureBuilder<List<dynamic>>(
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.hasError) return Center(child: Text('${snapshot.error}',
-          style: const TextStyle(color: Colors.white)));
+          style: const TextStyle(color: BlinkColors.ink)));
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final data = snapshot.data![0];
         if (data is! Map<String,dynamic>) return const Center(child: Text('Reel unavailable'));

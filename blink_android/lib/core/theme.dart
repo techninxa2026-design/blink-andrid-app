@@ -1,4 +1,3 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,12 +6,12 @@ class BlinkColors {
   static const orange = Color(0xFFFF5900);
   static const orangeDark = Color(0xFFE74B00);
   static const orangeSoft = Color(0xFFFFE9DD);
-  static const pale = Color(0xFFFFF8F3);
+  static const pale = Color(0xFFFFF5ED);
   static const ink = Color(0xFF171719);
   static const muted = Color(0xFF8D8F97);
   static const line = Color(0xFFF0EEEC);
   static const surface = Color(0xFFFFFFFF);
-  static const canvas = Color(0xFFFFFCFA);
+  static const canvas = Color(0xFFFFF9F5);
   static const green = Color(0xFF24AA73);
   static const blue = Color(0xFF3478F6);
   static const pink = Color(0xFFF44B6C);
@@ -104,58 +103,11 @@ ThemeData blinkTheme() {
 }
 
 
-/// The selected appearance is persisted and shared by all routes.
+/// Blink Orange is temporarily light-only across all app screens.
+/// The previous dark-mode preference is intentionally ignored.
 final blinkAppearance = BlinkAppearance();
-
 class BlinkAppearance extends ChangeNotifier {
-  ThemeMode mode = ThemeMode.system;
-  Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final value = prefs.getString('blink_appearance') ?? 'system';
-    mode = value == 'dark' ? ThemeMode.dark
-      : value == 'light' ? ThemeMode.light : ThemeMode.system;
-    notifyListeners();
-  }
-  Future<void> choose(ThemeMode selected) async {
-    mode = selected;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('blink_appearance', selected.name);
-  }
-}
-
-ThemeData blinkDarkTheme() {
-  final light = blinkTheme();
-  final scheme = ColorScheme.fromSeed(
-    seedColor: BlinkColors.orange,
-    brightness: Brightness.dark,
-    primary: const Color(0xFFFF7C40),
-    surface: const Color(0xFF201D23),
-  );
-  return light.copyWith(
-    brightness: Brightness.dark,
-    colorScheme: scheme,
-    scaffoldBackgroundColor: const Color(0xFF111016),
-    canvasColor: const Color(0xFF111016),
-    cardColor: const Color(0xFF201D23),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF201D23),
-      foregroundColor: Colors.white,
-      centerTitle: true,
-      elevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-      ),
-    ),
-    inputDecorationTheme: light.inputDecorationTheme.copyWith(
-      fillColor: const Color(0xFF28242D),
-      hintStyle: const TextStyle(color: Color(0xFFBAB4C0)),
-    ),
-    dividerTheme: const DividerThemeData(color: Color(0xFF38313D)),
-    cardTheme: CardThemeData(
-      color: const Color(0xFF201D23),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-    ),
-  );
+  ThemeMode get mode => ThemeMode.light;
+  Future<void> load() async {}
+  Future<void> choose(ThemeMode selected) async { notifyListeners(); }
 }

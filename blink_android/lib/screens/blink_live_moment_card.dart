@@ -176,12 +176,12 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
     } else {
       await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => Scaffold(
-          backgroundColor: Colors.black,
-          appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
+          backgroundColor: BlinkColors.canvas,
+           appBar: AppBar(backgroundColor: BlinkColors.surface, foregroundColor: BlinkColors.orangeDark),
           body: Center(child: InteractiveViewer(child: Image.network(
             BlinkHomeApi.mediaUrl(widget.moment.mediaUrl),
             errorBuilder: (_, __, ___) => const Text(
-              'Image unavailable', style: TextStyle(color: Colors.white)),
+              'Image unavailable', style: TextStyle(color: BlinkColors.ink)),
           ))),
         ),
       ));
@@ -262,7 +262,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
                 ),
               if (video == null || !video.value.isInitialized)
                 Center(child: _error != null
-                    ? Text(_error!, style: const TextStyle(color: Colors.white))
+                    ? Text(_error!, style: const TextStyle(color: BlinkColors.ink))
                     : const CircularProgressIndicator(color: BlinkColors.orange)),
               if (video != null && video.value.isInitialized)
                 Positioned.fill(child: InkWell(
@@ -491,8 +491,8 @@ class _MomentVideoFullscreenState extends State<_MomentVideoFullscreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Colors.black,
-    appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
+    backgroundColor: BlinkColors.canvas,
+           appBar: AppBar(backgroundColor: BlinkColors.surface, foregroundColor: BlinkColors.orangeDark),
     body: Center(child: _error != null
       ? Text(_error!, style: const TextStyle(color: Colors.white))
       : !_controller.value.isInitialized

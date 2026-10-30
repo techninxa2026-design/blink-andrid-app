@@ -50,7 +50,7 @@ class BlinkScreen extends StatelessWidget {
     super.key,
     required this.title,
     required this.child,
-    this.bottom = false,
+    this.bottom = true,
     this.active = '',
     this.trailing,
     this.showBack = true,

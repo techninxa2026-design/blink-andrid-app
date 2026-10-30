@@ -117,7 +117,7 @@ class _LiveChatState extends State<LiveChatScreen>{
       final self=await BlinkAuthApi.cachedUser();
       final data=obj(await LiveApi.call('GET','/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}'));
       if(!mounted)return;
-      setState((){myId=field(self,'id');messages=arr(data['messages']).reversed.toList();error=null;loading=false;});
+      setState((){myId=field(self,'id');messages=arr(data['messages']);error=null;loading=false;});
       if(!silent)await LiveApi.call('POST','/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}/read');
     }catch(e){if(mounted&&!silent)setState((){error=e.toString();loading=false;});}
   }

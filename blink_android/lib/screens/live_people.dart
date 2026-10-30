@@ -213,11 +213,14 @@ class _PublicState extends State<LivePublicProfileScreen>{
         Center(child:Text(field(p,'name'),style:Theme.of(context).textTheme.titleLarge)),
         Center(child:Text(field(p,'bio'))),
         ListTile(title:const Text('Connections'),trailing:Text(field(p,'connectionsCount','0'))),
-        if(p['isFriend']!=true)FilledButton.icon(onPressed:()async{
+        if(field(p,'relationship')=='NONE')FilledButton.icon(onPressed:()async{
           try{await LiveApi.call('POST','/friends/requests',{'receiverId':widget.userId});
             if(context.mounted)liveNotice(context,'Friend request sent');}
           catch(e){if(context.mounted)liveNotice(context,e.toString());}
         },icon:const Icon(Icons.person_add),label:const Text('Add Friend')),
+        if(field(p,'relationship')=='FRIENDS') const ListTile(leading:Icon(Icons.check_circle,color:BlinkColors.orange),title:Text('You are friends')),
+        if(field(p,'relationship')=='OUTGOING_PENDING') const ListTile(leading:Icon(Icons.hourglass_top,color:BlinkColors.orange),title:Text('Friend request pending')),
+        if(field(p,'relationship')=='INCOMING_PENDING') TextButton(onPressed:()=>Navigator.pushNamed(context,'/people/requests'),child:const Text('Respond to friend request')),
       ]));
   }
 }

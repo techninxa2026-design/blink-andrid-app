@@ -291,39 +291,33 @@ class NotificationsScreen extends StatelessWidget {
   );
 }
 
+/// Single, consistent branded theme (no dark-mode toggle for now).
 class AppearanceScreen extends StatelessWidget {
   const AppearanceScreen({super.key});
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: blinkAppearance,
-    builder: (context, child) => Scaffold(
-      appBar: AppBar(title: const Text('Appearance')),
-      body: ListView(padding: const EdgeInsets.all(18), children: [
-        Text('Choose your Blink theme', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
-        const Text('Blink orange remains the primary brand color.'),
-        const SizedBox(height: 18),
-        _themeTile(context, ThemeMode.light, Icons.light_mode_outlined,
-          'Light', 'Bright white surfaces and deep orange accents'),
-        _themeTile(context, ThemeMode.dark, Icons.dark_mode_outlined,
-          'Dark', 'Comfortable dark surfaces and vivid orange accents'),
-        _themeTile(context, ThemeMode.system, Icons.brightness_auto_outlined,
-          'Use device setting', 'Follow your phone appearance'),
-      ]),
-    ),
-  );
-
-  Widget _themeTile(BuildContext context, ThemeMode option, IconData icon,
-      String title, String subtitle) => Card(
-    child: RadioListTile<ThemeMode>(
-      value: option,
-      groupValue: blinkAppearance.mode,
-      onChanged: (value) {
-        if (value != null) blinkAppearance.choose(value);
-      },
-      secondary: Icon(icon, color: BlinkColors.orange),
-      title: Text(title), subtitle: Text(subtitle),
-      activeColor: BlinkColors.orange,
-    ),
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Appearance')),
+    body: ListView(padding: const EdgeInsets.all(20), children: [
+      Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(color: BlinkColors.orangeSoft,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFFFFC9AD))),
+        child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(Icons.palette_rounded, color: BlinkColors.orange, size: 42),
+          SizedBox(height: 14),
+          Text('Blink Orange', style: TextStyle(color: BlinkColors.ink, fontSize: 25, fontWeight: FontWeight.w900)),
+          SizedBox(height: 8),
+          Text('Warm white backgrounds, deep-orange navigation and buttons, clear readable text. Dark mode is disabled for now.',
+            style: TextStyle(color: BlinkColors.ink, height: 1.5)),
+        ]),
+      ),
+      const SizedBox(height: 20),
+      const ListTile(
+        leading: Icon(Icons.light_mode_rounded, color: BlinkColors.orange),
+        title: Text('Light orange theme'),
+        subtitle: Text('Active across Blink'),
+        trailing: Icon(Icons.check_circle_rounded, color: BlinkColors.orange)),
+    ]),
   );
 }
