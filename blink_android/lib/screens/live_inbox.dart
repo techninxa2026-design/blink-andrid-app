@@ -61,7 +61,7 @@ class _LiveInboxState extends State<LiveInboxScreen> {
                   builder:(_)=>LiveChatScreen(conversationId:field(c,'id'),title:name))).then((_){_load();}),
               );
             },
-          ))),
+          )),
         ),
       ]),
     );
@@ -163,7 +163,7 @@ class _LiveChatState extends State<LiveChatScreen>{
               ClipRRect(borderRadius:BorderRadius.circular(10),
                 child:Image.network(LiveApi.url('/reels/media/$reel/thumbnail'),
                   width:220,height:125,fit:BoxFit.cover,
-                  errorBuilder:(_,__,___)=>const SizedBox(height:65,child:Icon(Icons.movie))),
+                  errorBuilder:(_,__,___)=>const SizedBox(height:65,child:Icon(Icons.movie)))),
               const SizedBox(height:7),
               const Text('🎬 Shared Blink Reel',style:TextStyle(fontWeight:FontWeight.bold)),
               const Text('▶ Watch Reel',style:TextStyle(color:BlinkColors.orange)),

@@ -186,7 +186,7 @@ class _EditState extends State<LiveEditProfileScreen>{
       ]),
       ...controllers.entries.map((e)=>Padding(padding:const EdgeInsets.symmetric(vertical:6),child:TextField(
         controller:e.value,maxLines:e.key=='bio'?3:1,
-        decoration:InputDecoration(labelText:e.key, border:const OutlineInputBorder()))),
+        decoration:InputDecoration(labelText:e.key, border:const OutlineInputBorder())))),
       const SizedBox(height:15),
       FilledButton(onPressed:busy?null:_save,child:Text(busy?'Saving...':'Save profile')),
     ]));

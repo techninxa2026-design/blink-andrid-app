@@ -173,6 +173,6 @@ class _MeetingsState extends State<LiveBusinessMeetings>{
             TextButton(onPressed:()=>_action(field(m,'id'),'cancel'),child:const Text('Cancel')),
           ]),
         ]))),
-      ]))),
+      ])),
   );
 }
