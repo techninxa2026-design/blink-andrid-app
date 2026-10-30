@@ -2,6 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/live_api.dart';
+import '../core/blink_home_api.dart';
+import '../core/blink_auth_api.dart';
+import 'blink_live_moment_card.dart';
 import '../core/theme.dart';
 
 class LiveDiscoverPeopleScreen extends StatefulWidget{
@@ -96,52 +99,289 @@ class _RequestsState extends State<LiveRequestsScreen>{
     ])));
 }
 
-class LiveProfileScreen extends StatefulWidget{
+
+class LiveProfileScreen extends StatefulWidget {
   const LiveProfileScreen({super.key});
-  @override State<LiveProfileScreen> createState()=>_ProfileState();
+
+  @override
+  State<LiveProfileScreen> createState() => _ProfileState();
 }
-class _ProfileState extends State<LiveProfileScreen>{
-  Map<String,dynamic>? profile;String? error;bool loading=true;
-  @override void initState(){super.initState();_load();}
-  Future<void> _load()async{
-    try{final value=obj(await LiveApi.call('GET','/profile/me'));if(mounted)setState((){profile=value;error=null;loading=false;});}
-    catch(e){if(mounted)setState((){error=e.toString();loading=false;});}
+
+class _ProfileState extends State<LiveProfileScreen> {
+  Map<String, dynamic>? _profile;
+  List<BlinkMoment> _moments = <BlinkMoment>[];
+  List<BlinkReel> _reels = <BlinkReel>[];
+  String? _error;
+  String? _reelsError;
+  bool _loading = true;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  int _generation = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
   }
-  @override Widget build(BuildContext context){
-    final p=profile??{};
-    return Scaffold(appBar:AppBar(title:const Text('My Profile'),actions:[
-      IconButton(tooltip:'Edit profile',icon:const Icon(Icons.edit),onPressed:()=>Navigator.push(context,
-        MaterialPageRoute<void>(builder:(_)=>const LiveEditProfileScreen())).then((_){_load();})),
-      IconButton(tooltip:'Settings',icon:const Icon(Icons.settings),onPressed:()=>Navigator.pushNamed(context,'/settings')),
-    ]),body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
-      RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(16),children:[
-        if(field(p,'coverKey').isNotEmpty)ClipRRect(borderRadius:BorderRadius.circular(12),
-          child:Image.network(LiveApi.url(field(p,'coverKey')),height:135,fit:BoxFit.cover)),
-        const SizedBox(height:15),Center(child:liveAvatar(p,radius:49)),
-        const SizedBox(height:12),Center(child:Text(field(p,'name'),style:Theme.of(context).textTheme.headlineSmall)),
-        Center(child:Text(field(p,'bio','Welcome to Blink'))),
-        const SizedBox(height:12),
-        Row(mainAxisAlignment:MainAxisAlignment.spaceEvenly,children:[
-          _stat(field(p,'followersCount','0'),'Followers'),
-          _stat(field(p,'followingCount','0'),'Following'),
-          _stat(field(p,'connectionsCount','0'),'Friends'),
+
+  @override
+  void dispose() {
+    _generation++;
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final request = ++_generation;
+    if (mounted) setState(() { _loading = true; _error = null; });
+    try {
+      final profile = obj(await LiveApi.call('GET', '/profile/me'));
+      final moments = await BlinkHomeApi.moments(mine: true, skip: 0, take: 40);
+      if (!mounted || request != _generation) return;
+      setState(() {
+        _profile = profile;
+        _moments = moments.where((m) => m.senderId == field(profile, 'id')).toList();
+        _hasMore = moments.length == 40;
+        _loading = false;
+      });
+      try {
+        final reels = await BlinkHomeApi.myReels();
+        if (!mounted || request != _generation) return;
+        setState(() {
+          _reels = reels.where((r) => r.authorId == field(profile, 'id')).toList();
+          _reelsError = null;
+        });
+      } catch (error) {
+        if (mounted && request == _generation) {
+          setState(() => _reelsError = error.toString());
+        }
+      }
+    } catch (error) {
+      if (mounted && request == _generation) {
+        setState(() { _loading = false; _error = error.toString(); });
+      }
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading || _loadingMore || !_hasMore || _profile == null) return;
+    final request = _generation;
+    final offset = _moments.length;
+    setState(() => _loadingMore = true);
+    try {
+      final more = await BlinkHomeApi.moments(mine: true, skip: offset, take: 40);
+      if (!mounted || request != _generation) return;
+      final existing = _moments.map((m) => m.id).toSet();
+      setState(() {
+        _moments.addAll(more.where((m) =>
+          m.senderId == field(_profile, 'id') && !existing.contains(m.id)));
+        _hasMore = more.length == 40;
+        _loadingMore = false;
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() => _loadingMore = false);
+        liveNotice(context, 'Unable to load older Moments: $error');
+      }
+    }
+  }
+
+  Future<void> _openMoment(BlinkMoment item) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (detailContext) => Scaffold(
+        appBar: AppBar(title: const Text('My Moment')),
+        backgroundColor: BlinkColors.canvas,
+        body: ListView(children: [
+          BlinkLiveMomentCard(
+            moment: item,
+            myUserId: field(_profile, 'id'),
+            onDeleted: () => Navigator.of(detailContext).pop(),
+          ),
         ]),
-        const SizedBox(height:20),
-        _info('Email',field(p,'email')),
-        _info('Occupation',field(p,'occupation')),
-        _info('Workplace',field(p,'workplace')),
-        _info('College',field(p,'college')),
-        _info('High School',field(p,'highSchool')),
-        FilledButton.icon(onPressed:()=>Navigator.pushNamed(context,'/home'),icon:const Icon(Icons.photo_library),
-          label:const Text('View My Moments (Home → My Moments)')),
-        OutlinedButton.icon(onPressed:()=>Navigator.pushNamed(context,'/people/friends'),
-          icon:const Icon(Icons.people),label:const Text('My Friends')),
-      ])),
+      ),
+    ));
+    if (mounted) _load();
+  }
+
+  Future<void> _openReel(BlinkReel reel) async {
+    await Navigator.pushNamed(context, '/reel/view', arguments: reel.id);
+    if (mounted) _load();
+  }
+
+  Widget _stat(String value, String label) => Column(children: [
+    Text(value, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900,
+      color: BlinkColors.orangeDark)),
+    Text(label, style: const TextStyle(color: BlinkColors.muted, fontSize: 12)),
+  ]);
+
+  Widget _info(String label, String value) => value.isEmpty
+    ? const SizedBox.shrink()
+    : ListTile(dense: true, title: Text(label), subtitle: Text(value));
+
+  @override
+  Widget build(BuildContext context) {
+    final p = _profile ?? <String, dynamic>{};
+    return Scaffold(
+      backgroundColor: BlinkColors.canvas,
+      appBar: AppBar(title: const Text('My Profile'), actions: [
+        IconButton(
+          tooltip: 'Edit profile',
+          icon: const Icon(Icons.edit_outlined),
+          onPressed: () => Navigator.push(context,
+            MaterialPageRoute<void>(builder: (_) => const LiveEditProfileScreen()))
+            .then((_) { if (mounted) _load(); }),
+        ),
+        IconButton(tooltip: 'Settings', icon: const Icon(Icons.settings_outlined),
+          onPressed: () => Navigator.pushNamed(context, '/settings')),
+      ]),
+      body: _loading
+        ? const Center(child: CircularProgressIndicator(color: BlinkColors.orange))
+        : _error != null
+          ? liveError(_error, _load)
+          : RefreshIndicator(
+              color: BlinkColors.orange,
+              onRefresh: _load,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 32),
+                children: [
+                  if (field(p, 'coverKey').isNotEmpty)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(LiveApi.url(field(p, 'coverKey')),
+                        height: 140, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox(
+                          height: 140, child: Icon(Icons.image_not_supported_outlined))),
+                    ),
+                  const SizedBox(height: 14),
+                  Center(child: liveAvatar(p, radius: 48)),
+                  const SizedBox(height: 10),
+                  Center(child: Text(field(p, 'name'), style: Theme.of(context).textTheme.headlineSmall)),
+                  if (field(p, 'bio').isNotEmpty)
+                    Center(child: Text(field(p, 'bio'), textAlign: TextAlign.center)),
+                  const SizedBox(height: 16),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+                    _stat(field(p, 'followersCount', '0'), 'Followers'),
+                    _stat(field(p, 'followingCount', '0'), 'Following'),
+                    _stat(field(p, 'connectionsCount', '0'), 'Friends'),
+                  ]),
+                  const Divider(height: 28),
+                  _info('Email', field(p, 'email')),
+                  _info('Occupation', field(p, 'occupation')),
+                  _info('Workplace', field(p, 'workplace')),
+                  _info('College', field(p, 'college')),
+                  _info('High School', field(p, 'highSchool')),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.pushNamed(context, '/people/friends'),
+                    icon: const Icon(Icons.people_outline), label: const Text('My Friends')),
+                  const SizedBox(height: 20),
+                  _GalleryHeading(
+                    title: 'My Moments',
+                    count: _moments.length,
+                    onViewAll: () => Navigator.pushNamed(context, '/moments/mine')),
+                  const SizedBox(height: 10),
+                  if (_moments.isEmpty)
+                    const Padding(padding: EdgeInsets.all(16),
+                      child: Text('You have not published any Moments yet.')),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _moments.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, crossAxisSpacing: 7, mainAxisSpacing: 7),
+                    itemBuilder: (_, i) {
+                      final item = _moments[i];
+                      return _ProfileMediaTile(
+                        url: item.mediaType == 'video' ? null : BlinkHomeApi.mediaUrl(item.mediaUrl),
+                        video: item.mediaType == 'video',
+                        onTap: () => _openMoment(item));
+                    },
+                  ),
+                  if (_hasMore)
+                    Padding(padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.expand_more),
+                        label: Text(_loadingMore ? 'Loading...' : 'Load older Moments'),
+                        onPressed: _loadingMore ? null : _loadMore)),
+                  const SizedBox(height: 24),
+                  _GalleryHeading(
+                    title: 'My Reels',
+                    count: _reels.length,
+                    onViewAll: null),
+                  const SizedBox(height: 10),
+                  if (_reelsError != null)
+                    ListTile(
+                      title: const Text('Unable to load your Reels'),
+                      subtitle: Text(_reelsError!),
+                      trailing: TextButton(onPressed: _load, child: const Text('Retry'))),
+                  if (_reels.isEmpty && _reelsError == null)
+                    const Padding(padding: EdgeInsets.all(16),
+                      child: Text('You have not published any Reels yet.')),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _reels.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, crossAxisSpacing: 7, mainAxisSpacing: 7),
+                    itemBuilder: (_, i) {
+                      final reel = _reels[i];
+                      return _ProfileMediaTile(
+                        video: true,
+                        url: BlinkHomeApi.mediaUrl(reel.thumbnailUrl),
+                        onTap: () => _openReel(reel));
+                    },
+                  ),
+                ],
+              ),
+            ),
     );
   }
-  Widget _stat(String n,String label)=>Column(children:[Text(n,style:const TextStyle(fontSize:19,fontWeight:FontWeight.bold)),Text(label)]);
-  Widget _info(String label,String value)=>value.isEmpty?const SizedBox.shrink():ListTile(
-    dense:true,title:Text(label),subtitle:Text(value));
+}
+
+class _GalleryHeading extends StatelessWidget {
+  const _GalleryHeading({required this.title, required this.count, required this.onViewAll});
+  final String title;
+  final int count;
+  final VoidCallback? onViewAll;
+
+  @override
+  Widget build(BuildContext context) => Row(children: [
+    Expanded(child: Text(title, style: const TextStyle(
+      color: BlinkColors.ink, fontSize: 19, fontWeight: FontWeight.w900))),
+    Text('$count', style: const TextStyle(
+      color: BlinkColors.orangeDark, fontWeight: FontWeight.bold)),
+    const SizedBox(width: 6),
+    if (onViewAll != null)
+      TextButton(onPressed: onViewAll, child: const Text('View all')),
+  ]);
+}
+
+class _ProfileMediaTile extends StatelessWidget {
+  const _ProfileMediaTile({this.url, required this.video, required this.onTap});
+  final String? url;
+  final bool video;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    clipBehavior: Clip.antiAlias,
+    color: BlinkColors.orangeSoft,
+    borderRadius: BorderRadius.circular(13),
+    child: InkWell(
+      onTap: onTap,
+      child: Stack(fit: StackFit.expand, children: [
+        if (url != null && url!.isNotEmpty)
+          Image.network(url!, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const Center(
+              child: Icon(Icons.broken_image_outlined, color: BlinkColors.orange)))
+        else
+          const Center(child: Icon(Icons.photo_library_outlined,
+            color: BlinkColors.orange, size: 29)),
+        if (video)
+          const Center(child: Icon(Icons.play_circle_fill_rounded,
+            color: BlinkColors.orange, size: 40)),
+      ]),
+    ),
+  );
 }
 
 class LiveEditProfileScreen extends StatefulWidget{
@@ -192,35 +432,213 @@ class _EditState extends State<LiveEditProfileScreen>{
     ]));
 }
 
-class LivePublicProfileScreen extends StatefulWidget{
+
+class LivePublicProfileScreen extends StatefulWidget {
   final String userId;
-  const LivePublicProfileScreen({super.key,required this.userId});
-  @override State<LivePublicProfileScreen> createState()=>_PublicState();
+  const LivePublicProfileScreen({super.key, required this.userId});
+
+  @override
+  State<LivePublicProfileScreen> createState() => _PublicState();
 }
-class _PublicState extends State<LivePublicProfileScreen>{
-  Map<String,dynamic>? profile;String? error;
-  @override void initState(){super.initState();_load();}
-  Future<void> _load()async{
-    try{final p=obj(await LiveApi.call('GET','/profile/${Uri.encodeComponent(widget.userId)}'));
-      if(mounted)setState((){profile=p;error=null;});}
-    catch(e){if(mounted)setState(()=>error=e.toString());}
+
+class _PublicState extends State<LivePublicProfileScreen> {
+  Map<String, dynamic>? _profile;
+  List<BlinkMoment> _moments = <BlinkMoment>[];
+  List<BlinkReel> _reels = <BlinkReel>[];
+  String _viewerId = '';
+  String? _error;
+  bool _loading = true;
+  bool _busy = false;
+  int _generation = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
   }
-  @override Widget build(BuildContext context){
-    final p=profile??{};
-    return Scaffold(appBar:AppBar(title:const Text('Blink Profile')),
-      body:profile==null?liveError(error,_load):ListView(padding:const EdgeInsets.all(16),children:[
-        Center(child:liveAvatar(p,radius:50)),const SizedBox(height:12),
-        Center(child:Text(field(p,'name'),style:Theme.of(context).textTheme.titleLarge)),
-        Center(child:Text(field(p,'bio'))),
-        ListTile(title:const Text('Connections'),trailing:Text(field(p,'connectionsCount','0'))),
-        if(field(p,'relationship')=='NONE')FilledButton.icon(onPressed:()async{
-          try{await LiveApi.call('POST','/friends/requests',{'receiverId':widget.userId});
-            if(context.mounted)liveNotice(context,'Friend request sent');}
-          catch(e){if(context.mounted)liveNotice(context,e.toString());}
-        },icon:const Icon(Icons.person_add),label:const Text('Add Friend')),
-        if(field(p,'relationship')=='FRIENDS') const ListTile(leading:Icon(Icons.check_circle,color:BlinkColors.orange),title:Text('You are friends')),
-        if(field(p,'relationship')=='OUTGOING_PENDING') const ListTile(leading:Icon(Icons.hourglass_top,color:BlinkColors.orange),title:Text('Friend request pending')),
-        if(field(p,'relationship')=='INCOMING_PENDING') TextButton(onPressed:()=>Navigator.pushNamed(context,'/people/requests'),child:const Text('Respond to friend request')),
-      ]));
+
+  @override
+  void dispose() { _generation++; super.dispose(); }
+
+  Future<void> _load() async {
+    final request = ++_generation;
+    setState(() { _loading = true; _error = null; });
+    try {
+      final profile = obj(await LiveApi.call('GET', '/profile/${Uri.encodeComponent(widget.userId)}'));
+      final viewer = await BlinkAuthApi.cachedUser();
+      final currentId = field(viewer, 'id');
+      final moments = arr(profile['moments']).map((raw) {
+        final data = obj(raw);
+        return BlinkMoment.fromJson({
+          ...data,
+          'senderId': widget.userId,
+          'sender': {'name': field(profile, 'name'), 'avatarKey': profile['avatarKey']},
+        });
+      }).toList();
+      List<BlinkReel> reels = <BlinkReel>[];
+      try {
+        final response = arr(await LiveApi.call('GET', '/reels/user/${Uri.encodeComponent(widget.userId)}'));
+        reels = response.map((item) => BlinkReel.fromJson(obj(item))).toList();
+      } catch (_) {
+        // The profile itself remains usable when Reels are unavailable.
+      }
+      if (!mounted || request != _generation) return;
+      setState(() {
+        _profile = profile;
+        _viewerId = currentId;
+        _moments = moments;
+        _reels = reels;
+        _loading = false;
+      });
+    } catch (error) {
+      if (mounted && request == _generation) setState(() {
+        _loading = false;
+        _error = error.toString();
+      });
+    }
+  }
+
+  Future<void> _friendAction(String action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      if (action == 'add') {
+        await LiveApi.call('POST', '/friends/requests',
+          {'receiverId': widget.userId});
+      } else if (action == 'accept' || action == 'decline') {
+        final id = field(_profile, 'incomingRequestId');
+        if (id.isEmpty) throw const LiveApiError('Friend request unavailable.');
+        await LiveApi.call('POST', '/friends/requests/${Uri.encodeComponent(id)}/$action');
+      } else if (action == 'remove') {
+        await LiveApi.call('DELETE', '/friends/${Uri.encodeComponent(widget.userId)}');
+      }
+      await _load();
+    } catch (error) {
+      if (mounted) liveNotice(context, error.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _openMoment(BlinkMoment moment) async {
+    await Navigator.push(context, MaterialPageRoute<void>(
+      builder: (_) => Scaffold(
+        appBar: AppBar(title: Text(field(_profile, 'name', 'Moment'))),
+        backgroundColor: BlinkColors.canvas,
+        body: ListView(children: [
+          BlinkLiveMomentCard(moment: moment, myUserId: _viewerId),
+        ]),
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = _profile ?? <String, dynamic>{};
+    final relationship = field(p, 'relationship');
+    return Scaffold(
+      backgroundColor: BlinkColors.canvas,
+      appBar: AppBar(title: Text(field(p, 'name', 'Blink Profile'))),
+      body: _loading
+        ? const Center(child: CircularProgressIndicator(color: BlinkColors.orange))
+        : _error != null
+          ? liveError(_error, _load)
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 28),
+                children: [
+                  if (field(p, 'coverKey').isNotEmpty)
+                    ClipRRect(borderRadius: BorderRadius.circular(15),
+                      child: Image.network(LiveApi.url(field(p, 'coverKey')),
+                        height: 136, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox(height: 136))),
+                  const SizedBox(height: 14),
+                  Center(child: liveAvatar(p, radius: 45)),
+                  const SizedBox(height: 12),
+                  Center(child: Text(field(p, 'name'),
+                    style: Theme.of(context).textTheme.headlineSmall)),
+                  if (field(p, 'bio').isNotEmpty)
+                    Center(child: Text(field(p, 'bio'), textAlign: TextAlign.center)),
+                  const SizedBox(height: 12),
+                  Center(child: Text('${field(p,'connectionsCount','0')} connections')),
+                  const SizedBox(height: 15),
+                  if (relationship == 'SELF')
+                    FilledButton.icon(
+                      onPressed: () => Navigator.pushNamed(context, '/profile'),
+                      icon: const Icon(Icons.account_circle_outlined),
+                      label: const Text('My Profile')),
+                  if (relationship == 'NONE')
+                    FilledButton.icon(
+                      onPressed: _busy ? null : () => _friendAction('add'),
+                      icon: const Icon(Icons.person_add_alt_1_outlined),
+                      label: const Text('Add Friend')),
+                  if (relationship == 'OUTGOING_PENDING')
+                    const ListTile(
+                      leading: Icon(Icons.hourglass_top, color: BlinkColors.orange),
+                      title: Text('Friend request pending')),
+                  if (relationship == 'INCOMING_PENDING')
+                    Wrap(spacing: 8, children: [
+                      FilledButton(
+                        onPressed: _busy ? null : () => _friendAction('accept'),
+                        child: const Text('Accept request')),
+                      OutlinedButton(
+                        onPressed: _busy ? null : () => _friendAction('decline'),
+                        child: const Text('Decline')),
+                    ]),
+                  if (relationship == 'FRIENDS')
+                    OutlinedButton.icon(
+                      onPressed: _busy ? null : () => _friendAction('remove'),
+                      icon: const Icon(Icons.people_alt_outlined),
+                      label: const Text('Friends · Remove')),
+                  const SizedBox(height: 20),
+                  _GalleryHeading(title: 'Public Moments', count: _moments.length,
+                    onViewAll: null),
+                  const SizedBox(height: 10),
+                  if (_moments.isEmpty)
+                    const Padding(padding: EdgeInsets.all(12),
+                      child: Text('No public Moments shared yet.')),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _moments.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, crossAxisSpacing: 7, mainAxisSpacing: 7),
+                    itemBuilder: (_, index) {
+                      final item = _moments[index];
+                      return _ProfileMediaTile(
+                        video: item.mediaType == 'video',
+                        url: item.mediaType == 'video'
+                          ? null : BlinkHomeApi.mediaUrl(item.mediaUrl),
+                        onTap: () => _openMoment(item));
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  _GalleryHeading(title: 'Reels', count: _reels.length,
+                    onViewAll: null),
+                  const SizedBox(height: 10),
+                  if (_reels.isEmpty)
+                    const Padding(padding: EdgeInsets.all(12),
+                      child: Text('No Reels shared yet.')),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _reels.length,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, crossAxisSpacing: 7, mainAxisSpacing: 7),
+                    itemBuilder: (_, index) {
+                      final reel = _reels[index];
+                      return _ProfileMediaTile(
+                        video: true,
+                        url: BlinkHomeApi.mediaUrl(reel.thumbnailUrl),
+                        onTap: () => Navigator.pushNamed(
+                          context, '/reel/view', arguments: reel.id));
+                    },
+                  ),
+                ],
+              ),
+            ),
+    );
   }
 }
