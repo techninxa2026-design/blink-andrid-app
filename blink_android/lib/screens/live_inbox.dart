@@ -117,7 +117,7 @@ class _LiveChatState extends State<LiveChatScreen>{
       final self=await BlinkAuthApi.cachedUser();
       final data=obj(await LiveApi.call('GET','/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}'));
       if(!mounted)return;
-      setState((){myId=field(self,'id');messages=arr(data['messages']);error=null;loading=false;});
+      setState((){myId=field(self,'id');messages=arr(data['messages']).reversed.toList();error=null;loading=false;});
       if(!silent)await LiveApi.call('POST','/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}/read');
     }catch(e){if(mounted&&!silent)setState((){error=e.toString();loading=false;});}
   }
@@ -240,7 +240,7 @@ Future<void> shareReelToBlinkFriends(BuildContext context,String reelId)async{
                     {'friendIds':selected.toList()}));
                   if(!context.mounted)return;
                   Navigator.pop(context);
-                  liveNotice(context,'Reel sent to ${field(result,'sent')} friend(s).');
+                  if(sheetContext.mounted)liveNotice(sheetContext,'Reel sent to ${field(result,'sent')} friend(s).');
                 }catch(e){if(context.mounted)liveNotice(context,e.toString());}
                 finally{if(context.mounted)setModal(()=>sending=false);}
               },icon:const Icon(Icons.send),
