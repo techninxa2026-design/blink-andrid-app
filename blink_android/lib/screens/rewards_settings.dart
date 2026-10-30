@@ -291,78 +291,39 @@ class NotificationsScreen extends StatelessWidget {
   );
 }
 
-class AppearanceScreen extends StatefulWidget {
+class AppearanceScreen extends StatelessWidget {
   const AppearanceScreen({super.key});
   @override
-  State<AppearanceScreen> createState() => _AppearanceScreenState();
-}
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: blinkAppearance,
+    builder: (context, child) => Scaffold(
+      appBar: AppBar(title: const Text('Appearance')),
+      body: ListView(padding: const EdgeInsets.all(18), children: [
+        Text('Choose your Blink theme', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        const Text('Blink orange remains the primary brand color.'),
+        const SizedBox(height: 18),
+        _themeTile(context, ThemeMode.light, Icons.light_mode_outlined,
+          'Light', 'Bright white surfaces and deep orange accents'),
+        _themeTile(context, ThemeMode.dark, Icons.dark_mode_outlined,
+          'Dark', 'Comfortable dark surfaces and vivid orange accents'),
+        _themeTile(context, ThemeMode.system, Icons.brightness_auto_outlined,
+          'Use device setting', 'Follow your phone appearance'),
+      ]),
+    ),
+  );
 
-class _AppearanceScreenState extends State<AppearanceScreen> {
-  bool compact = false, animations = true;
-  @override
-  Widget build(BuildContext context) => BlinkScreen(
-    title: 'Appearance',
-    logoTitle: false,
-    active: 'people',
-    child: ScreenList(
-      children: [
-        const SectionHeading(
-          'Theme & Appearance',
-          subtitle: 'Blink signature orange and white',
-        ),
-        const BlinkPanel(
-          color: BlinkColors.orangeSoft,
-          child: Row(
-            children: [
-              Icon(Icons.palette, color: BlinkColors.orange, size: 34),
-              SizedBox(width: 15),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Blink Orange',
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    Text(
-                      'Default app theme',
-                      style: TextStyle(color: BlinkColors.muted, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.check_circle, color: BlinkColors.orange),
-            ],
-          ),
-        ),
-        const SizedBox(height: 15),
-        BlinkPanel(
-          child: Column(
-            children: [
-              SwitchListTile.adaptive(
-                activeTrackColor: BlinkColors.orange,
-                title: const Text(
-                  'Compact content',
-                  style: TextStyle(fontSize: 13),
-                ),
-                value: compact,
-                onChanged: (v) => setState(() => compact = v),
-              ),
-              const Divider(),
-              SwitchListTile.adaptive(
-                activeTrackColor: BlinkColors.orange,
-                title: const Text('Animations', style: TextStyle(fontSize: 13)),
-                value: animations,
-                onChanged: (v) => setState(() => animations = v),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        const DemoNotice(
-          'Appearance toggles are visual previews. Persist preferences in your app settings provider.',
-        ),
-      ],
+  Widget _themeTile(BuildContext context, ThemeMode option, IconData icon,
+      String title, String subtitle) => Card(
+    child: RadioListTile<ThemeMode>(
+      value: option,
+      groupValue: blinkAppearance.mode,
+      onChanged: (value) {
+        if (value != null) blinkAppearance.choose(value);
+      },
+      secondary: Icon(icon, color: BlinkColors.orange),
+      title: Text(title), subtitle: Text(subtitle),
+      activeColor: BlinkColors.orange,
     ),
   );
 }

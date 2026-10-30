@@ -5,8 +5,9 @@ import 'core/theme.dart';
 import 'core/nav.dart';
 import 'core/blink_auth_guard.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await blinkAppearance.load();
   runApp(const BlinkApp());
 }
 
@@ -34,10 +35,14 @@ class BlinkApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return AnimatedBuilder(
+      animation: blinkAppearance,
+      builder: (context, child) => MaterialApp(
       title: 'Blink — Your people. Your moments.',
       debugShowCheckedModeBanner: false,
       theme: blinkTheme(),
+      darkTheme: blinkDarkTheme(),
+      themeMode: blinkAppearance.mode,
       initialRoute: '/',
       onGenerateRoute: (settings) {
         final route = settings.name ?? '/';
@@ -124,6 +129,7 @@ class BlinkApp extends StatelessWidget {
           },
         );
       },
+    ),
     );
   }
 }

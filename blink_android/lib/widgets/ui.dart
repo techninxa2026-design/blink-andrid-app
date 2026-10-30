@@ -43,7 +43,7 @@ class BlinkScreen extends StatelessWidget {
   final Widget? trailing;
   final bool showBack;
   final bool logoTitle;
-  final Color background;
+  final Color? background;
   final Widget? floatingActionButton;
 
   const BlinkScreen({
@@ -55,7 +55,7 @@ class BlinkScreen extends StatelessWidget {
     this.trailing,
     this.showBack = true,
     this.logoTitle = true,
-    this.background = BlinkColors.canvas,
+    this.background,
     this.floatingActionButton,
   });
 
@@ -64,7 +64,7 @@ class BlinkScreen extends StatelessWidget {
     final canBack = Navigator.of(context).canPop();
 
     return Scaffold(
-      backgroundColor: background,
+      backgroundColor: background ?? Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: logoTitle
             ? const BlinkLogo()

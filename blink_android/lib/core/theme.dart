@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -98,6 +99,63 @@ ThemeData blinkTheme() {
       behavior: SnackBarBehavior.floating,
       backgroundColor: BlinkColors.ink,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+  );
+}
+
+
+/// The selected appearance is persisted and shared by all routes.
+final blinkAppearance = BlinkAppearance();
+
+class BlinkAppearance extends ChangeNotifier {
+  ThemeMode mode = ThemeMode.system;
+  Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString('blink_appearance') ?? 'system';
+    mode = value == 'dark' ? ThemeMode.dark
+      : value == 'light' ? ThemeMode.light : ThemeMode.system;
+    notifyListeners();
+  }
+  Future<void> choose(ThemeMode selected) async {
+    mode = selected;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('blink_appearance', selected.name);
+  }
+}
+
+ThemeData blinkDarkTheme() {
+  final light = blinkTheme();
+  final scheme = ColorScheme.fromSeed(
+    seedColor: BlinkColors.orange,
+    brightness: Brightness.dark,
+    primary: const Color(0xFFFF7C40),
+    surface: const Color(0xFF201D23),
+  );
+  return light.copyWith(
+    brightness: Brightness.dark,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: const Color(0xFF111016),
+    canvasColor: const Color(0xFF111016),
+    cardColor: const Color(0xFF201D23),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Color(0xFF201D23),
+      foregroundColor: Colors.white,
+      centerTitle: true,
+      elevation: 0,
+      systemOverlayStyle: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+      ),
+    ),
+    inputDecorationTheme: light.inputDecorationTheme.copyWith(
+      fillColor: const Color(0xFF28242D),
+      hintStyle: const TextStyle(color: Color(0xFFBAB4C0)),
+    ),
+    dividerTheme: const DividerThemeData(color: Color(0xFF38313D)),
+    cardTheme: CardThemeData(
+      color: const Color(0xFF201D23),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
     ),
   );
 }
