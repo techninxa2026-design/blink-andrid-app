@@ -3,127 +3,79 @@ import 'package:flutter/material.dart';
 import '../core/blink_auth_api.dart';
 import '../core/theme.dart';
 import '../core/nav.dart';
-import '../core/data.dart';
+import '../core/live_api.dart';
 import '../widgets/ui.dart';
 
-class WalletScreen extends StatelessWidget {
+/// BP Wallet reflects the real MySQL user.blinkPoints balance.
+/// The API does not yet expose a transaction ledger, so never invent one.
+class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
+  @override
+  State<WalletScreen> createState() => _WalletState();
+}
+class _WalletState extends State<WalletScreen> {
+  String? balance;
+  String? error;
+  bool loading = true;
+  @override
+  void initState() { super.initState(); _load(); }
+  Future<void> _load() async {
+    try {
+      final profile = obj(await LiveApi.call('GET', '/profile/me'));
+      if (!mounted) return;
+      setState(() {
+        balance = profile['blinkPoints']?.toString();
+        error = null;
+        loading = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() { error = '$e'; loading = false; });
+    }
+  }
   @override
   Widget build(BuildContext context) => BlinkScreen(
     title: 'BP Wallet',
     active: 'explore',
-    child: ListView(
-      children: [
-        const SectionHeading(
-          'BP Wallet',
-          subtitle: 'Your Blink Points, your rewards',
-        ),
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 2, 16, 13),
-          padding: const EdgeInsets.all(23),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFF7A07), BlinkColors.orange],
+    child: RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          const SectionHeading('Your Blink Points', subtitle: 'Rewards earned through real Blink activity'),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFFFF833F), BlinkColors.orange]),
+              borderRadius: BorderRadius.circular(22),
             ),
-            borderRadius: BorderRadius.circular(19),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Available balance', style: TextStyle(color: Colors.white, fontSize: 13)),
+              const SizedBox(height: 12),
+              Text(loading ? 'Loading...' : balance == null ? 'Unavailable' : '$balance BP',
+                style: const TextStyle(color: Colors.white,
+                  fontSize: 32, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 8),
+              const Icon(Icons.stars_rounded, color: Colors.white, size: 28),
+            ]),
           ),
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Available balance',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-              SizedBox(height: 10),
-              Text(
-                '50.50 BP',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Icon(Icons.stars_rounded, color: Colors.white70, size: 31),
-                ],
-              ),
-            ],
+          if (error != null) liveError(error, _load),
+          if (!loading && balance == null && error == null)
+            const ListTile(title: Text('Balance not available'),
+              subtitle: Text('Update and restart your Blink NestJS server to enable this wallet balance.')),
+          const SizedBox(height: 20),
+          const ListTile(
+            leading: Icon(Icons.verified_outlined, color: BlinkColors.orange),
+            title: Text('BP comes from verified Blink activity'),
+            subtitle: Text('Your balance is stored on your Blink account and verified by the server.'),
           ),
-        ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 15),
-          child: Row(
-            children: [
-              Expanded(child: BlinkPanel(child: BlinkCount('76', 'Earned'))),
-              SizedBox(width: 8),
-              Expanded(child: BlinkPanel(child: BlinkCount('25.5', 'Used'))),
-              SizedBox(width: 8),
-              Expanded(child: BlinkPanel(child: BlinkCount('505', 'Bonuses'))),
-            ],
+          const ListTile(
+            leading: Icon(Icons.receipt_long_outlined, color: BlinkColors.orange),
+            title: Text('Transaction history'),
+            subtitle: Text('An itemized ledger is not available from the current Blink API.'),
           ),
-        ),
-        const SectionHeading('Recent Activity'),
-        ...<(String, String, String)>[
-          ('Completed a task', 'Today · 12:24 PM', '+ 4.5 BP'),
-          ('Published a moment', 'Yesterday · 4:10 PM', '+ 0.5 BP'),
-          ('Creator task verified', '24 Oct · 11:42 AM', '+ 2 BP'),
-          ('Reel engagement', '23 Oct · 3:21 PM', '+ 1 BP'),
-        ].map(
-          (e) => Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 9),
-            child: BlinkPanel(
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    backgroundColor: BlinkColors.orangeSoft,
-                    child: Icon(Icons.stars_rounded, color: BlinkColors.orange),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          e.$1,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          e.$2,
-                          style: const TextStyle(
-                            color: BlinkColors.muted,
-                            fontSize: 10.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    e.$3,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      color: BlinkColors.orange,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 11, 16, 18),
-          child: DemoNotice(
-            'BP is an in-app reward. Cash conversion is not available in this UI demo.',
-          ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }
@@ -137,11 +89,14 @@ class SettingsScreen extends StatelessWidget {
     child: ScreenList(
       children: [
         const SizedBox(height: 9),
-        BlinkUserLine(
-          person: people[1],
-          subtitle: 'My Blink account',
-          onTap: () => go(context, '/profile'),
+        ListTile(
+          leading: const CircleAvatar(
+            backgroundColor: BlinkColors.orangeSoft,
+            child: Icon(Icons.person_outline, color: BlinkColors.orange)),
+          title: const Text('My Blink account'),
+          subtitle: const Text('View your own profile'),
           trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => go(context, '/profile'),
         ),
         const Divider(),
         const SizedBox(height: 10),
@@ -178,46 +133,6 @@ class SettingsScreen extends StatelessWidget {
                 onTap: () => go(context, '/appearance'),
               ),
               const Divider(),
-              BlinkOptionRow(
-                icon: Icons.lock_outline_rounded,
-                text: 'Privacy and security',
-                onTap: () => go(context, '/profile/edit'),
-              ),
-              const Divider(),
-              BlinkOptionRow(
-                icon: Icons.delete_outline_rounded,
-                text: 'Delete account',
-                onTap: () => showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text('Delete account?'),
-                    content: const Text(
-                      'This is a UI preview. Real deletion must require authentication and be handled by your backend.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          demoToast(context);
-                        },
-                        child: const Text('Continue'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const Divider(),
-              BlinkOptionRow(
-                icon: Icons.grid_view_rounded,
-                text: 'UI screen gallery',
-                onTap: () => go(context, '/ui-gallery'),
-              ),
-              const Divider(),
-
           BlinkOptionRow(
             icon: Icons.logout_rounded,
             text: 'Log Out',
@@ -253,41 +168,82 @@ class SettingsScreen extends StatelessWidget {
   );
 }
 
-class NotificationsScreen extends StatelessWidget {
+/// Real alerts from the Inbox and the pending-friend-requests API.
+/// No fake notification records are rendered.
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
+  @override
+  State<NotificationsScreen> createState() => _NotificationsState();
+}
+class _NotificationsState extends State<NotificationsScreen> {
+  List<dynamic> incoming = [];
+  List<dynamic> conversations = [];
+  bool loading = true;
+  String? error;
+  @override
+  void initState() { super.initState(); _load(); }
+  Future<void> _load() async {
+    try {
+      final result = await Future.wait([
+        LiveApi.call('GET','/friends/requests/incoming'),
+        LiveApi.call('GET','/inbox'),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        incoming = arr(result[0]);
+        conversations = arr(result[1]).where((c) =>
+          ((obj(c)['unreadCount'] as num?)?.toInt() ?? 0) > 0).toList();
+        loading = false;
+        error = null;
+      });
+    } catch(e) {
+      if(mounted) setState(() {error = '$e'; loading = false;});
+    }
+  }
   @override
   Widget build(BuildContext context) => BlinkScreen(
     title: 'Notifications',
-    logoTitle: false,
     active: 'people',
-    child: ListView(
-      children: [
-        const SectionHeading(
-          'Notifications',
-          subtitle: 'Your latest Blink activity',
-        ),
-        ...<(String, String)>[
-          ('liked your moment', 'Just now'),
-          ('sent you a friend request', '12m ago'),
-          ('commented on your reel', '1h ago'),
-          ('shared a moment with you', 'Yesterday'),
-          ('verified your creator task', '2 days ago'),
-        ].asMap().entries.map(
-          (e) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15),
-            child: BlinkUserLine(
-              person: people[e.key % people.length],
-              subtitle: '${e.value.$1} · ${e.value.$2}',
-              trailing: const Icon(
-                Icons.circle,
-                color: BlinkColors.orange,
-                size: 8,
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
+    child: loading ? const Center(child: CircularProgressIndicator())
+      : error != null ? liveError(error,_load)
+      : RefreshIndicator(onRefresh:_load,child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(14),
+        children: [
+          const SectionHeading('Your updates', subtitle: 'New messages and friend requests'),
+          if (incoming.isEmpty && conversations.isEmpty)
+            const ListTile(leading: Icon(Icons.notifications_none, color: BlinkColors.orange),
+              title: Text('All caught up'),subtitle: Text('No unread messages or pending friend requests.')),
+          ...incoming.map((raw) {
+            final r = obj(raw);
+            final user = obj(r['sender']);
+            return ListTile(
+              leading: liveAvatar(user),
+              title: Text(field(user,'name','A member') + ' sent you a friend request'),
+              subtitle: const Text('Tap to respond'),
+              trailing: const Icon(Icons.person_add_alt_1,color:BlinkColors.orange),
+              onTap:()=>go(context,'/people/requests'),
+            );
+          }),
+          ...conversations.map((raw) {
+            final c=obj(raw);
+            final sender=c['isGroup']==true
+              ? field(c,'groupName','Group')
+              : field(c['otherUser'],'name','Friend');
+            final unread=(c['unreadCount'] as num?)?.toInt() ?? 0;
+            return ListTile(
+              leading: const CircleAvatar(backgroundColor:BlinkColors.orangeSoft,
+                child: Icon(Icons.mark_email_unread_outlined,color:BlinkColors.orange)),
+              title: Text('$unread unread message(s) from $sender'),
+              subtitle: const Text('Open Inbox to read'),
+              onTap:()=>go(context,'/inbox'),
+            );
+          }),
+          const SizedBox(height: 14),
+          const Text('Other activity notifications require a dedicated server notification endpoint.',
+            style: TextStyle(fontSize: 12, color: BlinkColors.muted)),
+        ],
+      )),
   );
 }
 
