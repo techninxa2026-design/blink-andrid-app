@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
+
 jobs:
   analyze:
     runs-on: ubuntu-latest
@@ -11,6 +12,10 @@ jobs:
         working-directory: blink_android
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -21,3 +26,10 @@ jobs:
         run: flutter analyze --no-fatal-infos
       - name: Unit tests
         run: flutter test
+      - name: Build Android APK
+        run: flutter build apk --debug --dart-define=BLINK_API_URL=https://example.invalid
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blink-android-debug
+          path: blink_android/build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
