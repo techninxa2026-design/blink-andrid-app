@@ -45,7 +45,7 @@ class BlinkRoutes {
     '/irl/chat': (_) => const LiveIrlScreen(),
     '/inbox': (_) => const LiveInboxScreen(),
     '/chat': (context) { final args = ModalRoute.of(context)?.settings.arguments; final p = args is Map ? args : {}; final id = p['id']?.toString() ?? ''; return id.isEmpty ? const LiveInboxScreen() : LiveChatScreen(conversationId:id,title:p['title']?.toString() ?? 'Conversation'); },
-    '/group-chat': (_) => const GroupChatScreen(),
+    '/group-chat': (_) => const LiveCreateGroupScreen(),
     '/share': (_) => const ShareMediaScreen(),
     '/secrets': (_) => const LiveSecretsScreen(),
     '/secret/create': (_) => const LiveSecretsScreen(),
