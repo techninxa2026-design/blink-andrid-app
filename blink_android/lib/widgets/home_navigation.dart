@@ -9,7 +9,6 @@ import 'ui.dart';
 // BLINK BRAND COLORS
 // =====================================================
 
-const Color _navOrange = BlinkColors.orangeDark;
 const Color _softOrange = Color(0xFFFFEEE3);
 const Color _textMuted = BlinkColors.muted;
 

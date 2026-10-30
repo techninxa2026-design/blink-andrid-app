@@ -391,7 +391,7 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
           maxWidth: 720,
           quality: 80,
         );
-        if (jpeg == null || jpeg.isEmpty) {
+        if (jpeg.isEmpty) {
           throw const BlinkHomeError('Cannot generate JPEG cover from this video. Choose a playable MP4 or MOV.');
         }
         await BlinkHomeApi.uploadReel(file, jpeg, caption: _caption.text);
@@ -426,7 +426,7 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     _preview?.dispose();
     _caption.dispose();
     for (final dir in _temporaryMediaDirectories) {
-      dir.delete(recursive: true).catchError((Object _) {});
+      dir.delete(recursive: true).ignore();
     }
     super.dispose();
   }

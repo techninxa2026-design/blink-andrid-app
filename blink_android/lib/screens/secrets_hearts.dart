@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 import '../core/nav.dart';
-import '../core/data.dart';
 import '../widgets/ui.dart';
 
 class SecretsScreen extends StatefulWidget {

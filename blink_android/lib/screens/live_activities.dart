@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../core/live_api.dart';
-import '../core/blink_auth_api.dart';
 import '../core/theme.dart';
 
 class LiveCheckinsScreen extends StatefulWidget {

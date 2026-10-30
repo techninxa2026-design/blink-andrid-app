@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../core/live_api.dart';
-import '../core/theme.dart';
 
 class LiveExchangeScreen extends StatefulWidget {
   const LiveExchangeScreen({super.key});

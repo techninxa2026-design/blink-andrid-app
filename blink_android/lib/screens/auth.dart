@@ -1,5 +1,4 @@
 
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../core/blink_auth_api.dart';
@@ -10,7 +9,6 @@ import '../widgets/ui.dart';
 const _orange = BlinkColors.orange;
 const _darkOrange = BlinkColors.orangeDark;
 const _cream = Color(0xFFFFF8F3);
-const _brown = Color(0xFF704632);
 
 // =====================================================
 // ANIMATION HELPERS
