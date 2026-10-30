@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'live_inbox.dart';
 import 'package:video_player/video_player.dart';
 
 import '../core/blink_auth_api.dart';
@@ -317,12 +318,35 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
   }
 
   Future<void> _share() async {
-    final url = BlinkHomeApi.mediaUrl(widget.reel.videoUrl);
-    try {
-      await SharePlus.instance.share(ShareParams(
-        text: '${widget.reel.caption ?? 'Watch this Blink Reel'}\n$url',
-      ));
-    } catch (e) { _toast('Share failed: $e'); }
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.people_alt_outlined, color: BlinkColors.orange),
+            title: const Text('Share to Blink friends'),
+            subtitle: const Text('Send the Reel into your friends\' Inbox'),
+            onTap: () {
+              Navigator.pop(sheetContext);
+              shareReelToBlinkFriends(context, widget.reel.id);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.share),
+            title: const Text('Share outside Blink'),
+            onTap: () async {
+              Navigator.pop(sheetContext);
+              final url = BlinkHomeApi.mediaUrl(widget.reel.videoUrl);
+              try {
+                await SharePlus.instance.share(ShareParams(
+                  text: '${widget.reel.caption ?? 'Watch this Blink Reel'}\n$url',
+                ));
+              } catch (e) { _toast('Share failed: $e'); }
+            },
+          ),
+        ]),
+      ),
+    );
   }
 
   Future<void> _delete() async {
@@ -528,12 +552,46 @@ class _LiveReelCommentsState extends State<_LiveReelComments> {
   );
 }
 
-/// The old detail route has no reel ID argument. Show the real public feed
-/// instead of returning a fake Reel photo or hardcoded demo content.
-class ReelDetailScreen extends StatelessWidget {
+/// Open an exact Reel ID, including Reels shared through Inbox.
+class ReelDetailScreen extends StatefulWidget {
   const ReelDetailScreen({super.key});
   @override
-  Widget build(BuildContext context) => const ReelsScreen();
+  State<ReelDetailScreen> createState() => _ReelDetailState();
+}
+class _ReelDetailState extends State<ReelDetailScreen> {
+  Future<List<dynamic>>? _future;
+  @override void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_future != null) return;
+    final arg = ModalRoute.of(context)?.settings.arguments;
+    final id = arg is String ? arg : (arg is Map ? (arg['id']?.toString() ?? '') : '');
+    _future = Future.wait<dynamic>([
+      BlinkHomeApi.request('GET', '/reels/${Uri.encodeComponent(id)}'),
+      BlinkAuthApi.cachedUser(),
+    ]);
+  }
+  @override Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.black,
+    appBar: AppBar(backgroundColor: Colors.black,
+      foregroundColor: Colors.white, title: const Text('Reel')),
+    body: FutureBuilder<List<dynamic>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return Center(child: Text('${snapshot.error}',
+          style: const TextStyle(color: Colors.white)));
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        final data = snapshot.data![0];
+        if (data is! Map<String,dynamic>) return const Center(child: Text('Reel unavailable'));
+        final self = snapshot.data![1];
+        final userId = self is Map ? (self['id']?.toString() ?? '') : '';
+        return ReelFullScreen(
+          reel: BlinkReel.fromJson(data),
+          myUserId: userId,
+          active: true,
+        );
+      },
+    ),
+  );
 }
 
 /// Route into the SAME real Capture component, preselected to publish a Reel.

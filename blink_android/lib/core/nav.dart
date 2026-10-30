@@ -13,6 +13,8 @@ import '../screens/tasks.dart';
 import '../screens/business.dart';
 import '../screens/rewards_settings.dart';
 import '../screens/gallery.dart';
+import '../screens/live_inbox.dart';
+import '../screens/live_people.dart';
 
 /// Each visual on the reference board has a concrete, independently navigable route.
 class BlinkRoutes {
@@ -34,18 +36,18 @@ class BlinkRoutes {
     '/reels': (_) => const ReelsScreen(),
     '/reel/view': (_) => const ReelDetailScreen(),
     '/reel/upload': (_) => const UploadReelScreen(),
-    '/people': (_) => const DiscoverPeopleScreen(),
-    '/people/requests': (_) => const RequestsScreen(),
-    '/people/friends': (_) => const FriendsScreen(),
-    '/profile': (_) => const ProfileScreen(),
-    '/profile/edit': (_) => const EditProfileScreen(),
+    '/people': (_) => const LiveDiscoverPeopleScreen(),
+    '/people/requests': (_) => const LiveRequestsScreen(),
+    '/people/friends': (_) => const LiveFriendsScreen(),
+    '/profile': (_) => const LiveProfileScreen(),
+    '/profile/edit': (_) => const LiveEditProfileScreen(),
     '/checkins': (_) => const CheckinFeedScreen(),
     '/checkin/create': (_) => const CreateCheckinScreen(),
     '/irl': (_) => const IrlPlansScreen(),
     '/irl/detail': (_) => const IrlPlanDetailScreen(),
     '/irl/chat': (_) => const IrlChatScreen(),
-    '/inbox': (_) => const InboxScreen(),
-    '/chat': (_) => const ConversationScreen(),
+    '/inbox': (_) => const LiveInboxScreen(),
+    '/chat': (context) { final args = ModalRoute.of(context)?.settings.arguments; final p = args is Map ? args : {}; final id = p['id']?.toString() ?? ''; return id.isEmpty ? const LiveInboxScreen() : LiveChatScreen(conversationId:id,title:p['title']?.toString() ?? 'Conversation'); },
     '/group-chat': (_) => const GroupChatScreen(),
     '/share': (_) => const ShareMediaScreen(),
     '/secrets': (_) => const SecretsScreen(),
