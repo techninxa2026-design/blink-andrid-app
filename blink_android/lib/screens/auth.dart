@@ -146,11 +146,14 @@ class SplashScreen extends StatelessWidget {
               ),
             ),
             SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  26, 12, 26, 24,
-                ),
-                child: Column(
+              child: LayoutBuilder(builder: (context, viewport) =>
+                SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: viewport.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(26, 12, 26, 24),
+                        child: Column(
                   children: [
                     const Spacer(),
 
@@ -269,8 +272,12 @@ class SplashScreen extends StatelessWidget {
                       ),
                     ),
                   ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+              )),
             ),
           ],
         ),
