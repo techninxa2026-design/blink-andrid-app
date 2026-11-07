@@ -39,14 +39,30 @@ class _TasksState extends State<FullTasksScreen> {
         :error.isNotEmpty?liveError(error,_load)
         :RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
           if(tasks.isEmpty)const ListTile(title:Text('No published tasks found.')),
-          ...tasks.map((raw){final t=obj(raw);return Card(child:ListTile(
-            leading:const CircleAvatar(backgroundColor:BlinkColors.orangeSoft,
-              child:Icon(Icons.task_alt,color:BlinkColors.orange)),
-            title:Text(field(t,'title')),
-            subtitle:Text(field(t['creator'],'name')+' · '+field(t,'rewardBp')+
-              ' BP\n'+field(t,'description'),maxLines:3,overflow:TextOverflow.ellipsis),
-            onTap:()=>Navigator.push<void>(context,MaterialPageRoute(
-              builder:(_)=>FullTaskDetail(taskId:field(t,'id'))))));}),
+          ...tasks.map((raw){
+            final t=obj(raw);
+            return BlinkProListCard(
+              icon:Icons.task_alt_rounded,
+              eyebrow:'CREATOR CHALLENGE',
+              title:field(t,'title'),
+              subtitle:field(t,'description'),
+              badges:[
+                BlinkInfoPill('${field(t,'rewardBp','0')} BP',
+                  icon:Icons.stars_rounded,highlight:true),
+                if(field(t['creator'],'name').isNotEmpty)
+                  BlinkInfoPill(field(t['creator'],'name'),
+                    icon:Icons.person_outline_rounded),
+              ],
+              footer:const Row(mainAxisAlignment:MainAxisAlignment.end,children:[
+                Text('View challenge',style:TextStyle(
+                  color:BlinkColors.orangeDark,fontWeight:FontWeight.w800)),
+                SizedBox(width:6),Icon(Icons.arrow_forward_rounded,
+                  color:BlinkColors.orangeDark,size:18),
+              ]),
+              onTap:()=>Navigator.push<void>(context,MaterialPageRoute(
+                builder:(_)=>FullTaskDetail(taskId:field(t,'id')))),
+            );
+          }),
           Row(mainAxisAlignment:MainAxisAlignment.center,children:[
             TextButton(onPressed:page>1?(){page--;_load();}:null,child:const Text('Previous')),
             Text('Page $page'),
@@ -94,18 +110,27 @@ class _CreatorState extends State<FullCreatorDashboard>{
         const ListTile(title:Text('My Creator Tasks'),subtitle:Text('Publish and verify BP rewards.')),
         if(tasks.isEmpty)const ListTile(title:Text('No tasks yet.')),
         ...tasks.map((raw){final t=obj(raw),id=field(t,'id');
-          return Card(child:Column(children:[
-            ListTile(title:Text(field(t,'title')),subtitle:Text(field(t,'status')+
-              ' · '+field(t,'rewardBp')+' BP'),onTap:()=>_edit(t)),
-            Wrap(spacing:6,children:[
-              TextButton.icon(onPressed:()=>_edit(t),icon:const Icon(Icons.edit_outlined),label:const Text('Edit')),
-              TextButton.icon(onPressed:()=>Navigator.push<void>(context,MaterialPageRoute(
-                builder:(_)=>FullTaskReviews(taskId:id))),
+          return BlinkProListCard(
+            title:field(t,'title'),
+            eyebrow:'MY CREATOR TASK',
+            icon:Icons.stars_rounded,
+            subtitle:field(t,'description'),
+            badges:[
+              BlinkInfoPill(field(t,'status'),icon:Icons.visibility_outlined),
+              BlinkInfoPill('${field(t,'rewardBp','0')} BP',
+                icon:Icons.stars_rounded,highlight:true),
+            ],
+            onTap:()=>_edit(t),
+            footer:Wrap(spacing:5,runSpacing:5,children:[
+              TextButton.icon(onPressed:()=>_edit(t),
+                icon:const Icon(Icons.edit_outlined),label:const Text('Edit')),
+              TextButton.icon(onPressed:()=>Navigator.push<void>(context,
+                MaterialPageRoute(builder:(_)=>FullTaskReviews(taskId:id))),
                 icon:const Icon(Icons.fact_check_outlined),label:const Text('Review')),
-              TextButton.icon(onPressed:()=>_delete(id),icon:const Icon(Icons.delete_outline),
-                label:const Text('Delete')),
+              TextButton.icon(onPressed:()=>_delete(id),
+                icon:const Icon(Icons.delete_outline),label:const Text('Delete')),
             ]),
-          ]));
+          );
         }),
       ])));
 }

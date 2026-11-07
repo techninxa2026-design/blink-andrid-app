@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -10,10 +9,9 @@ import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:flutter/services.dart' show PlatformException, DeviceOrientation;
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
-import 'package:get_video_thumbnail/get_video_thumbnail.dart' as thumb;
-import 'package:get_video_thumbnail/index.dart' as thumb_format;
 
 import '../core/blink_home_api.dart';
+import '../core/reel_cover.dart';
 import '../core/blink_original_music.dart';
 import '../core/nav.dart';
 import '../core/theme.dart';
@@ -543,8 +541,20 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
 
   void _showError(String message) {
     if (!mounted) return;
-    setState(() => _error = message);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    // Never put Java/plugin stack traces across the entire capture preview.
+    // Show a short actionable message and log the original only in debug.
+    debugPrint('Blink capture issue: $message');
+    final clean = message.split('\n').first.trim();
+    final friendly = clean.contains('java.') ||
+            clean.contains('ThumbnailUtils') ||
+            clean.contains('Invalid height')
+        ? 'Could not prepare this video. Please retry or choose another recording.'
+        : clean.length > 165 ? '${clean.substring(0, 162)}...' : clean;
+    setState(() => _error = friendly);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(friendly, maxLines: 3, overflow: TextOverflow.ellipsis),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   // Determine the media type from the actual selected file, never from the
@@ -734,19 +744,17 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
       final file = !_videoMode && _lens != 'none'
           ? await _renderFilteredPhoto() : File(_picked!.path);
       if (_videoMode && _publishReel) {
-        final Uint8List jpeg =
-        await thumb.VideoThumbnail.thumbnailData(
-          video: file.path,
-          imageFormat: thumb_format.ImageFormat.JPEG,
-          maxWidth: 720,
-          quality: 80,
-        );
-        if (jpeg.isEmpty) {
-          throw const BlinkHomeError('Cannot generate JPEG cover from this video. Choose a playable MP4 or MOV.');
-        }
-        await BlinkHomeApi.uploadReel(file, jpeg, caption: _caption.text);
+        // Avoid getScaledFrameAtTime(width, 0), which crashes on some devices.
+        // A valid JPEG is always handed to the existing NestJS upload API.
+        final jpeg = await BlinkReelCover.generate(file);
+        await BlinkHomeApi.uploadReel(
+          file, jpeg, caption: _caption.text.trim());
       } else {
-        await BlinkHomeApi.uploadMoment(file, caption: _caption.text, musicTrackId: _musicTrackId);
+        await BlinkHomeApi.uploadMoment(
+          file,
+          caption: _caption.text.trim(),
+          musicTrackId: _musicTrackId,
+        );
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

@@ -64,15 +64,18 @@ class _WalletState extends State<WalletScreen> {
             const ListTile(title: Text('Balance not available'),
               subtitle: Text('Update and restart your Blink NestJS server to enable this wallet balance.')),
           const SizedBox(height: 20),
-          const ListTile(
-            leading: Icon(Icons.verified_outlined, color: BlinkColors.orange),
-            title: Text('BP comes from verified Blink activity'),
-            subtitle: Text('Your balance is stored on your Blink account and verified by the server.'),
+          const BlinkProListCard(
+            icon: Icons.verified_user_outlined,
+            eyebrow: 'YOUR REWARDS',
+            title: 'Verified Blink Points',
+            subtitle: 'Your BP balance is stored on your Blink account and confirmed by the server.',
+            badges: [BlinkInfoPill('Account secured',icon:Icons.verified_outlined,highlight:true)],
           ),
-          const ListTile(
-            leading: Icon(Icons.receipt_long_outlined, color: BlinkColors.orange),
-            title: Text('Transaction history'),
-            subtitle: Text('An itemized ledger is not available from the current Blink API.'),
+          const BlinkProListCard(
+            icon: Icons.receipt_long_outlined,
+            eyebrow: 'REWARDS ACTIVITY',
+            title: 'Transaction history',
+            subtitle: 'An itemized ledger is not available from the current Blink API.',
           ),
         ],
       ),
@@ -217,12 +220,15 @@ class _NotificationsState extends State<NotificationsScreen> {
           ...incoming.map((raw) {
             final r = obj(raw);
             final user = obj(r['sender']);
-            return ListTile(
-              leading: liveAvatar(user),
-              title: Text(field(user,'name','A member') + ' sent you a friend request'),
-              subtitle: const Text('Tap to respond'),
-              trailing: const Icon(Icons.person_add_alt_1,color:BlinkColors.orange),
+            return BlinkProListCard(
+              leading:liveAvatar(user),
+              icon:Icons.person_add_alt_1,
+              eyebrow:'NEW CONNECTION REQUEST',
+              title:field(user,'name','A member')+' sent a friend request',
+              subtitle:'Review and respond to this request',
               onTap:()=>go(context,'/people/requests'),
+              badges:const [BlinkInfoPill('Action available',
+                icon:Icons.person_add_alt_1_rounded,highlight:true)],
             );
           }),
           ...conversations.map((raw) {
@@ -231,11 +237,13 @@ class _NotificationsState extends State<NotificationsScreen> {
               ? field(c,'groupName','Group')
               : field(c['otherUser'],'name','Friend');
             final unread=(c['unreadCount'] as num?)?.toInt() ?? 0;
-            return ListTile(
-              leading: const CircleAvatar(backgroundColor:BlinkColors.orangeSoft,
-                child: Icon(Icons.mark_email_unread_outlined,color:BlinkColors.orange)),
-              title: Text('$unread unread message(s) from $sender'),
-              subtitle: const Text('Open Inbox to read'),
+            return BlinkProListCard(
+              icon:Icons.mark_email_unread_outlined,
+              eyebrow:'BLINK INBOX',
+              title:'Messages from $sender',
+              subtitle:'Open your conversation and reply',
+              badges:[BlinkInfoPill('$unread unread',
+                icon:Icons.mark_chat_unread_outlined,highlight:true)],
               onTap:()=>go(context,'/inbox'),
             );
           }),

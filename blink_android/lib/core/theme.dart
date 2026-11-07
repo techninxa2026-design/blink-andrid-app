@@ -65,10 +65,19 @@ ThemeData blinkTheme() {
         statusBarIconBrightness: Brightness.dark,
       ),
     ),
+    // Give *every* existing Material Card a cohesive premium surface,
+    // including small detail/history cards that use the stock Card widget.
     cardTheme: CardThemeData(
-      color: Colors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      color: const Color(0xFFFFFDFB),
+      surfaceTintColor: Colors.transparent,
+      elevation: 2,
+      shadowColor: const Color(0x1AFF5900),
+      margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: const BorderSide(color: Color(0xFFFFDFCC)),
+      ),
     ),
     dividerTheme: const DividerThemeData(color: BlinkColors.line, thickness: 1),
     inputDecorationTheme: InputDecorationTheme(

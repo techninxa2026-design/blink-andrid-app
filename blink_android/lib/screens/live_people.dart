@@ -32,10 +32,21 @@ class _DiscoverState extends State<LiveDiscoverPeopleScreen>{
     Expanded(child:loading?const Center(child:CircularProgressIndicator()):
       error!=null?liveError(error,_load):
       RefreshIndicator(onRefresh:_load,child:ListView.builder(itemCount:users.length,itemBuilder:(_,i){
-        final user=users[i];return ListTile(leading:liveAvatar(user),title:Text(field(user,'name')),
-          subtitle:Text(field(user,'bio','Blink member'),maxLines:1,overflow:TextOverflow.ellipsis),
-          onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>LivePublicProfileScreen(userId:field(user,'id')))),
-          trailing:IconButton(icon:const Icon(Icons.person_add_alt,color:BlinkColors.orange),onPressed:()=>_request(field(user,'id'))));
+        final user=users[i];return Padding(
+          padding:const EdgeInsets.symmetric(horizontal:12),
+          child:BlinkProListCard(
+            leading:liveAvatar(user),icon:Icons.person_search_rounded,
+            eyebrow:'DISCOVER BLINK MEMBERS',
+            title:field(user,'name'),
+            subtitle:field(user,'bio','Blink member'),
+            badges:const [BlinkInfoPill('Community member',icon:Icons.people_alt_outlined)],
+            onTap:()=>Navigator.push(context,MaterialPageRoute<void>(
+              builder:(_)=>LivePublicProfileScreen(userId:field(user,'id')))),
+            trailing:IconButton(tooltip:'Send friend request',
+              icon:const Icon(Icons.person_add_alt,color:BlinkColors.orange),
+              onPressed:()=>_request(field(user,'id'))),
+          ),
+        );
       }))),
   ]));
 }
@@ -55,13 +66,23 @@ class _FriendsState extends State<LiveFriendsScreen>{
     body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
     RefreshIndicator(onRefresh:_load,child:ListView(children:[
       if(friends.isEmpty)const ListTile(title:Text('No friends yet'),subtitle:Text('Discover people and send a friend request.')),
-      ...friends.map((row){final user=obj(obj(row)['user']);return ListTile(
-        leading:liveAvatar(user),title:Text(field(user,'name')),
-        onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>LivePublicProfileScreen(userId:field(user,'id')))),
-        trailing:IconButton(tooltip:'Unfriend',icon:const Icon(Icons.person_remove_outlined),onPressed:()async{
-          try{await LiveApi.call('DELETE','/friends/${Uri.encodeComponent(field(user,'id'))}');await _load();}
-          catch(e){if(context.mounted)liveNotice(context,e.toString());}
-        }),
+      ...friends.map((row){final user=obj(obj(row)['user']);return Padding(
+        padding:const EdgeInsets.symmetric(horizontal:12),
+        child:BlinkProListCard(
+          leading:liveAvatar(user),icon:Icons.favorite_rounded,
+          eyebrow:'CONNECTED ON BLINK',
+          title:field(user,'name'),
+          subtitle:field(user,'bio','Your Blink friend'),
+          badges:const [BlinkInfoPill('Friends',icon:Icons.verified_rounded,highlight:true)],
+          onTap:()=>Navigator.push(context,MaterialPageRoute<void>(
+            builder:(_)=>LivePublicProfileScreen(userId:field(user,'id')))),
+          trailing:IconButton(tooltip:'Unfriend',
+            icon:const Icon(Icons.person_remove_outlined),
+            onPressed:()async{
+              try{await LiveApi.call('DELETE','/friends/${Uri.encodeComponent(field(user,'id'))}');await _load();}
+              catch(e){if(context.mounted)liveNotice(context,e.toString());}
+            }),
+        ),
       );}),
     ])));
 }
@@ -89,14 +110,32 @@ class _RequestsState extends State<LiveRequestsScreen>{
     RefreshIndicator(onRefresh:_load,child:ListView(children:[
       const ListTile(title:Text('Incoming requests',style:TextStyle(fontWeight:FontWeight.bold))),
       if(incoming.isEmpty)const ListTile(title:Text('No incoming requests')),
-      ...incoming.map((r)=>ListTile(leading:liveAvatar(obj(r)['sender']),
-        title:Text(field(obj(r)['sender'],'name')),trailing:Wrap(spacing:4,children:[
-          TextButton(onPressed:()=>_respond(r,'accept'),child:const Text('Accept')),
-          TextButton(onPressed:()=>_respond(r,'decline'),child:const Text('Decline')),
-        ]))),
+      ...incoming.map((r)=>Padding(
+        padding:const EdgeInsets.symmetric(horizontal:12),
+        child:BlinkProListCard(
+          title:field(obj(r)['sender'],'name','Blink member'),
+          leading:liveAvatar(obj(r)['sender']),icon:Icons.person_add_alt_1,
+          eyebrow:'FRIEND REQUEST',
+          subtitle:'Would like to connect with you',
+          footer:Wrap(spacing:8,runSpacing:4,children:[
+            FilledButton.icon(onPressed:()=>_respond(r,'accept'),
+              icon:const Icon(Icons.check_rounded,size:17),
+              label:const Text('Accept')),
+            OutlinedButton(onPressed:()=>_respond(r,'decline'),
+              child:const Text('Decline')),
+          ]),
+        ),
+      )),
       const Divider(),const ListTile(title:Text('Sent requests',style:TextStyle(fontWeight:FontWeight.bold))),
-      ...outgoing.map((r)=>ListTile(leading:liveAvatar(obj(r)['receiver']),
-        title:Text(field(obj(r)['receiver'],'name')),trailing:const Text('Pending'))),
+      ...outgoing.map((r)=>Padding(
+        padding:const EdgeInsets.symmetric(horizontal:12),
+        child:BlinkProListCard(
+          title:field(obj(r)['receiver'],'name','Blink member'),
+          leading:liveAvatar(obj(r)['receiver']),icon:Icons.schedule_rounded,
+          eyebrow:'OUTGOING REQUEST',
+          badges:const [BlinkInfoPill('Pending',icon:Icons.schedule_outlined)],
+        ),
+      )),
     ])));
 }
 

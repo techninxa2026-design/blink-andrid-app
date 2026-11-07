@@ -195,17 +195,9 @@ class _CheckinsState extends State<LiveCheckinsScreen> {
 
   Widget _tile(Map<String, dynamic> item, {bool own = false}) {
     final user = obj(item['user']);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: BlinkColors.line),
-      ),
-      child: InkWell(
-        onTap: () => _openCheckin(item),
-        borderRadius: BorderRadius.circular(18),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    return BlinkProCard(
+      onTap:()=>_openCheckin(item),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Container(width: 52, height: 52,
               alignment: Alignment.center,
@@ -247,7 +239,6 @@ class _CheckinsState extends State<LiveCheckinsScreen> {
               const Icon(Icons.arrow_forward_ios, size: 12, color: BlinkColors.orange),
             ])),
         ]),
-      ),
     );
   }
 
@@ -590,17 +581,33 @@ class _SecretsState extends State<LiveSecretsScreen>{
             final item=obj(raw),id=field(item,'id'),selected=item['myGuess'];
             final choices=arr(item['options']),reveal=item['revealed']==true;
             final own=item['isMine']==true;
-            return Card(child:Padding(padding:const EdgeInsets.all(13),
-              child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            return BlinkProCard(child:Column(
+              crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Row(children:[
-                  Expanded(child:Text(field(item,'prompt'),
-                    style:Theme.of(context).textTheme.titleMedium)),
+                  Container(width:45,height:45,decoration:BoxDecoration(
+                    color:BlinkColors.orangeSoft,borderRadius:BorderRadius.circular(14)),
+                    child:const Icon(Icons.lock_open_outlined,color:BlinkColors.orangeDark)),
+                  const SizedBox(width:11),
+                  Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    Text('BLINK SECRET · '+(own?'YOUR QUESTION':'DISCOVER'),
+                      style:const TextStyle(fontSize:10,letterSpacing:.7,
+                        color:BlinkColors.orangeDark,fontWeight:FontWeight.w800)),
+                    const SizedBox(height:4),
+                    Text(field(item,'prompt'),maxLines:5,overflow:TextOverflow.ellipsis,
+                      style:Theme.of(context).textTheme.titleMedium),
+                  ])),
                   if(item['canEdit']==true)IconButton(
                     tooltip:'Edit your Secret',icon:const Icon(Icons.edit_outlined,
                       color:BlinkColors.orange),onPressed:()=>_create(item)),
                 ]),
-                Text(own?'Your Secret':field(item['author'],'name','Anonymous'),
-                  style:const TextStyle(color:BlinkColors.orange)),
+                const SizedBox(height:12),
+                Wrap(spacing:7,runSpacing:7,children:[
+                  BlinkInfoPill(own?'Your Secret':field(item['author'],'name','Anonymous'),
+                    icon:Icons.person_outline_rounded,highlight:true),
+                  BlinkInfoPill(reveal?'Revealed':'Reveal scheduled',
+                    icon:Icons.schedule_outlined),
+                ]),
+                const SizedBox(height:10),
                 ...choices.asMap().entries.map((entry)=>RadioListTile<int>(
                   title:Text(entry.value.toString()),
                   value:entry.key,groupValue:selected is int?selected:null,
@@ -619,7 +626,7 @@ class _SecretsState extends State<LiveSecretsScreen>{
                     {'emoji':emoji}),child:Text(emoji))).toList()),
                 Text(field(item,'guessCount','0')+' guesses · Earned '+
                   field(item,'myReward','0')+' BP'),
-              ])));
+              ]));
           }),
         ])),
     );
@@ -683,12 +690,17 @@ class _HeartsState extends State<LiveHeartsScreen>{
     ])),
   );
   Widget _heartTile(dynamic value){final heart=obj(value);final id=field(heart,'id');
-    return Card(child:ListTile(
-      leading:const CircleAvatar(child:Icon(Icons.favorite)),
-      title:Text(field(heart['person'],'name',heart['side']=='incoming'?'Anonymous sender':'Blink member')),
-      subtitle:Text(field(heart,'status','PENDING')),
-      onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>LiveHeartThreadScreen(id:id))).then((_){_load();}),
-    ));
+    return BlinkProListCard(
+      icon:Icons.favorite_border_rounded,
+      eyebrow:heart['side']=='incoming'?'RECEIVED HEART':'SENT HEART',
+      title:field(heart['person'],'name',heart['side']=='incoming'?'Anonymous sender':'Blink member'),
+      subtitle:heart['side']=='incoming'
+        ?'A private note from a Blink member':'Your personal Heart conversation',
+      badges:[BlinkInfoPill(field(heart,'status','PENDING'),
+        icon:Icons.favorite_outline,highlight:true)],
+      onTap:()=>Navigator.push(context,MaterialPageRoute<void>(
+        builder:(_)=>LiveHeartThreadScreen(id:id))).then((_){_load();}),
+    );
   }
 }
 

@@ -158,12 +158,20 @@ class _BusinessState extends State<LiveBusinessScreen>{
     ]),
     body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
       RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
-        Card(child:SwitchListTile.adaptive(
-          title:Text(field(profile,'name','Create a professional profile')),
-          subtitle:Text(field(profile,'headline','Add your experience to discover opportunities')),
-          value:profile['active']==true,onChanged:profile.isEmpty?null:_activation,
-          activeTrackColor:BlinkColors.orange,
-        )),
+        BlinkProCard(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          const Text('YOUR PROFESSIONAL IDENTITY',style:TextStyle(
+            letterSpacing:1.1,fontWeight:FontWeight.w900,fontSize:10,
+            color:BlinkColors.orangeDark)),
+          SwitchListTile.adaptive(
+            contentPadding:EdgeInsets.zero,
+            title:Text(field(profile,'name','Create a professional profile'),
+              style:const TextStyle(fontWeight:FontWeight.w800)),
+            subtitle:Text(field(profile,'headline',
+              'Add your experience to discover opportunities')),
+            value:profile['active']==true,onChanged:profile.isEmpty?null:_activation,
+            activeTrackColor:BlinkColors.orange,
+          ),
+        ])),
         if(profile.isEmpty)FilledButton(onPressed:_edit,child:const Text('Create Business Profile')),
         if(profile['active']==true)...[
           Padding(padding:const EdgeInsets.all(10),child:TextField(
@@ -177,33 +185,68 @@ class _BusinessState extends State<LiveBusinessScreen>{
               DropdownMenuItem(value:'COMPANY',child:Text('Companies'))],
             onChanged:(v){type=v??'';page=1;_load();}),
           const ListTile(title:Text('Discover professionals',style:TextStyle(fontWeight:FontWeight.bold))),
-          ...matches.map((m)=>Card(child:ListTile(title:Text(field(m,'name')),
-            subtitle:Text(field(m,'headline')+' · '+field(m,'industry')),
+          ...matches.map((m)=>BlinkProListCard(
+            icon:field(m,'type')=='COMPANY'
+              ?Icons.business_center_rounded:Icons.person_search_rounded,
+            eyebrow:field(m,'type')=='COMPANY'?'COMPANY PROFILE':'BLINK PROFESSIONAL',
+            title:field(m,'name'),
+            subtitle:field(m,'headline'),
+            badges:[
+              if(field(m,'industry').isNotEmpty)
+                BlinkInfoPill(field(m,'industry'),icon:Icons.work_outline_rounded,highlight:true),
+              if(field(m,'location').isNotEmpty)
+                BlinkInfoPill(field(m,'location'),icon:Icons.location_on_outlined),
+            ],
             onTap:()=>_profileDetails(field(m,'id')),
-            trailing:IconButton(tooltip:'Connect',icon:const Icon(Icons.person_add),onPressed:()=>_send(field(m,'id')))))),
+            footer:Row(children:[
+              Expanded(child:OutlinedButton.icon(
+                onPressed:()=>_profileDetails(field(m,'id')),
+                icon:const Icon(Icons.visibility_outlined,size:17),
+                label:const Text('Profile'))),
+              const SizedBox(width:8),
+              Expanded(child:FilledButton.icon(
+                onPressed:()=>_send(field(m,'id')),
+                icon:const Icon(Icons.person_add_alt_1_rounded,size:17),
+                label:const Text('Connect'))),
+            ]),
+          )),
           Row(mainAxisAlignment:MainAxisAlignment.center,children:[
             TextButton(onPressed:page>1?(){page--;_load();}:null,child:const Text('Previous')),
             Text('Page $page'),
             TextButton(onPressed:matches.length==20?(){page++;_load();}:null,child:const Text('Next')),
           ]),
           const ListTile(title:Text('Requests',style:TextStyle(fontWeight:FontWeight.bold))),
-          ...requests.map((r)=>ListTile(
-            title:Text(field(obj(r)['profile'],'name')),
-            subtitle:Text(field(r,'direction')),
-            trailing:field(r,'direction')=='incoming'
-              ?Wrap(spacing:4,children:[
-                TextButton(onPressed:()=>_respond(field(r,'id'),true),child:const Text('Accept')),
-                TextButton(onPressed:()=>_respond(field(r,'id'),false),child:const Text('Decline'))])
-              :IconButton(icon:const Icon(Icons.close),onPressed:()async{
-                try{await LiveApi.call('DELETE','/business-match/requests/${field(r,'id')}');await _load();}
-                catch(e){if(context.mounted)liveNotice(context,e.toString());}
-              }),
+          ...requests.map((r)=>BlinkProListCard(
+            title:field(obj(r)['profile'],'name','Professional'),
+            subtitle:field(r,'direction')=='incoming'
+              ?'Wants to connect with you':'Request awaiting a response',
+            eyebrow:'BUSINESS CONNECTION REQUEST',
+            icon:Icons.mark_email_unread_outlined,
+            badges:[BlinkInfoPill(field(r,'direction'),icon:Icons.schedule_outlined)],
+            footer:Wrap(spacing:8,runSpacing:4,children:[
+              if(field(r,'direction')=='incoming')...[
+                FilledButton.icon(onPressed:()=>_respond(field(r,'id'),true),
+                  icon:const Icon(Icons.check,size:18),label:const Text('Accept')),
+                OutlinedButton(onPressed:()=>_respond(field(r,'id'),false),
+                  child:const Text('Decline')),
+              ]else OutlinedButton.icon(
+                icon:const Icon(Icons.close,size:18),label:const Text('Cancel request'),
+                onPressed:()async{
+                  try{await LiveApi.call('DELETE','/business-match/requests/${field(r,'id')}');await _load();}
+                  catch(e){if(context.mounted)liveNotice(context,e.toString());}
+                }),
+            ]),
           )),
           const ListTile(title:Text('Business Connections',style:TextStyle(fontWeight:FontWeight.bold))),
-          ...connections.map((m)=>ListTile(title:Text(field(obj(m)['profile'],'name')),
-            subtitle:Text(field(obj(m)['profile'],'headline')),
+          ...connections.map((m)=>BlinkProListCard(
+            title:field(obj(m)['profile'],'name','Connection'),
+            subtitle:field(obj(m)['profile'],'headline'),
+            eyebrow:'YOUR BUSINESS NETWORK',
+            icon:Icons.handshake_outlined,
+            badges:const [BlinkInfoPill('Connected',icon:Icons.verified_outlined,highlight:true)],
             onTap:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>
-              LiveBusinessChat(connectionId:field(m,'id'),name:field(obj(m)['profile'],'name')))))),
+              LiveBusinessChat(connectionId:field(m,'id'),name:field(obj(m)['profile'],'name')))),
+          )),
           FilledButton.icon(onPressed:()=>Navigator.push(context,
             MaterialPageRoute<void>(builder:(_)=>const LiveBusinessMeetings())),
             icon:const Icon(Icons.event),label:const Text('Business Meetings')),
@@ -339,15 +382,21 @@ class _MeetingsState extends State<LiveBusinessMeetings>{
     body:error!=null?liveError(error,_load):RefreshIndicator(onRefresh:_load,
       child:ListView(children:[
         if(meetings.isEmpty)const ListTile(title:Text('No meetings scheduled')),
-        ...meetings.map((m)=>Card(child:Column(children:[
-          ListTile(title:Text(field(m,'title','Meeting')),
-            subtitle:Text('${field(m,'status')} · ${field(m,'startsAt')}')),
-          Wrap(children:[
+        ...meetings.map((m)=>BlinkProListCard(
+          title:field(m,'title','Meeting'),
+          subtitle:field(m,'agenda'),
+          eyebrow:'BUSINESS MEETING',
+          icon:Icons.event_available_outlined,
+          badges:[
+            BlinkInfoPill(field(m,'status'),icon:Icons.schedule_outlined,highlight:true),
+            BlinkInfoPill(field(m,'startsAt'),icon:Icons.calendar_month_outlined),
+          ],
+          footer:Wrap(spacing:8,runSpacing:4,children:[
             TextButton(onPressed:()=>_action(field(m,'id'),'accept'),child:const Text('Accept')),
             TextButton(onPressed:()=>_action(field(m,'id'),'decline'),child:const Text('Decline')),
             TextButton(onPressed:()=>_action(field(m,'id'),'cancel'),child:const Text('Cancel')),
           ]),
-        ]))),
+        )),
       ])),
   );
 }
