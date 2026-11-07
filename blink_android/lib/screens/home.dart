@@ -13,7 +13,7 @@ import '../widgets/ui.dart';
 import '../widgets/home_navigation.dart';
 import '../widgets/blink_full_drawer.dart';
 
-import 'blink_live_moment_card.dart';
+import 'blink_moment_story_gallery.dart';
 import 'blink_real_capture.dart';
 
 // ============================================================
@@ -723,7 +723,7 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
   // ==========================================================
   // MAIN FEED UI
   //
-  // ListView.builder avoids creating all video players at once.
+  // A lightweight thumbnail strip avoids creating all video players at once.
   // ==========================================================
 
   @override
@@ -736,27 +736,27 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 20),
 
-        // 1 header + N Moments + 1 footer
-        itemCount: _items.length + 2,
+        // Instagram-style: header, horizontal portrait Moment strip, footer.
+        // Do not instantiate a full video player for every feed item.
+        itemCount: 3,
 
         itemBuilder: (context, index) {
-          if (index == 0) {
-            return _buildHeader();
-          }
+          if (index == 0) return _buildHeader();
+          if (index == 2) return _buildFooter();
 
-          if (index == _items.length + 1) {
-            return _buildFooter();
-          }
-
-          final moment = _items[index - 1];
-
-          return BlinkLiveMomentCard(
-            key: ValueKey(
-              '${_mine ? "my" : "public"}-${moment.id}',
-            ),
-            moment: moment,
-            myUserId: _viewerId,
-            onDeleted: _refresh,
+          return BlinkMomentStoryStrip(
+            moments: _items,
+            onOpen: (selected) async {
+              await Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => BlinkMomentViewer(
+                  moments: List<BlinkMoment>.of(_items),
+                  initialIndex: selected,
+                  viewerId: _viewerId,
+                ),
+              ));
+              // Refresh public and own counts after likes, BP gifts or comments.
+              if (mounted) await _refresh();
+            },
           );
         },
       ),
