@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 
 import '../core/blink_home_api.dart';
+import '../core/live_api.dart';
 import '../core/theme.dart';
 
 class BlinkLiveMomentCard extends StatefulWidget {
@@ -125,6 +126,94 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
     }
   }
 
+
+  Future<void> _viewers() async {
+    try {
+      final result = await BlinkHomeApi.request('GET', '/moments/' + Uri.encodeComponent(widget.moment.id) + '/views');
+      if (!mounted) return;
+      final viewers = result is List ? result : (result is Map ? (result['viewers'] is List ? result['viewers'] as List : <dynamic>[]) : <dynamic>[]);
+      await showModalBottomSheet<void>(context: context, isScrollControlled: true,
+        builder: (ctx) => SafeArea(child: SizedBox(
+          height: MediaQuery.sizeOf(ctx).height * .55,
+          child: Column(children: [
+            const Padding(padding: EdgeInsets.all(17), child: Text('Moment viewers', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800))),
+            Expanded(child: viewers.isEmpty
+              ? const Center(child: Text('No viewers yet'))
+              : ListView.builder(itemCount: viewers.length, itemBuilder: (_, i) {
+                  final v = obj(viewers[i]);
+                  return ListTile(leading: liveAvatar(v, radius: 21),
+                    title: Text(field(v, 'name', 'Blink member')),
+                    subtitle: Text(field(v, 'viewedAt')));
+                })),
+          ]),
+        )));
+    } catch (e) { _notify('Unable to load viewers: $e'); }
+  }
+
+  Future<void> _giftBp() async {
+    if (widget.myUserId == widget.moment.senderId || _busy) return;
+    final balance = _activity?['myBalance'];
+    final amount = await showDialog<int>(context: context, builder: (ctx) => SimpleDialog(
+      title: const Text('Gift Blink Points'),
+      children: [
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Text('Your balance: ' + (balance?.toString() ?? '—') + ' BP')),
+        ...[1, 2, 5, 10, 25, 50, 100].map((n) => SimpleDialogOption(
+          onPressed: () => Navigator.pop(ctx, n),
+          child: Text('Send $n BP', style: const TextStyle(color: BlinkColors.orange)))),
+      ],
+    ));
+    if (amount == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await BlinkHomeApi.request('POST', '/moments/' + Uri.encodeComponent(widget.moment.id) + '/bp',
+        data: {'amount': amount});
+      await _loadActivity();
+      _notify('$amount BP sent successfully!');
+    } catch (e) { _notify('BP gift failed: $e'); }
+    finally { if (mounted) setState(() => _busy = false); }
+  }
+
+  Future<void> _shareToInbox() async {
+    try {
+      final users = arr(await LiveApi.call('GET', '/inbox/friends'));
+      if (!mounted) return;
+      if (users.isEmpty) { _notify('Add a Blink friend to share Moments.'); return; }
+      final friend = await showModalBottomSheet<Map<String,dynamic>>(context: context, builder: (ctx) =>
+        SafeArea(child: ListView(shrinkWrap: true, children: [
+          const ListTile(title: Text('Share Moment to Blink Inbox')),
+          ...users.map((u) => ListTile(
+            leading: liveAvatar(u), title: Text(field(u, 'name')),
+            onTap: () => Navigator.pop(ctx, obj(u)),
+          )),
+        ])));
+      if (friend == null || !mounted) return;
+      final conversation = obj(await LiveApi.call('POST', '/inbox/conversations',
+        {'friendId': field(friend, 'id')}));
+      final id = field(conversation, 'conversationId');
+      if (id.isEmpty) throw const LiveApiError('Unable to open conversation.');
+      await LiveApi.call('POST', '/inbox/conversations/' + Uri.encodeComponent(id) + '/messages', {
+        'body': '📸 Blink Moment shared\n' +
+          ((widget.moment.caption ?? '').isEmpty ? '' : widget.moment.caption! + '\n') +
+          BlinkHomeApi.mediaUrl(widget.moment.mediaUrl)
+      });
+      _notify('Moment shared to ' + field(friend, 'name'));
+    } catch (e) { _notify('Unable to share: $e'); }
+  }
+
+  Future<void> _shareOptions() async {
+    await showModalBottomSheet<void>(context: context, builder: (ctx) => SafeArea(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(leading: const Icon(Icons.chat_bubble_outline, color: BlinkColors.orange),
+          title: const Text('Share to Blink Inbox'),
+          onTap: () { Navigator.pop(ctx); _shareToInbox(); }),
+        ListTile(leading: const Icon(Icons.share_outlined),
+          title: const Text('Share outside Blink'),
+          onTap: () { Navigator.pop(ctx); _share(); }),
+      ]),
+    ));
+  }
+
   Future<void> _deleteMoment() async {
     final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
       title: const Text('Delete Moment?'),
@@ -235,7 +324,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
             ])),
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_horiz_rounded),
-              onSelected: (value) => value == 'delete' ? _deleteMoment() : _share(),
+              onSelected: (value) => value == 'delete' ? _deleteMoment() : _shareOptions(),
               itemBuilder: (context) => [
                 const PopupMenuItem(value: 'share', child: Text('Share')),
                 if (widget.moment.senderId == widget.myUserId)
@@ -320,7 +409,12 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
           Text('$total', style: const TextStyle(fontSize: 11)),
           IconButton(onPressed: _comments, icon: const Icon(Icons.mode_comment_outlined, size: 22)),
           Text('$comments', style: const TextStyle(fontSize: 11)),
-          IconButton(onPressed: _share, icon: const Icon(Icons.send_outlined, size: 21)),
+          IconButton(onPressed: _shareOptions, tooltip: 'Share Moment', icon: const Icon(Icons.send_outlined, size: 21)),
+          if (widget.moment.senderId != widget.myUserId)
+            IconButton(onPressed: _busy ? null : _giftBp, tooltip: 'Gift Blink Points',
+              icon: const Icon(Icons.stars_outlined, color: BlinkColors.orange, size: 23)),
+          if (widget.moment.senderId == widget.myUserId)
+            IconButton(onPressed: _viewers, tooltip: 'Moment viewers', icon: const Icon(Icons.visibility_outlined, size: 23)),
           const Spacer(),
           IconButton(onPressed: _toggleSave,
             icon: Icon(_saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded)),
