@@ -127,6 +127,13 @@ void main() {
       }
     }
     expect(onboardingError, isNull);
+
+    // Exercise all three artwork/caption layouts, not just the first page.
+    for (var page = 0; page < 2; page++) {
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    }
   });
 
   testWidgets('Explore cards remain readable at 280px with large text',
