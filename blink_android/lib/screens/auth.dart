@@ -235,21 +235,17 @@ class SplashScreen extends StatelessWidget {
                                 ),
                               ),
                               child: const Row(
-                                mainAxisAlignment:
-                                MainAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    'Get Started',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight:
-                                      FontWeight.w900,
-                                    ),
-                                  ),
-                                  SizedBox(width: 10),
-                                  Icon(
-                                    Icons.arrow_forward_rounded,
-                                  ),
+                                  Flexible(child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text('Get Started', maxLines: 1,
+                                      softWrap: false,
+                                      style: TextStyle(fontSize: 15,
+                                        fontWeight: FontWeight.w900)),
+                                  )),
+                                  SizedBox(width: 8),
+                                  Icon(Icons.arrow_forward_rounded),
                                 ],
                               ),
                             ),
