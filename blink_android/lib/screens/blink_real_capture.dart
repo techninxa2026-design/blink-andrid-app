@@ -842,7 +842,16 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
             begin: Alignment.topCenter, end: Alignment.bottomCenter,
           ),
         )))),
-        SafeArea(child: Column(children: [
+        // Controls remain scrollable on compact screens and when the caption
+        // keyboard opens. The camera surface itself always fills the background.
+        SafeArea(child: LayoutBuilder(builder: (context, viewport) =>
+          SingleChildScrollView(
+            reverse: true,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom > 0 ? 10 : 0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: viewport.maxHeight),
+              child: IntrinsicHeight(child: Column(children: [
           Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Row(children: [
             IconButton(onPressed: _uploading ? null : () => Navigator.maybePop(context),
               icon: const Icon(Icons.close_rounded, color: Colors.white, size: 29)),
@@ -961,6 +970,9 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
             child: Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white))),
           const SizedBox(height: 20),
         ])),
+            ),
+          ),
+        )),
       ]),
     );
   }
