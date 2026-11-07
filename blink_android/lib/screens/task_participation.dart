@@ -80,9 +80,13 @@ class _FullTaskDetailState extends State<FullTaskDetail> {
                   Uri.encodeComponent(field(image,'id')),width:130,fit:BoxFit.cover,
                   errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined)))),
             ])),
-          if(locked)Card(color:BlinkColors.orangeSoft,child:ListTile(
-            title:Text('Participation: '+field(saved,'status')),
-            subtitle:Text('Approved reward: '+field(saved,'earnedBp','0')+' BP'))),
+          if(locked)BlinkProListCard(
+            title:'Participation: '+field(saved,'status'),
+            eyebrow:'YOUR SUBMISSION',
+            icon:Icons.verified_user_outlined,
+            badges:[BlinkInfoPill('${field(saved,'earnedBp','0')} BP approved',
+              icon:Icons.stars_rounded,highlight:true)],
+          ),
           const Divider(height:30),
           Text('Named checklists',style:Theme.of(context).textTheme.titleLarge),
           ...arr(task['checklists']).map((rawGroup){
@@ -94,10 +98,18 @@ class _FullTaskDetailState extends State<FullTaskDetail> {
                 final item=obj(rawItem),id=field(item,'id');
                 final matches=steps.where((s)=>field(s,'checklistItemId')==id).toList();
                 final step=matches.isEmpty?<String,dynamic>{}:matches.first;
-                return Card(child:Column(children:[
-                  CheckboxListTile(title:Text(field(item,'text')),
-                    subtitle:Text(field(item,'rewardBp')+' BP · '+
-                      (step.isEmpty?'No evidence saved':field(step,'reviewStatus'))),
+                return BlinkProCard(padding:const EdgeInsets.fromLTRB(8,8,8,3),
+                  child:Column(children:[
+                  CheckboxListTile(
+                    activeColor:BlinkColors.orange,
+                    title:Text(field(item,'text'),
+                      style:const TextStyle(fontWeight:FontWeight.w800)),
+                    subtitle:Wrap(spacing:6,runSpacing:6,children:[
+                      BlinkInfoPill('${field(item,'rewardBp','0')} BP',
+                        icon:Icons.stars_rounded,highlight:true),
+                      BlinkInfoPill(step.isEmpty?'No evidence saved'
+                        :field(step,'reviewStatus'),icon:Icons.checklist_rtl_outlined),
+                    ]),
                     value:selected.contains(id),onChanged:owner||locked||busy?null:
                       (v)=>_check(id,v==true)),
                   if(!owner)Align(alignment:Alignment.centerRight,
