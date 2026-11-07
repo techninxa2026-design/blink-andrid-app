@@ -885,26 +885,40 @@ class ExploreScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final tile = items[index];
 
-                return InkWell(
-                  borderRadius: BorderRadius.circular(17),
-                  onTap: () => go(context, tile.route),
-
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: tile.background,
-                      borderRadius: BorderRadius.circular(17),
-                    ),
+                return Material(
+                  color:Colors.transparent,
+                  child:InkWell(
+                    borderRadius:BorderRadius.circular(22),
+                    onTap:()=>go(context,tile.route),
+                    child:Container(
+                      padding:const EdgeInsets.all(11),
+                      decoration:BoxDecoration(
+                        gradient:LinearGradient(
+                          begin:Alignment.topLeft,end:Alignment.bottomRight,
+                          colors:[Colors.white,Color.lerp(tile.background,
+                            Colors.white,.23)!]),
+                        borderRadius:BorderRadius.circular(22),
+                        border:Border.all(color:const Color(0xFFFFDBC7)),
+                        boxShadow:const [
+                          BoxShadow(color:Color(0x12AF5918),blurRadius:17,
+                            offset:Offset(0,7)),
+                        ],
+                      ),
 
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: 46,
-                          height: 46,
-                          decoration: const BoxDecoration(
-                            color: Color(0xCCFFFFFF),
-                            shape: BoxShape.circle,
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color:Colors.white,
+                            borderRadius:BorderRadius.circular(16),
+                            border:Border.all(color:const Color(0xFFFFD8C5)),
+                            boxShadow:const [
+                              BoxShadow(color:Color(0x12000000),blurRadius:9,
+                                offset:Offset(0,3)),
+                            ],
                           ),
                           child: Icon(
                             tile.icon,
@@ -937,6 +951,7 @@ class ExploreScreen extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ),
                   ),
                 );
               },
