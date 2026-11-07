@@ -15,6 +15,7 @@ import '../screens/full_tasks.dart';
 import '../screens/full_irl.dart';
 import '../screens/task_participation.dart';
 import '../screens/live_business.dart';
+import '../screens/blink_server_settings.dart';
 
 /// Each visual on the reference board has a concrete, independently navigable route.
 class BlinkRoutes {
@@ -24,6 +25,7 @@ class BlinkRoutes {
     '/login': (_) => const LoginScreen(),
     '/register': (_) => const RegisterScreen(),
     '/forgot': (_) => const ForgotPasswordScreen(),
+    '/server-settings': (_) => const BlinkServerSettingsScreen(),
     '/home': (_) => const HomeScreen(),
     '/explore': (_) => const ExploreScreen(),
     '/capture': (_) => const CaptureScreen(),
