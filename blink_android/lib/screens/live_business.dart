@@ -193,11 +193,76 @@ class _MeetingsState extends State<LiveBusinessMeetings>{
     try{final rows=arr(await LiveApi.call('GET','/business-match/meetings'));
       if(mounted)setState((){meetings=rows;error=null;});}
     catch(e){if(mounted)setState(()=>error=e.toString());}}
+
+  Future<void> _create()async{
+    try{
+      final connections=arr(await LiveApi.call('GET','/business-match/connections'));
+      if(!mounted)return;
+      if(connections.isEmpty){
+        liveNotice(context,'Connect with a business partner before scheduling a meeting.');
+        return;
+      }
+      final title=TextEditingController(),agenda=TextEditingController(),location=TextEditingController();
+      String connectionId=field(connections.first,'id');
+      var startsAt=DateTime.now().add(const Duration(days:1));
+      var endsAt=startsAt.add(const Duration(hours:1));
+      final values=await showDialog<Map<String,dynamic>>(context:context,
+        builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+          title:const Text('Schedule Business Meeting'),
+          content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+            DropdownButtonFormField<String>(initialValue:connectionId,
+              decoration:const InputDecoration(labelText:'Business connection'),
+              items:connections.map((c)=>DropdownMenuItem(
+                value:field(c,'id'),child:Text(field(obj(c)['profile'],'name','Partner')))).toList(),
+              onChanged:(v){if(v!=null)update(()=>connectionId=v);}),
+            TextField(controller:title,maxLength:120,
+              decoration:const InputDecoration(labelText:'Meeting title')),
+            TextField(controller:agenda,maxLength:1000,maxLines:3,
+              decoration:const InputDecoration(labelText:'Agenda')),
+            TextField(controller:location,maxLength:300,
+              decoration:const InputDecoration(labelText:'Meeting link or location')),
+            TextButton.icon(icon:const Icon(Icons.event),label:Text('Starts: '+startsAt.toString().substring(0,16)),
+              onPressed:()async{
+                final date=await showDatePicker(context:ctx,initialDate:startsAt,
+                  firstDate:DateTime.now(),lastDate:DateTime.now().add(const Duration(days:365)));
+                if(date==null||!ctx.mounted)return;
+                final tm=await showTimePicker(context:ctx,initialTime:TimeOfDay.fromDateTime(startsAt));
+                if(tm!=null)update((){
+                  startsAt=DateTime(date.year,date.month,date.day,tm.hour,tm.minute);
+                  endsAt=startsAt.add(const Duration(hours:1));
+                });
+              }),
+            TextButton.icon(icon:const Icon(Icons.access_time),label:Text('Ends: '+endsAt.toString().substring(0,16)),
+              onPressed:()async{
+                final tm=await showTimePicker(context:ctx,initialTime:TimeOfDay.fromDateTime(endsAt));
+                if(tm!=null)update(()=>endsAt=DateTime(
+                  startsAt.year,startsAt.month,startsAt.day,tm.hour,tm.minute));
+              }),
+            const Text('Meeting duration must be 8 hours or less.'),
+          ])),
+          actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+            FilledButton(onPressed:()=>Navigator.pop(ctx,{
+              'connectionId':connectionId,'title':title.text.trim(),
+              'agenda':agenda.text.trim(),'location':location.text.trim(),
+              'startsAt':startsAt.toUtc().toIso8601String(),
+              'endsAt':endsAt.toUtc().toIso8601String(),
+            }),child:const Text('Schedule'))],
+        )));
+      title.dispose();agenda.dispose();location.dispose();
+      if(values==null)return;
+      await LiveApi.call('POST','/business-match/meetings',values);
+      await _load();
+      if(mounted)liveNotice(context,'Meeting invitation sent.');
+    }catch(e){if(mounted)liveNotice(context,e.toString());}
+  }
+
   Future<void> _action(String id,String action)async{
     try{await LiveApi.call('PATCH','/business-match/meetings/$id/$action');await _load();}
     catch(e){if(mounted)liveNotice(context,e.toString());}
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Business Meetings')),
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Business Meetings'),actions:[
+      IconButton(tooltip:'Schedule meeting',onPressed:_create,
+        icon:const Icon(Icons.add_circle_outline))]),
     body:error!=null?liveError(error,_load):RefreshIndicator(onRefresh:_load,
       child:ListView(children:[
         if(meetings.isEmpty)const ListTile(title:Text('No meetings scheduled')),
