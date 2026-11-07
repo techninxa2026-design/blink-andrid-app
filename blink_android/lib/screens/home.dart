@@ -620,22 +620,7 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
 
         const SizedBox(height: 10),
 
-        if (kDebugMode && !_loading && _error == null)
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 5,
-            ),
-            child: Text(
-              'DEBUG: API returned $_serverCount | '
-                  'Displayed ${_items.length} | '
-                  '${_mine ? "My Moments" : "Public Moments"}',
-              style: const TextStyle(
-                fontSize: 11,
-                color: BlinkColors.muted,
-              ),
-            ),
-          ),
+        // Debug diagnostics remain in debugPrint, not in the user-facing UI.
       ],
     );
   }
