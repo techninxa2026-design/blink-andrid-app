@@ -11,6 +11,7 @@ import '../screens/live_inbox.dart';
 import '../screens/live_people.dart';
 import '../screens/live_activities.dart';
 import '../screens/live_market.dart';
+import '../screens/full_exchange.dart';
 import '../screens/live_business.dart';
 
 /// Each visual on the reference board has a concrete, independently navigable route.
@@ -53,10 +54,10 @@ class BlinkRoutes {
     '/hearts': (_) => const LiveHeartsScreen(),
     '/heart/send': (_) => const LiveHeartsScreen(),
     '/heart/chat': (_) => const LiveHeartsScreen(),
-    '/exchange': (_) => const LiveExchangeScreen(),
-    '/exchange/detail': (_) => const LiveExchangeScreen(),
-    '/exchange/offer': (_) => const LiveExchangeScreen(),
-    '/exchange/create': (_) => const LiveExchangeScreen(),
+    '/exchange': (_) => const FullExchangeScreen(),
+    '/exchange/detail': (context) { final id = ModalRoute.of(context)?.settings.arguments?.toString() ?? ''; return id.isEmpty ? const FullExchangeScreen() : FullExchangeDetail(id: id); },
+    '/exchange/offer': (_) => const FullExchangeScreen(),
+    '/exchange/create': (_) => const FullExchangeEditor(),
     '/tasks': (_) => const LiveTasksScreen(),
     '/task/detail': (_) => const LiveTasksScreen(),
     '/task/submit': (_) => const LiveTasksScreen(),
