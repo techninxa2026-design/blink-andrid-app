@@ -38,7 +38,11 @@ BlinkOriginalTrack? blinkOriginalTrack(String? id) {
 }
 
 double _wave(double phase, String type) {
-  if (type == 'square') return math.tanh(3.2 * math.sin(phase));
+  if (type == 'square') {
+    final x = 3.2 * math.sin(phase);
+    final e = math.exp(2 * x);
+    return (e - 1) / (e + 1);
+  }
   if (type == 'triangle') return 2 / math.pi * math.asin(math.sin(phase));
   return math.sin(phase);
 }
