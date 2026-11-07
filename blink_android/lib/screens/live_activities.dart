@@ -802,7 +802,7 @@ class _IrlChatState extends State<LiveIrlChatScreen>{
     try{await LiveApi.call('POST','/irl/plans/${widget.planId}/messages',{'text':text.text.trim()});
       text.clear();await _load();
     }catch(e){if(mounted)liveNotice(context,e.toString());}}
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(widget.title)),body:Column(children:[
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:BlinkBrandedTitle(widget.title),body:Column(children:[
     if(error!=null)liveError(error,_load),
     Expanded(child:ListView(children:messages.map((m)=>ListTile(
       title:Text(field(obj(m)['sender'],'name','Blink member')),subtitle:Text(field(m,'text')))).toList())),
