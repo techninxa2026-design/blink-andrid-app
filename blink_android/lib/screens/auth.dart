@@ -1546,6 +1546,15 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
 
+            Align(
+              alignment: Alignment.center,
+              child: TextButton.icon(
+                onPressed: () => go(context, '/server-settings'),
+                icon: const Icon(Icons.dns_outlined, size: 17),
+                label: const Text('Check Blink API connection',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ),
             const SizedBox(height: 13),
 
             // Same button styling.
