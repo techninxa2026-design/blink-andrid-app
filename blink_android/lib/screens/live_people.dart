@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/live_api.dart';
 import '../core/blink_home_api.dart';
@@ -23,7 +24,7 @@ class _DiscoverState extends State<LiveDiscoverPeopleScreen>{
     try{await LiveApi.call('POST','/friends/requests',{'receiverId':id});if(mounted)liveNotice(context,'Friend request sent');}
     catch(e){if(mounted)liveNotice(context,e.toString());}
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Discover People'),actions:[
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Discover People'),actions:[
     IconButton(icon:const Icon(Icons.people),tooltip:'My friends',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveFriendsScreen()))),
     IconButton(icon:const Icon(Icons.person_add_alt),tooltip:'Requests',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveRequestsScreen()))),
   ]),body:Column(children:[
@@ -50,7 +51,7 @@ class _FriendsState extends State<LiveFriendsScreen>{
     try{final rows=arr(await LiveApi.call('GET','/friends'));if(mounted)setState((){friends=rows;loading=false;error=null;});}
     catch(e){if(mounted)setState((){error=e.toString();loading=false;});}
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('My Friends')),
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('My Friends')),
     body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
     RefreshIndicator(onRefresh:_load,child:ListView(children:[
       if(friends.isEmpty)const ListTile(title:Text('No friends yet'),subtitle:Text('Discover people and send a friend request.')),
@@ -83,7 +84,7 @@ class _RequestsState extends State<LiveRequestsScreen>{
     try{await LiveApi.call('POST','/friends/requests/${Uri.encodeComponent(field(request,'id'))}/$answer');await _load();}
     catch(e){if(mounted)liveNotice(context,e.toString());}
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Friend Requests')),body:
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Friend Requests')),body:
     loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
     RefreshIndicator(onRefresh:_load,child:ListView(children:[
       const ListTile(title:Text('Incoming requests',style:TextStyle(fontWeight:FontWeight.bold))),
@@ -188,7 +189,7 @@ class _ProfileState extends State<LiveProfileScreen> {
   Future<void> _openMoment(BlinkMoment item) async {
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (detailContext) => Scaffold(
-        appBar: AppBar(title: const Text('My Moment')),
+        appBar: AppBar(title: const BlinkBrandedTitle('My Moment')),
         backgroundColor: BlinkColors.canvas,
         body: ListView(children: [
           BlinkLiveMomentCard(
@@ -222,7 +223,7 @@ class _ProfileState extends State<LiveProfileScreen> {
     final p = _profile ?? <String, dynamic>{};
     return Scaffold(
       backgroundColor: BlinkColors.canvas,
-      appBar: AppBar(title: const Text('My Profile'), actions: [
+      appBar: AppBar(title: const BlinkBrandedTitle('My Profile'), actions: [
         IconButton(
           tooltip: 'Edit profile',
           icon: const Icon(Icons.edit_outlined),
@@ -414,7 +415,7 @@ class _EditState extends State<LiveEditProfileScreen>{
     catch(e){if(mounted)setState(()=>error=e.toString());}
     finally{if(mounted)setState(()=>busy=false);}
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Edit Profile')),body:ListView(
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Edit Profile')),body:ListView(
     padding:const EdgeInsets.all(18),children:[
       if(error!=null)Text(error!,style:const TextStyle(color:Colors.red)),
       Row(children:[

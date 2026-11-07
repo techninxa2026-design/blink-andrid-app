@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -76,7 +77,7 @@ class _FullExchangeScreenState extends State<FullExchangeScreen> {
   }
 
   @override Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Blink Exchange'), actions: [
+    appBar: AppBar(title: const BlinkBrandedTitle('Blink Exchange'), actions: [
       IconButton(tooltip: 'Create an Exchange post', icon: const Icon(Icons.add_circle_outline),
           onPressed: () => _openEditor()),
     ]),
@@ -306,7 +307,7 @@ class _FullExchangeDetailState extends State<FullExchangeDetail> {
   }
   @override Widget build(BuildContext context) {
     final owner = myId.isNotEmpty && field(post, 'authorId') == myId;
-    return Scaffold(appBar: AppBar(title: const Text('Exchange Details'), actions: [
+    return Scaffold(appBar: AppBar(title: const BlinkBrandedTitle('Exchange Details'), actions: [
       if (owner) IconButton(icon: const Icon(Icons.edit_outlined), onPressed: () async {
         final changed = await Navigator.push<bool>(context,
           MaterialPageRoute(builder: (_) => FullExchangeEditor(post: post)));

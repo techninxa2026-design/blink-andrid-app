@@ -32,6 +32,27 @@ class BlinkLogo extends StatelessWidget {
   }
 }
 
+/// Consistent Blink branding on feature pages without losing page context.
+/// Uses the same immutable final.png logo as Home, auth and Capture.
+class BlinkBrandedTitle extends StatelessWidget {
+  const BlinkBrandedTitle(this.page, {super.key});
+  final String page;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      const BlinkLogo(fontSize: 23),
+      const SizedBox(width: 10),
+      Container(width: 1, height: 20, color: BlinkColors.line),
+      const SizedBox(width: 10),
+      Flexible(child: Text(page, overflow: TextOverflow.ellipsis,
+        maxLines: 1, style: const TextStyle(
+          fontWeight: FontWeight.w800, fontSize: 15, color: BlinkColors.ink))),
+    ],
+  );
+}
+
 // ========================================
 // SHARED SCREEN LAYOUT
 // ========================================

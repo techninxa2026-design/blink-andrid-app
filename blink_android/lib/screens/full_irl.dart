@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/blink_auth_api.dart';
 import '../core/live_api.dart';
@@ -136,7 +137,7 @@ class _IrlState extends State<FullIrlScreen>{
       return (!mine||field(p,'creatorId')==myId)&&
         (filter=='All'||field(p,'category')==filter);
     }).toList();
-    return Scaffold(appBar:AppBar(title:const Text('Blink IRL'),actions:[
+    return Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Blink IRL'),actions:[
       IconButton(onPressed:_create,tooltip:'Create IRL plan',
         icon:const Icon(Icons.add_circle_outline))]),
       body:loading?const Center(child:CircularProgressIndicator(color:BlinkColors.orange))

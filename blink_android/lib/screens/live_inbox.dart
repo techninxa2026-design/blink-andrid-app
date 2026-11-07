@@ -38,7 +38,7 @@ class _LiveInboxState extends State<LiveInboxScreen> {
     return Scaffold(
       drawer: const BlinkFullDrawer(),
       bottomNavigationBar: const BlinkBottomBar(active: 'inbox'),
-      appBar: AppBar(title: const Text('Inbox'), actions: [
+      appBar: AppBar(title: const BlinkBrandedTitle('Inbox'), actions: [
         IconButton(tooltip:'New chat', icon:const Icon(Icons.edit_square),onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveNewChatScreen())).then((_){_load();})),
         IconButton(tooltip:'Create group', icon:const Icon(Icons.group_add_outlined),onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveCreateGroupScreen())).then((_){_load();})),
         IconButton(tooltip:'Refresh', icon:const Icon(Icons.refresh),onPressed:_load),
@@ -95,7 +95,7 @@ class _LiveNewChatState extends State<LiveNewChatScreen> {
     finally{if(mounted)setState(()=>busy=false);}
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('Message a friend')),
+    appBar:AppBar(title:const BlinkBrandedTitle('Message a friend')),
     body:Column(children:[
       Padding(padding:const EdgeInsets.all(12),child:TextField(decoration:const InputDecoration(
         hintText:'Find a friend',prefixIcon:Icon(Icons.search)),onChanged:(v)=>setState(()=>search=v))),
@@ -598,7 +598,7 @@ class _InboxVideoState extends State<_InboxVideoPage>{
   }
   @override Widget build(BuildContext context)=>Scaffold(
     backgroundColor:BlinkColors.canvas,
-    appBar:AppBar(title:const Text('Blink Video')),
+    appBar:AppBar(title:const BlinkBrandedTitle('Blink Video')),
     body:Center(child:FutureBuilder<void>(future:ready,builder:(_,snapshot){
       if(snapshot.hasError)return Text('${snapshot.error}');
       if(snapshot.connectionState!=ConnectionState.done)return const CircularProgressIndicator(color:BlinkColors.orange);
@@ -642,7 +642,7 @@ class _CreateGroupState extends State<LiveCreateGroupScreen>{
     finally{if(mounted)setState(()=>busy=false);}
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('Create Blink Group')),
+    appBar:AppBar(title:const BlinkBrandedTitle('Create Blink Group')),
     body:loading?const Center(child:CircularProgressIndicator()):
       error!=null?liveError(error,_load):
       Column(children:[

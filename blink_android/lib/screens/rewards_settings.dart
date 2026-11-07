@@ -252,7 +252,7 @@ class AppearanceScreen extends StatelessWidget {
   const AppearanceScreen({super.key});
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Appearance')),
+    appBar: AppBar(title: const BlinkBrandedTitle('Appearance')),
     body: ListView(padding: const EdgeInsets.all(20), children: [
       Container(
         padding: const EdgeInsets.all(24),
