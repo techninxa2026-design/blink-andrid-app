@@ -544,7 +544,7 @@ class _SecretsState extends State<LiveSecretsScreen>{
       return filter=='all'||(filter=='mine'&&s['isMine']==true)||
         (filter=='answered'&&s['myGuess']!=null);
     }).toList();
-    return Scaffold(appBar:AppBar(title:const Text('Blink Secrets'),actions:[
+    return Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Blink Secrets'),actions:[
       IconButton(onPressed:()=>_create(),tooltip:'Create Secret',
         icon:const Icon(Icons.add_circle_outline)),
     ]),body:loading?const Center(child:CircularProgressIndicator(color:BlinkColors.orange))
@@ -637,7 +637,7 @@ class _HeartsState extends State<LiveHeartsScreen>{
     catch(e){if(mounted)liveNotice(context,e.toString());}
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('Blink Hearts'),actions:[
+    appBar:AppBar(title:const BlinkBrandedTitle('Blink Hearts'),actions:[
       IconButton(tooltip:'Send Heart',onPressed:_send,icon:const Icon(Icons.favorite_border))]),
     body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
     RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
@@ -697,7 +697,7 @@ class _HeartThreadState extends State<LiveHeartThreadScreen>{
     }catch(e){if(mounted)liveNotice(context,e.toString());}
   }
 
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Heart conversation')),body:Column(children:[
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Heart conversation')),body:Column(children:[
     if(error!=null)liveError(error,_load),
     if(data['side']=='incoming'&&data['status']=='PENDING')
       Row(mainAxisAlignment:MainAxisAlignment.center,children:[
@@ -763,7 +763,7 @@ class _IrlState extends State<LiveIrlScreen>{
     catch(e){if(mounted)liveNotice(context,e.toString());}
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('IRL Plans'),actions:[
+    appBar:AppBar(title:const BlinkBrandedTitle('IRL Plans'),actions:[
       IconButton(tooltip:'Create plan',onPressed:_create,icon:const Icon(Icons.add))]),
     body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
       RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
