@@ -138,7 +138,7 @@ class _SecretsState extends State<LiveSecretsScreen>{
   Future<void> _create([Map<String,dynamic>? existing])async{
     final edit=existing!=null;
     final prompt=TextEditingController(text:field(existing,'prompt'));
-    final options=TextEditingController(text:arr(existing?['options']).join('\n'));
+    final options=TextEditingController(text:arr(existing == null ? null : existing['options']).join('\n'));
     int correct=existing != null && existing['correctIndex'] is int
       ?existing['correctIndex'] as int:0;
     bool anonymous=field(existing,'visibility','ANONYMOUS')!='NAMED';
