@@ -917,31 +917,37 @@ class _FeatureTile extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 37,
-            height: 37,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFE5D5),
-              borderRadius: BorderRadius.circular(12),
+      // The artwork is a fixed-size illustration. Scale the tile artwork
+      // internally so large Android font settings never clip its labels.
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE5D5),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: _orange, size: 19),
+                ),
+              ),
             ),
-            child: Icon(
-              icon,
-              color: _orange,
-              size: 21,
+            SizedBox(
+              height: 18,
+              width: double.infinity,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(title, maxLines: 1, softWrap: false,
+                  style: const TextStyle(fontSize: 12,
+                    fontWeight: FontWeight.w800)),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
