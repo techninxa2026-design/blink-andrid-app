@@ -58,7 +58,8 @@ class _OrangeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 54,
+      height: MediaQuery.textScalerOf(context).scale(15) * 2 + 18 > 54
+          ? MediaQuery.textScalerOf(context).scale(15) * 2 + 18 : 54,
       child: FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
@@ -73,13 +74,16 @@ class _OrangeButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
+            Flexible(child: Text(
               title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
-            ),
+            )),
             if (icon != null) ...[
               const SizedBox(width: 10),
               Icon(icon, size: 20),
@@ -259,12 +263,17 @@ class SplashScreen extends StatelessWidget {
                               '/login',
                               replace: true,
                             ),
-                            child: const Text(
-                              'Already have an account? Sign in',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight:
-                                FontWeight.w700,
+                            child: SizedBox(
+                              width: MediaQuery.sizeOf(context).width - 95,
+                              child: const Text(
+                                'Already have an account? Sign in',
+                                textAlign: TextAlign.center,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ),
