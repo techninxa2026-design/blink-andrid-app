@@ -437,8 +437,8 @@ class _CheckinEditorState extends State<_CheckinEditor> {
         const Row(children: [
           Icon(Icons.lock_outline, color: BlinkColors.muted, size: 17),
           SizedBox(width: 7),
-          Text('Only your Blink friends can see this Check-In.',
-            style: TextStyle(color: BlinkColors.muted, fontSize: 12)),
+          Expanded(child: Text('Only your Blink friends can see this Check-In.',
+            style: TextStyle(color: BlinkColors.muted, fontSize: 12))),
         ]),
         if (error != null) Padding(padding: const EdgeInsets.only(top: 15),
           child: Text(error!, style: const TextStyle(color: Colors.red))),
