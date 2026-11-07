@@ -72,7 +72,7 @@ void main() {
                       icon: Icons.check_circle_outline),
                   ]),
                 ]),
-              )),
+              ),
             ]),
           ),
         ),
