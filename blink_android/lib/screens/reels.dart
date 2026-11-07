@@ -624,7 +624,7 @@ class _ReelDetailState extends State<ReelDetailScreen> {
   @override Widget build(BuildContext context) => Scaffold(
     backgroundColor: BlinkColors.canvas,
     appBar: AppBar(backgroundColor: BlinkColors.surface,
-      foregroundColor: BlinkColors.orangeDark, title: const Text('Reel')),
+      foregroundColor: BlinkColors.orangeDark, title: const BlinkBrandedTitle('Reel')),
     body: FutureBuilder<List<dynamic>>(
       future: _future,
       builder: (context, snapshot) {
