@@ -107,7 +107,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
       await BlinkHomeApi.react(widget.moment.id, '❤️');
       await _loadActivity();
     } catch (error) {
-      _notify('Could not like this Moment: $error');
+      _notify('Could not like this Moment: ${BlinkHomeApi.momentActionError(error)}');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -138,7 +138,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
       await BlinkHomeApi.react(widget.moment.id, selected);
       await _loadActivity();
     } catch (e) {
-      _notify(e.toString());
+      _notify(BlinkHomeApi.momentActionError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -323,7 +323,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
                         _notify('$selected BP sent successfully!');
                       } catch (failure) {
                         if (sheetContext.mounted) update(() {
-                          error = failure.toString();
+                          error = BlinkHomeApi.momentActionError(failure);
                           sending = false;
                         });
                       }
