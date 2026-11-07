@@ -90,17 +90,33 @@ class _FullExchangeScreenState extends State<FullExchangeScreen> {
               onPressed: () => _load(next: 1))),
           onSubmitted: (_) => _load(next: 1)),
         const SizedBox(height: 8),
-        Row(children: [
-          Expanded(child: DropdownButtonFormField<String>(initialValue: kind,
+        LayoutBuilder(builder: (context, constraints) {
+          final categories = DropdownButtonFormField<String>(
+            key: ValueKey(kind),
+            initialValue: kind,
+            isExpanded: true,
             decoration: const InputDecoration(labelText: 'Service type'),
             items: [const DropdownMenuItem(value: '', child: Text('All types')),
-              ..._exchangeKinds.map((k) => DropdownMenuItem(value: k, child: Text(k)))],
-            onChanged: (v) { kind = v ?? ''; _load(next: 1); })),
-          const SizedBox(width: 10),
-          FilterChip(label: const Text('My posts'), selected: mine,
+              ..._exchangeKinds.map((k) => DropdownMenuItem(value: k,
+                child: Text(k, overflow: TextOverflow.ellipsis)))],
+            onChanged: (v) { kind = v ?? ''; _load(next: 1); },
+          );
+          final own = FilterChip(label: const Text('My posts'), selected: mine,
             selectedColor: BlinkColors.orangeSoft,
-            onSelected: (v) { mine = v; _load(next: 1); }),
-        ]),
+            onSelected: (v) { mine = v; _load(next: 1); });
+          if (constraints.maxWidth < 380) {
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              categories,
+              const SizedBox(height: 8),
+              Align(alignment: Alignment.centerLeft, child: own),
+            ]);
+          }
+          return Row(children: [
+            Expanded(child: categories),
+            const SizedBox(width: 10),
+            own,
+          ]);
+        }),
       ])),
       Expanded(child: loading ? const Center(child: CircularProgressIndicator(color: BlinkColors.orange))
         : error.isNotEmpty ? liveError(error, () => _load())
