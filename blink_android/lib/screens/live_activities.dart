@@ -217,6 +217,26 @@ class _HeartThreadState extends State<LiveHeartThreadScreen>{
     try{await LiveApi.call('POST','/hearts/${widget.id}/$suffix',body);await _load();}
     catch(e){if(mounted)liveNotice(context,e.toString());}
   }
+
+  Future<void> _editMessage(dynamic raw)async{
+    final item=obj(raw),id=field(item,'id');
+    if(id.isEmpty||item['fromMe']!=true)return;
+    final controller=TextEditingController(text:field(item,'text'));
+    final edited=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Edit Heart message'),
+      content:TextField(controller:controller,maxLength:2000,maxLines:4,
+        decoration:const InputDecoration(labelText:'Your Heart message')),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+        FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:const Text('Save'))]));
+    controller.dispose();
+    if(edited==null||edited.isEmpty)return;
+    try{
+      await LiveApi.call('PATCH','/hearts/'+Uri.encodeComponent(widget.id)+
+        '/messages/'+Uri.encodeComponent(id),{'text':edited});
+      await _load();
+    }catch(e){if(mounted)liveNotice(context,e.toString());}
+  }
+
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Heart conversation')),body:Column(children:[
     if(error!=null)liveError(error,_load),
     if(data['side']=='incoming'&&data['status']=='PENDING')
@@ -229,7 +249,11 @@ class _HeartThreadState extends State<LiveHeartThreadScreen>{
     if(data['side']=='incoming'&&data['blockedByMe']!=true)
       TextButton(onPressed:()=>_action('block'),child:const Text('Block sender')),
     Expanded(child:ListView(padding:const EdgeInsets.all(15),children:arr(data['messages']).map((m)=>Card(
-      child:Padding(padding:const EdgeInsets.all(12),child:Text(field(m,'text'))))).toList())),
+      child:ListTile(title:Text(field(m,'text')),
+        subtitle:obj(m)['editedAt']!=null?const Text('Edited'):null,
+        trailing:obj(m)['fromMe']==true?IconButton(
+          tooltip:'Edit Heart message',onPressed:()=>_editMessage(m),
+          icon:const Icon(Icons.edit_outlined,color:BlinkColors.orange)):null))).toList())),
     SafeArea(top:false,child:Row(children:[
       Expanded(child:TextField(controller:message,decoration:const InputDecoration(hintText:'Write a Heart reply...'))),
       IconButton(onPressed:()async{if(message.text.trim().isEmpty)return;
