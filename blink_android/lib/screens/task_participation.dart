@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import '../core/blink_auth_api.dart';
@@ -61,7 +62,7 @@ class _FullTaskDetailState extends State<FullTaskDetail> {
     final owner=myId.isNotEmpty&&field(task,'creatorId')==myId;
     final locked=saved.isNotEmpty&&field(saved,'status','DRAFT')!='DRAFT';
     final steps=arr(saved['steps']).map(obj).toList();
-    return Scaffold(appBar:AppBar(title:const Text('Creator Task')),
+    return Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Creator Task')),
       body:loading?const Center(child:CircularProgressIndicator(color:BlinkColors.orange))
         :error.isNotEmpty?liveError(error,_load)
         :RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(16),children:[
@@ -166,7 +167,7 @@ class _EvidenceState extends State<FullTaskEvidenceEditor>{
     finally{if(mounted)setState(()=>busy=false);}
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('Checklist Evidence')),
+    appBar:AppBar(title:const BlinkBrandedTitle('Checklist Evidence')),
     body:ListView(padding:const EdgeInsets.all(16),children:[
       Text(field(widget.item,'text'),style:Theme.of(context).textTheme.titleLarge),
       Text('Potential reward: '+field(widget.item,'rewardBp')+' BP'),
