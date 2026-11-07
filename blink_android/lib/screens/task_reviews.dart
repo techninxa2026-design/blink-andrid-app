@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
 import '../core/blink_auth_api.dart';
 import '../core/live_api.dart';
 import '../core/theme.dart';
@@ -82,11 +83,11 @@ class _ReviewState extends State<FullTaskReviews>{
       :ListView(padding:const EdgeInsets.all(12),children:[
         Text(field(data['task'],'title'),style:Theme.of(context).textTheme.titleLarge),
         const SizedBox(height:12),
-        SegmentedButton<String>(segments:const [
+        BlinkAdaptiveSegments<String>(segments:const [
           ButtonSegment(value:'SUBMITTED',label:Text('Pending')),
           ButtonSegment(value:'REVIEWED',label:Text('Reviewed')),
           ButtonSegment(value:'ALL',label:Text('All')),
-        ],selected:{filter},onSelectionChanged:(value)=>setState(()=>filter=value.first)),
+        ],selected:{filter},onChanged:(value)=>setState(()=>filter=value.first)),
         if(entries.isEmpty)const ListTile(title:Text('No submissions in this category.')),
         ...entries.map((raw){
           final person=obj(raw);
