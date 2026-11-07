@@ -8,6 +8,7 @@ class LiveCheckinsScreen extends StatefulWidget {
 }
 class _CheckinsState extends State<LiveCheckinsScreen>{
   List<dynamic> items=[];Map<String,dynamic> mine={};String? error;bool loading=true;
+  String tab='all';
   @override void initState(){super.initState();_load();}
   Future<void> _load()async{
     try{final data=await Future.wait([LiveApi.call('GET','/checkins'),LiveApi.call('GET','/checkins/mine')]);
@@ -40,15 +41,74 @@ class _CheckinsState extends State<LiveCheckinsScreen>{
     try{await LiveApi.call(mine.isEmpty?'POST':'PATCH',mine.isEmpty?'/checkins':'/checkins/${field(mine,'id')}',form);await _load();}
     catch(e){if(mounted)liveNotice(context,e.toString());}
   }
+
+  Future<void> _privateReply(Map<String,dynamic> checkin,{String? reaction})async{
+    final friendId=field(checkin,'userId');
+    final name=field(checkin['user'],'name','friend');
+    if(friendId.isEmpty||friendId==field(mine,'userId'))return;
+    String? message;
+    if(reaction!=null)message=reaction;
+    else {
+      final controller=TextEditingController();
+      message=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(
+        title:Text('Reply privately to '+name),
+        content:TextField(controller:controller,maxLength:700,maxLines:4,
+          decoration:const InputDecoration(labelText:'Your private reply')),
+        actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),
+            child:const Text('Reply'))]));
+      controller.dispose();
+    }
+    if(message==null||message.trim().isEmpty)return;
+    try {
+      final opened=obj(await LiveApi.call('POST','/inbox/conversations',
+        {'friendId':friendId}));
+      final id=field(opened,'conversationId');
+      if(id.isEmpty)throw const LiveApiError('Could not open the private chat.');
+      final content=(reaction!=null?'Reacted to':'Replied to')+' Check-In '+
+        field(checkin,'emoji')+' '+field(checkin,'status')+'\n'+message;
+      await LiveApi.call('POST','/inbox/conversations/'+Uri.encodeComponent(id)+
+        '/messages',{'body':content});
+      if(mounted)liveNotice(context,'Private Check-In reply sent to '+name);
+    }catch(e){if(mounted)liveNotice(context,e.toString());}
+  }
+  Future<void> _openCheckin(Map<String,dynamic> checkin)async{
+    if(field(checkin,'userId')==field(mine,'userId'))return;
+    await showModalBottomSheet<void>(context:context,builder:(ctx)=>SafeArea(
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+        ListTile(title:Text(field(checkin['user'],'name','Friend')+"'s Check-In"),
+          subtitle:Text(field(checkin,'emoji')+' '+field(checkin,'status'))),
+        Wrap(spacing:4,children:['❤️','😂','🔥','🥹','👍'].map((emoji)=>TextButton(
+          onPressed:(){Navigator.pop(ctx);_privateReply(checkin,reaction:emoji);},
+          child:Text(emoji,style:const TextStyle(fontSize:25)))).toList()),
+        ListTile(leading:const Icon(Icons.reply_outlined,color:BlinkColors.orange),
+          title:const Text('Reply privately through Blink Inbox'),
+          onTap:(){Navigator.pop(ctx);_privateReply(checkin);}),
+      ]),
+    ));
+  }
+
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const Text('Blink Check-Ins'),actions:[
       IconButton(tooltip:mine.isEmpty?'Create Check-In':'Edit Check-In',onPressed:_compose,icon:Icon(mine.isEmpty?Icons.add:Icons.edit)),
     ]),
     body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
     RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
-      if(items.isEmpty)const ListTile(title:Text('No active Check-Ins from your friends.')),
-      ...items.map((raw){final item=obj(raw);final user=obj(item['user']);
+      SegmentedButton<String>(segments:const [
+        ButtonSegment(value:'all',label:Text('All')),
+        ButtonSegment(value:'friends',label:Text('Friends')),
+        ButtonSegment(value:'mine',label:Text('Mine')),
+      ],selected:{tab},onSelectionChanged:(v)=>setState(()=>tab=v.first)),
+      const SizedBox(height:12),
+      if(items.where((entry)=>tab=='all'||(tab=='mine'
+        ?field(entry,'userId')==field(mine,'userId')
+        :field(entry,'userId')!=field(mine,'userId'))).isEmpty)
+        const ListTile(title:Text('No Check-Ins in this section')),
+      ...items.where((entry)=>tab=='all'||(tab=='mine'
+        ?field(entry,'userId')==field(mine,'userId')
+        :field(entry,'userId')!=field(mine,'userId'))).map((raw){final item=obj(raw);final user=obj(item['user']);
         return Card(child:ListTile(leading:Text(field(item,'emoji'),style:const TextStyle(fontSize:30)),
+          onTap:()=>_openCheckin(item),
           title:Text(field(user,'name','Blink member')+' · '+field(item,'status')),
           subtitle:Text(field(item,'note')+'\n'+field(item,'duration'),maxLines:4),
           trailing:field(item,'id')==field(mine,'id')?IconButton(
@@ -79,7 +139,8 @@ class _SecretsState extends State<LiveSecretsScreen>{
     final edit=existing!=null;
     final prompt=TextEditingController(text:field(existing,'prompt'));
     final options=TextEditingController(text:arr(existing?['options']).join('\n'));
-    int correct=existing?['correctIndex'] is int?existing!['correctIndex'] as int:0:0;
+    int correct=existing != null && existing['correctIndex'] is int
+      ?existing['correctIndex'] as int:0;
     bool anonymous=field(existing,'visibility','ANONYMOUS')!='NAMED';
     int hours=24;
     final data=await showDialog<Map<String,dynamic>>(context:context,
