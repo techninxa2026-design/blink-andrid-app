@@ -1,5 +1,6 @@
 import 'package:blink_android/core/theme.dart';
 import 'package:blink_android/screens/blink_real_capture.dart';
+import 'package:blink_android/screens/auth.dart';
 import 'package:blink_android/widgets/blink_full_drawer.dart';
 import 'package:blink_android/widgets/home_navigation.dart';
 import 'package:blink_android/widgets/ui.dart';
@@ -97,6 +98,18 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Photo'), findsWidgets);
     expect(find.text('Video'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('splash and onboarding never overflow on a compact phone',
+      (tester) async {
+    await setViewport(tester, const Size(280, 520));
+    await tester.pumpWidget(app(const SplashScreen(), scale: 1.6));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(app(const OnboardingScreen(), scale: 1.6));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 
