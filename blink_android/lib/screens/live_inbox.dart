@@ -210,7 +210,7 @@ class _LiveChatState extends State<LiveChatScreen>{
               Padding(padding:const EdgeInsets.all(12),child:FilledButton(
                 onPressed:selected.isEmpty?null:()=>Navigator.pop(ctx,selected.toList()),
                 child:const Text('Forward message'))),
-            ]))));
+            ])))));
       if(recipients==null||recipients.isEmpty)return;
       await _action('POST','/inbox/messages/'+Uri.encodeComponent(field(message,'id'))+'/forward',
         {'friendIds':recipients});
@@ -304,7 +304,7 @@ class _LiveChatState extends State<LiveChatScreen>{
               }).toList())),
               FilledButton(onPressed:selected.isEmpty?null:()=>Navigator.pop(ctx,selected.toList()),
                 child:const Text('Add selected members')),
-            ]))));
+            ])))));
       if(ids==null||ids.isEmpty)return;
       await _action('POST','/inbox/groups/'+Uri.encodeComponent(widget.conversationId)+'/members',
         {'friendIds':ids});
