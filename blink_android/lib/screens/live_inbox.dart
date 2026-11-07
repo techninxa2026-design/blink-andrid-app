@@ -82,13 +82,26 @@ class _LiveInboxState extends State<LiveInboxScreen> {
               final preview=last['unsentAt']!=null?'Message removed':
                 body.startsWith('🎬 Reel by')?'🎬 Shared a Reel':
                 body.isNotEmpty?body:last['mediaKey']!=null?'Media attachment':'New conversation';
-              return ListTile(
-                leading:group?const CircleAvatar(child:Icon(Icons.groups)):liveAvatar(other),
-                title:Text(name),subtitle:Text(preview,maxLines:1,overflow:TextOverflow.ellipsis),
-                trailing: (c['unreadCount'] is num && c['unreadCount']>0)
-                  ? CircleAvatar(radius:12,backgroundColor:BlinkColors.orange,child:Text('${c['unreadCount']}',style:const TextStyle(fontSize:11,color:Colors.white))):null,
-                onTap:()=>Navigator.push(context,MaterialPageRoute<void>(
-                  builder:(_)=>LiveChatScreen(conversationId:field(c,'id'),title:name))).then((_){_load();}),
+              final unread=(c['unreadCount'] is num)
+                ?(c['unreadCount'] as num).toInt():0;
+              return Padding(
+                padding:const EdgeInsets.symmetric(horizontal:12),
+                child:BlinkProListCard(
+                  title:name,
+                  subtitle:preview,
+                  eyebrow:group?'GROUP CONVERSATION':'BLINK PRIVATE INBOX',
+                  icon:group?Icons.groups_2_outlined:Icons.forum_outlined,
+                  leading:group?const Icon(Icons.groups_2_rounded,
+                    color:BlinkColors.orangeDark):liveAvatar(other),
+                  badges:[
+                    if(unread>0)BlinkInfoPill('$unread unread',
+                      icon:Icons.mark_email_unread_outlined,highlight:true),
+                    if(group)const BlinkInfoPill('Group',icon:Icons.people_outline),
+                  ],
+                  onTap:()=>Navigator.push(context,MaterialPageRoute<void>(
+                    builder:(_)=>LiveChatScreen(
+                      conversationId:field(c,'id'),title:name))).then((_){_load();}),
+                ),
               );
             },
           )),
@@ -122,10 +135,16 @@ class _LiveNewChatState extends State<LiveNewChatScreen> {
       Padding(padding:const EdgeInsets.all(12),child:TextField(decoration:const InputDecoration(
         hintText:'Find a friend',prefixIcon:Icon(Icons.search)),onChanged:(v)=>setState(()=>search=v))),
       if(error!=null)liveError(error,_load),
-      Expanded(child:ListView(children:friends.where((u)=>field(u,'name').toLowerCase().contains(search.toLowerCase())).map((u)=>ListTile(
-        leading:liveAvatar(u),title:Text(field(u,'name')),trailing:const Icon(Icons.chat_bubble_outline),
-        enabled:!busy,onTap:()=>_start(u),
-      )).toList())),
+      Expanded(child:ListView(padding:const EdgeInsets.all(12),
+        children:friends.where((u)=>field(u,'name').toLowerCase().contains(
+          search.toLowerCase())).map((u)=>BlinkProListCard(
+          leading:liveAvatar(u),icon:Icons.person_outline,
+          eyebrow:'START A CONVERSATION',
+          title:field(u,'name'),
+          subtitle:field(u,'bio','Blink friend'),
+          trailing:const Icon(Icons.chat_bubble_outline,color:BlinkColors.orangeDark),
+          onTap:busy?null:()=>_start(u),
+        )).toList())),
     ]),
   );
 }
