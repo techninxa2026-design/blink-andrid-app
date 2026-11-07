@@ -67,76 +67,139 @@ class LiveSecretsScreen extends StatefulWidget{
 }
 class _SecretsState extends State<LiveSecretsScreen>{
   List<dynamic> secrets=[];String? error;bool loading=true;
+  String filter='all';
   @override void initState(){super.initState();_load();}
   Future<void> _load()async{
-    try{final rows=arr(await LiveApi.call('GET','/secrets'));if(mounted)setState((){secrets=rows;error=null;loading=false;});}
-    catch(e){if(mounted)setState((){error=e.toString();loading=false;});}
+    try{
+      final rows=arr(await LiveApi.call('GET','/secrets'));
+      if(mounted)setState((){secrets=rows;error=null;loading=false;});
+    }catch(e){if(mounted)setState((){error=e.toString();loading=false;});}
   }
-  Future<void> _create()async{
-    final prompt=TextEditingController();final options=TextEditingController();int correct=0;bool anonymous=true;int hours=24;
-    final data=await showDialog<Map<String,dynamic>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-      title:const Text('Create a Blink Secret'),
-      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        TextField(controller:prompt,maxLines:3,decoration:const InputDecoration(labelText:'Question (5+ characters)')),
-        TextField(controller:options,maxLines:5,decoration:const InputDecoration(labelText:'Options, one per line (2–5)')),
-        DropdownButton<int>(value:correct,isExpanded:true,items:List.generate(5,(i)=>DropdownMenuItem(value:i,child:Text('Correct option: ${i+1}'))),
-          onChanged:(v){if(v!=null)update(()=>correct=v);}),
-        SwitchListTile(title:const Text('Anonymous'),value:anonymous,onChanged:(v)=>update(()=>anonymous=v)),
-        DropdownButton<int>(value:hours,items:const [
-          DropdownMenuItem(value:1,child:Text('Reveal in 1 hour')),
-          DropdownMenuItem(value:24,child:Text('Reveal in 24 hours')),
-          DropdownMenuItem(value:48,child:Text('Reveal in 48 hours')),
-        ],onChanged:(v){if(v!=null)update(()=>hours=v);}),
-      ])),
-      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
-        FilledButton(onPressed:(){
-          final opts=options.text.split('\n').map((e)=>e.trim()).where((e)=>e.isNotEmpty).toList();
-          Navigator.pop(ctx,{'prompt':prompt.text.trim(),'options':opts,'correctIndex':correct,
-            'visibility':anonymous?'ANONYMOUS':'NAMED',
-            'revealAt':DateTime.now().toUtc().add(Duration(hours:hours)).toIso8601String()});
-        },child:const Text('Publish'))],
-    )));
+  Future<void> _create([Map<String,dynamic>? existing])async{
+    final edit=existing!=null;
+    final prompt=TextEditingController(text:field(existing,'prompt'));
+    final options=TextEditingController(text:arr(existing?['options']).join('\n'));
+    int correct=existing?['correctIndex'] is int?existing!['correctIndex'] as int:0:0;
+    bool anonymous=field(existing,'visibility','ANONYMOUS')!='NAMED';
+    int hours=24;
+    final data=await showDialog<Map<String,dynamic>>(context:context,
+      builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
+        title:Text(edit?'Edit Blink Secret':'Create Blink Secret'),
+        content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+          TextField(controller:prompt,maxLength:500,maxLines:3,
+            decoration:const InputDecoration(labelText:'Your question')),
+          TextField(controller:options,maxLines:5,
+            decoration:const InputDecoration(labelText:'Answer options (2–5, one per line)')),
+          DropdownButtonFormField<int>(initialValue:correct,
+            decoration:const InputDecoration(labelText:'Correct answer position'),
+            items:List.generate(5,(i)=>DropdownMenuItem(value:i,
+              child:Text('Option '+(i+1).toString()))),
+            onChanged:(v){if(v!=null)update(()=>correct=v);}),
+          SwitchListTile(title:const Text('Anonymous Secret'),value:anonymous,
+            activeTrackColor:BlinkColors.orange,
+            onChanged:(v)=>update(()=>anonymous=v)),
+          if(!edit)DropdownButtonFormField<int>(initialValue:hours,
+            decoration:const InputDecoration(labelText:'Reveal answers after'),
+            items:const [
+              DropdownMenuItem(value:1,child:Text('1 hour')),
+              DropdownMenuItem(value:24,child:Text('24 hours')),
+              DropdownMenuItem(value:48,child:Text('48 hours')),
+              DropdownMenuItem(value:72,child:Text('72 hours')),
+              DropdownMenuItem(value:168,child:Text('7 days')),
+            ],onChanged:(v){if(v!=null)update(()=>hours=v);}),
+          if(edit)const Text('The existing reveal time stays unchanged.',
+            style:TextStyle(fontSize:12,color:BlinkColors.muted)),
+        ])),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+          FilledButton(onPressed:(){
+            final opts=options.text.split('\n').map((x)=>x.trim())
+              .where((x)=>x.isNotEmpty).toList();
+            if(prompt.text.trim().length<5||opts.length<2||opts.length>5||
+              correct>=opts.length){
+              liveNotice(ctx,'Enter a valid question, 2–5 answers and the correct position.');
+              return;
+            }
+            Navigator.pop(ctx,{
+              'prompt':prompt.text.trim(),'options':opts,'correctIndex':correct,
+              'visibility':anonymous?'ANONYMOUS':'NAMED',
+              if(!edit)'revealAt':DateTime.now().toUtc()
+                .add(Duration(hours:hours)).toIso8601String(),
+            });
+          },child:Text(edit?'Save':'Publish')),
+        ],
+      )));
     prompt.dispose();options.dispose();
     if(data==null)return;
-    try{await LiveApi.call('POST','/secrets',data);await _load();}
+    try{
+      await LiveApi.call(edit?'PATCH':'POST',
+        edit?'/secrets/'+Uri.encodeComponent(field(existing,'id')):'/secrets',data);
+      await _load();
+    }catch(e){if(mounted)liveNotice(context,e.toString());}
+  }
+  Future<void> _act(String path,Map<String,dynamic> data)async{
+    try{await LiveApi.call('POST',path,data);await _load();}
     catch(e){if(mounted)liveNotice(context,e.toString());}
   }
-  Future<void> _act(String path,Map<String,dynamic> body)async{
-    try{await LiveApi.call('POST',path,body);await _load();}
-    catch(e){if(mounted)liveNotice(context,e.toString());}
+  @override Widget build(BuildContext context){
+    final visible=secrets.where((raw){
+      final s=obj(raw);
+      return filter=='all'||(filter=='mine'&&s['isMine']==true)||
+        (filter=='answered'&&s['myGuess']!=null);
+    }).toList();
+    return Scaffold(appBar:AppBar(title:const Text('Blink Secrets'),actions:[
+      IconButton(onPressed:()=>_create(),tooltip:'Create Secret',
+        icon:const Icon(Icons.add_circle_outline)),
+    ]),body:loading?const Center(child:CircularProgressIndicator(color:BlinkColors.orange))
+      :error!=null?liveError(error,_load)
+      :RefreshIndicator(onRefresh:_load,child:ListView(
+        padding:const EdgeInsets.all(12),children:[
+          SegmentedButton<String>(segments:const [
+            ButtonSegment(value:'all',label:Text('Explore')),
+            ButtonSegment(value:'mine',label:Text('My Secrets')),
+            ButtonSegment(value:'answered',label:Text('Answered')),
+          ],selected:{filter},onSelectionChanged:(values)=>
+            setState(()=>filter=values.first)),
+          const SizedBox(height:12),
+          if(visible.isEmpty)const ListTile(title:Text('No Secrets found for this tab.')),
+          ...visible.map((raw){
+            final item=obj(raw),id=field(item,'id'),selected=item['myGuess'];
+            final choices=arr(item['options']),reveal=item['revealed']==true;
+            final own=item['isMine']==true;
+            return Card(child:Padding(padding:const EdgeInsets.all(13),
+              child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Row(children:[
+                  Expanded(child:Text(field(item,'prompt'),
+                    style:Theme.of(context).textTheme.titleMedium)),
+                  if(item['canEdit']==true)IconButton(
+                    tooltip:'Edit your Secret',icon:const Icon(Icons.edit_outlined,
+                      color:BlinkColors.orange),onPressed:()=>_create(item)),
+                ]),
+                Text(own?'Your Secret':field(item['author'],'name','Anonymous'),
+                  style:const TextStyle(color:BlinkColors.orange)),
+                ...choices.asMap().entries.map((entry)=>RadioListTile<int>(
+                  title:Text(entry.value.toString()),
+                  value:entry.key,groupValue:selected is int?selected:null,
+                  onChanged:own||selected!=null||reveal?null:(index){
+                    if(index!=null)_act('/secrets/'+Uri.encodeComponent(id)+'/guess',
+                      {'selectedIndex':index});
+                  })),
+                if(reveal||own)Text('Correct answer: '+
+                  (item['correctIndex'] is int
+                    ?'Option '+((item['correctIndex'] as int)+1).toString()
+                    :'Pending'),
+                  style:const TextStyle(fontWeight:FontWeight.w700)),
+                if(!reveal)Text('Reveals: '+field(item,'revealAt')),
+                Wrap(spacing:7,children:['🧡','❤️','😮','😂','👏'].map((emoji)=>TextButton(
+                  onPressed:()=>_act('/secrets/'+Uri.encodeComponent(id)+'/react',
+                    {'emoji':emoji}),child:Text(emoji))).toList()),
+                Text(field(item,'guessCount','0')+' guesses · Earned '+
+                  field(item,'myReward','0')+' BP'),
+              ])));
+          }),
+        ])),
+    );
   }
-  @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('Blink Secrets'),actions:[
-      IconButton(onPressed:_create,tooltip:'New Secret',icon:const Icon(Icons.add_circle_outline)),
-    ]),
-    body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
-    RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
-      if(secrets.isEmpty)const ListTile(title:Text('No Secrets from your friends yet.')),
-      ...secrets.map((raw){final item=obj(raw),id=field(item,'id');
-        final selected=item['myGuess'];final options=arr(item['options']);final reveal=item['revealed']==true;
-        return Card(child:Padding(padding:const EdgeInsets.all(15),child:Column(
-          crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text(field(item,'prompt'),style:Theme.of(context).textTheme.titleMedium),
-          Text(item['isMine']==true?'Your Secret':field(item['author'],'name','Anonymous'),
-            style:const TextStyle(color:BlinkColors.orange)),
-          ...options.asMap().entries.map((entry)=>RadioListTile<int>(
-            title:Text(entry.value.toString()),
-            value:entry.key,groupValue:selected is int?selected:null,
-            onChanged:item['isMine']==true||selected!=null||reveal?null:(i){
-              if(i!=null)_act('/secrets/$id/guess',{'selectedIndex':i});
-            },
-          )),
-          if(reveal||item['isMine']==true)Text('Correct option: ${(item['correctIndex'] is int)?(item['correctIndex']+1):'Pending'}',
-            style:const TextStyle(fontWeight:FontWeight.bold)),
-          if(!reveal)Text('Reveal: ${field(item,'revealAt')}'),
-          Wrap(spacing:8,children:['🧡','❤️','😮','😂','👏'].map((e)=>TextButton(
-            onPressed:()=>_act('/secrets/$id/react',{'emoji':e}),
-            child:Text(e))).toList()),
-          Text('${field(item,'guessCount','0')} guesses · Earned ${field(item,'myReward','0')} BP'),
-        ])));
-      }),
-    ])),
-  );
 }
 
 class LiveHeartsScreen extends StatefulWidget{
