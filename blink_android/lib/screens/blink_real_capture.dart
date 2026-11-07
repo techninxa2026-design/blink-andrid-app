@@ -496,12 +496,24 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
               border: Border.all(color: chosen ? Colors.white : Colors.white38),
               borderRadius: BorderRadius.circular(17),
             ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(entry.$2, style: const TextStyle(color: Colors.white, fontSize: 25)),
-              const SizedBox(height: 4),
-              Text(entry.$3, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white,
-                  fontSize: 9, fontWeight: FontWeight.w700)),
+            child: Column(children: [
+              Expanded(child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(entry.$2,
+                  style: const TextStyle(color: Colors.white, fontSize: 25)),
+              )),
+              const SizedBox(height: 2),
+              SizedBox(
+                width: double.infinity,
+                height: 14,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(entry.$3, maxLines: 1, softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white,
+                      fontSize: 9, fontWeight: FontWeight.w700)),
+                ),
+              ),
             ]),
           ),
         );
