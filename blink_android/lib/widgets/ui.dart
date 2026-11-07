@@ -185,7 +185,10 @@ class BlinkBottomBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 74,
+          // Preserve the camera label even at large accessibility text scales.
+          height: MediaQuery.textScalerOf(context).scale(10) > 10
+              ? 74 + (MediaQuery.textScalerOf(context).scale(10) - 10)
+              : 74,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -368,9 +371,10 @@ class BlinkButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scaledMinHeight = MediaQuery.textScalerOf(context).scale(14) * 2 + 18;
     return SizedBox(
       width: double.infinity,
-      height: height,
+      height: scaledMinHeight > height ? scaledMinHeight : height,
       child: outline
           ? OutlinedButton.icon(
         style: OutlinedButton.styleFrom(
@@ -388,6 +392,9 @@ class BlinkButton extends StatelessWidget {
             : Icon(icon, size: 17),
         label: Text(
           text,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
           style: const TextStyle(
             fontWeight: FontWeight.w700,
           ),
@@ -402,7 +409,8 @@ class BlinkButton extends StatelessWidget {
               Icon(icon, size: 18),
               const SizedBox(width: 7),
             ],
-            Text(text),
+            Flexible(child: Text(text, maxLines: 2,
+              overflow: TextOverflow.ellipsis, textAlign: TextAlign.center)),
           ],
         ),
       ),
