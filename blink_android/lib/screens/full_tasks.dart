@@ -174,7 +174,7 @@ class _EditorState extends State<FullCreatorEditor>{
     finally{if(mounted)setState(()=>busy=false);}
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:Text(widget.task==null?'New Creator Task':'Edit Creator Task')),
+    appBar:AppBar(title:BlinkBrandedTitle(widget.task==null?'New Creator Task':'Edit Creator Task')),
     body:ListView(padding:const EdgeInsets.all(16),children:[
       TextField(controller:title,maxLength:140,decoration:const InputDecoration(labelText:'Title')),
       TextField(controller:description,maxLength:4000,minLines:4,maxLines:8,
