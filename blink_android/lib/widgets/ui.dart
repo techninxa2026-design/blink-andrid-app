@@ -813,6 +813,65 @@ class BlinkCreateLayout extends StatelessWidget {
   );
 }
 
+/// Consistent compact form dialog for existing in-place create actions.
+/// It is intentionally a widget, not a new route or an extra page.
+class BlinkFormDialog extends StatelessWidget {
+  const BlinkFormDialog({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.content,
+    required this.actions,
+    this.icon = Icons.edit_note_rounded,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget content;
+  final List<Widget> actions;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    scrollable: true,
+    backgroundColor: Colors.white,
+    insetPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 18),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+    titlePadding: const EdgeInsets.fromLTRB(19, 18, 19, 0),
+    contentPadding: const EdgeInsets.fromLTRB(19, 14, 19, 8),
+    actionsPadding: const EdgeInsets.fromLTRB(15, 5, 15, 14),
+    title: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 41, height: 41,
+          decoration: BoxDecoration(
+            color: BlinkColors.orangeSoft,
+            borderRadius: BorderRadius.circular(13)),
+          child: Icon(icon, color: BlinkColors.orange, size: 23),
+        ),
+        const SizedBox(width: 11),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, maxLines: 3, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 18,
+                fontWeight: FontWeight.w900)),
+            const SizedBox(height: 4),
+            Text(subtitle, style: const TextStyle(
+              fontSize: 12, color: BlinkColors.muted)),
+          ],
+        )),
+      ],
+    ),
+    content: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 510),
+      child: content,
+    ),
+    actions: actions,
+  );
+}
+
 /// White, softly bordered grouping for related inputs in Blink editors.
 class BlinkFormSection extends StatelessWidget {
   const BlinkFormSection({
