@@ -9,6 +9,7 @@ import '../core/blink_auth_api.dart';
 import '../core/theme.dart';
 import '../widgets/ui.dart';
 import '../widgets/blink_full_drawer.dart';
+import 'voice_message.dart';
 
 class LiveInboxScreen extends StatefulWidget {
   const LiveInboxScreen({super.key});
@@ -157,6 +158,21 @@ class _LiveChatState extends State<LiveChatScreen>{
     }catch(e){if(mounted)liveNotice(context,e.toString());}
     finally{if(mounted)setState(()=>busy=false);}
   }
+
+  Future<void> _voice()async{
+    final file=await Navigator.push<File>(context,MaterialPageRoute(
+      builder:(_)=>const BlinkVoiceRecordScreen()));
+    if(file==null||!mounted)return;
+    setState(()=>busy=true);
+    try{
+      await LiveApi.upload('/inbox/conversations/'+
+        Uri.encodeComponent(widget.conversationId)+'/media',file);
+      await _load();
+    }catch(e){if(mounted)liveNotice(context,'Voice upload failed: $e');}
+    finally{await file.delete().catchError((_){return file;});
+      if(mounted)setState(()=>busy=false);}
+  }
+
   Future<void> _action(String method,String path,[Map<String,dynamic>? body])async{
     try{await LiveApi.call(method,path,body);await _load();}catch(e){if(mounted)liveNotice(context,e.toString());}
   }
@@ -396,6 +412,7 @@ class _LiveChatState extends State<LiveChatScreen>{
           width:220,height:175,fit:BoxFit.cover,
           errorBuilder:(_,__,___)=>const Text('Image unavailable')));
     }
+    if(type=='audio')return BlinkVoiceBubble(messageId:id,bearer:bearer);
     if(type=='video'){
       return TextButton.icon(
         icon:const Icon(Icons.play_circle_outline,color:BlinkColors.orange),
@@ -496,6 +513,8 @@ class _LiveChatState extends State<LiveChatScreen>{
       SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(8,8,8,10),
         child:Row(children:[
           IconButton(tooltip:'Attach',onPressed:busy?null:_upload,icon:const Icon(Icons.add_circle_outline,color:BlinkColors.orange)),
+          IconButton(tooltip:'Voice message',onPressed:busy?null:_voice,
+            icon:const Icon(Icons.mic_none_outlined,color:BlinkColors.orange)),
           Expanded(child:TextField(controller:input,minLines:1,maxLines:4,decoration:const InputDecoration(hintText:'Message...'))),
           IconButton(tooltip:'Send',onPressed:busy?null:_send,icon:const Icon(Icons.send,color:BlinkColors.orange)),
         ]))),
