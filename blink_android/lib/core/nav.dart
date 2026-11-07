@@ -12,6 +12,9 @@ import '../screens/live_people.dart';
 import '../screens/live_activities.dart';
 import '../screens/live_market.dart';
 import '../screens/full_exchange.dart';
+import '../screens/full_tasks.dart';
+import '../screens/task_participation.dart';
+import '../screens/task_reviews.dart';
 import '../screens/live_business.dart';
 
 /// Each visual on the reference board has a concrete, independently navigable route.
@@ -58,10 +61,10 @@ class BlinkRoutes {
     '/exchange/detail': (context) { final id = ModalRoute.of(context)?.settings.arguments?.toString() ?? ''; return id.isEmpty ? const FullExchangeScreen() : FullExchangeDetail(id: id); },
     '/exchange/offer': (_) => const FullExchangeScreen(),
     '/exchange/create': (_) => const FullExchangeEditor(),
-    '/tasks': (_) => const LiveTasksScreen(),
-    '/task/detail': (_) => const LiveTasksScreen(),
-    '/task/submit': (_) => const LiveTasksScreen(),
-    '/creator': (_) => const LiveCreatorDashboard(),
+    '/tasks': (_) => const FullTasksScreen(),
+    '/task/detail': (context) { final id = ModalRoute.of(context)?.settings.arguments?.toString() ?? ''; return id.isEmpty ? const FullTasksScreen() : FullTaskDetail(taskId: id); },
+    '/task/submit': (context) { final id = ModalRoute.of(context)?.settings.arguments?.toString() ?? ''; return id.isEmpty ? const FullTasksScreen() : FullTaskDetail(taskId: id); },
+    '/creator': (_) => const FullCreatorDashboard(),
     '/business': (_) => const LiveBusinessScreen(),
     '/business/profile': (_) => const LiveBusinessScreen(),
     '/business/meetings': (_) => const LiveBusinessMeetings(),
