@@ -501,7 +501,7 @@ class _LiveChatState extends State<LiveChatScreen>{
     );
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:Text(widget.title),actions:[
+    appBar:AppBar(title:BlinkBrandedTitle(widget.title),actions:[
       PopupMenuButton<String>(tooltip:'Conversation options',
         onSelected:_conversationAction,itemBuilder:(_)=>[
           const PopupMenuItem(value:'search',child:Text('Search messages')),
