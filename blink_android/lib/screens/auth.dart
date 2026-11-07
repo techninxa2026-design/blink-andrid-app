@@ -488,11 +488,14 @@ class _OnboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        24, 18, 24, 4,
-      ),
-      child: Column(
+    return LayoutBuilder(builder: (context, viewport) =>
+      SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: viewport.maxHeight),
+          child: IntrinsicHeight(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 18, 24, 4),
+              child: Column(
         children: [
           Text(
             title,
@@ -549,6 +552,10 @@ class _OnboardPage extends StatelessWidget {
             ],
           ),
         ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
