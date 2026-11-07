@@ -128,6 +128,12 @@ class SettingsScreen extends StatelessWidget {
               ),
               const Divider(),
               BlinkOptionRow(
+                icon: Icons.dns_outlined,
+                text: 'Blink API connection',
+                onTap: () => go(context, '/server-settings'),
+              ),
+              const Divider(),
+              BlinkOptionRow(
                 icon: Icons.palette_outlined,
                 text: 'Theme and appearance',
                 onTap: () => go(context, '/appearance'),
