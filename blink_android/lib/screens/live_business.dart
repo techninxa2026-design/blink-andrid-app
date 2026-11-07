@@ -170,7 +170,7 @@ class _BusinessChatState extends State<LiveBusinessChat>{
     catch(e){if(mounted)liveNotice(context,e.toString());}
     finally{if(mounted)setState(()=>busy=false);}
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:BlinkBrandedTitle(widget.name),
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:BlinkBrandedTitle(widget.name)),
     body:Column(children:[
       if(error!=null)liveError(error,_load),
       Expanded(child:ListView(children:items.map((m)=>ListTile(
