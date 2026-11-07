@@ -495,22 +495,69 @@ class _EditState extends State<LiveEditProfileScreen>{
     catch(e){if(mounted)setState(()=>error=e.toString());}
     finally{if(mounted)setState(()=>busy=false);}
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Edit Profile')),body:ListView(
-    padding:const EdgeInsets.all(18),children:[
-      if(error!=null)Text(error!,style:const TextStyle(color:Colors.red)),
-      Row(children:[
-        Expanded(child:OutlinedButton.icon(onPressed:busy?null:()=>_upload('avatar'),icon:const Icon(Icons.person),
-          label:const Text('Avatar'))),
-        const SizedBox(width:8),
-        Expanded(child:OutlinedButton.icon(onPressed:busy?null:()=>_upload('cover'),icon:const Icon(Icons.image),
-          label:const Text('Cover'))),
+  @override
+  Widget build(BuildContext context) {
+    const labels = <String, String>{
+      'name': 'Display name',
+      'bio': 'About me',
+      'college': 'College',
+      'highSchool': 'High school',
+      'occupation': 'Occupation',
+      'workplace': 'Workplace',
+    };
+    return BlinkCreateLayout(
+      title: 'Edit Profile',
+      subtitle: 'Introduce yourself to your Blink community.',
+      icon: Icons.person_outline_rounded,
+      busy: busy,
+      primaryLabel: busy ? 'Saving profile...' : 'Save profile',
+      onSubmit: _save,
+      content: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        BlinkFormSection(
+          heading: 'Your photos',
+          helper: 'Choose a profile photo and a cover image.',
+          children: [
+            SizedBox(width: double.infinity, child: OutlinedButton.icon(
+              onPressed: busy ? null : () => _upload('avatar'),
+              icon: const Icon(Icons.person_rounded),
+              label: const Text('Change profile photo'),
+            )),
+            const SizedBox(height: 10),
+            SizedBox(width: double.infinity, child: OutlinedButton.icon(
+              onPressed: busy ? null : () => _upload('cover'),
+              icon: const Icon(Icons.image_rounded),
+              label: const Text('Change cover photo'),
+            )),
+          ],
+        ),
+        const SizedBox(height: 16),
+        BlinkFormSection(
+          heading: 'Personal details',
+          helper: 'Keep your information up to date.',
+          children: [
+            ...controllers.entries.map((e) => Padding(
+              padding: const EdgeInsets.only(bottom: 13),
+              child: TextField(
+                controller: e.value,
+                maxLines: e.key == 'bio' ? 4 : 1,
+                maxLength: e.key == 'bio' ? 500 : null,
+                textCapitalization: TextCapitalization.sentences,
+                textInputAction: e.key == 'bio'
+                  ? TextInputAction.newline : TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: labels[e.key] ?? e.key,
+                  alignLabelWithHint: e.key == 'bio'),
+              ),
+            )),
+          ],
+        ),
+        if (error != null) Padding(
+          padding: const EdgeInsets.only(top: 14),
+          child: Text(error!, style: const TextStyle(color: Colors.red)),
+        ),
       ]),
-      ...controllers.entries.map((e)=>Padding(padding:const EdgeInsets.symmetric(vertical:6),child:TextField(
-        controller:e.value,maxLines:e.key=='bio'?3:1,
-        decoration:InputDecoration(labelText:e.key, border:const OutlineInputBorder())))),
-      const SizedBox(height:15),
-      FilledButton(onPressed:busy?null:_save,child:Text(busy?'Saving...':'Save profile')),
-    ]));
+    );
+  }
 }
 
 
