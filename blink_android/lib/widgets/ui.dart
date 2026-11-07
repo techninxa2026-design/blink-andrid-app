@@ -12,22 +12,31 @@ import '../core/data.dart';
 
 class BlinkLogo extends StatelessWidget {
   final double fontSize;
+  final double? maxWidth;
   final Color? color;
 
   const BlinkLogo({
     super.key,
     this.fontSize = 27,
+    this.maxWidth,
     this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    // The official final.png is intentionally wide. An unconstrained Image in
+    // an AppBar/Row previously forced siblings off-screen on compact devices.
+    final proposed = MediaQuery.sizeOf(context).width * .48;
+    final limit = maxWidth ?? 160.0;
+    final width = proposed > limit ? limit : proposed;
     return Image.asset(
       'assets/branding/final.png',
+      width: width,
       height: fontSize,
       fit: BoxFit.contain,
+      alignment: Alignment.centerLeft,
       filterQuality: FilterQuality.high,
-      semanticLabel: 'Blink',
+      semanticLabel: 'Blink official logo',
     );
   }
 }
@@ -42,7 +51,7 @@ class BlinkBrandedTitle extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      const BlinkLogo(fontSize: 23),
+      const BlinkLogo(fontSize: 23, maxWidth: 72),
       const SizedBox(width: 10),
       Container(width: 1, height: 20, color: BlinkColors.line),
       const SizedBox(width: 10),
