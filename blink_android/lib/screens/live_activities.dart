@@ -297,7 +297,6 @@ class _CheckinsState extends State<LiveCheckinsScreen> {
               style: TextStyle(color: BlinkColors.muted, fontSize: 12)),
             const SizedBox(height: 14),
             BlinkAdaptiveSegments<String>(
-              showSelectedIcon: false,
               segments: const [
                 ButtonSegment(value: 'all', label: Text('All')),
                 ButtonSegment(value: 'friends', label: Text('Friends')),
