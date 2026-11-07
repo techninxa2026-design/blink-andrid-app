@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'core/theme.dart';
 import 'core/nav.dart';
 import 'core/blink_auth_guard.dart';
+import 'core/blink_auth_api.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await blinkAppearance.load();
+  await BlinkAuthApi.loadServerUrl();
   runApp(const BlinkApp());
 }
 
@@ -21,6 +23,7 @@ class BlinkApp extends StatelessWidget {
     '/login',
     '/register',
     '/forgot',
+    '/server-settings',
   };
 
   // Main swipe navigation follows the current
