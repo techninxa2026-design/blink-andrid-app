@@ -1,6 +1,7 @@
 import 'package:blink_android/core/theme.dart';
 import 'package:blink_android/screens/blink_real_capture.dart';
 import 'package:blink_android/screens/auth.dart';
+import 'package:blink_android/screens/home.dart';
 import 'package:blink_android/widgets/blink_full_drawer.dart';
 import 'package:blink_android/widgets/home_navigation.dart';
 import 'package:blink_android/widgets/ui.dart';
@@ -114,6 +115,14 @@ void main() {
 
     await tester.pumpWidget(app(const OnboardingScreen(), scale: 1.6));
     await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Explore cards remain readable at 280px with large text',
+      (tester) async {
+    await setViewport(tester, const Size(280, 610));
+    await tester.pumpWidget(app(const ExploreScreen(), scale: 1.7));
+    await tester.pump();
     expect(tester.takeException(), isNull);
   });
 
