@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../core/live_api.dart';
 import '../core/blink_home_api.dart';
 import '../core/blink_auth_api.dart';
-import 'blink_live_moment_card.dart';
+import 'blink_moment_story_gallery.dart';
 import '../core/theme.dart';
 
 class LiveDiscoverPeopleScreen extends StatefulWidget{
@@ -188,19 +188,39 @@ class _ProfileState extends State<LiveProfileScreen> {
 
   Future<void> _openMoment(BlinkMoment item) async {
     await Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (detailContext) => Scaffold(
-        appBar: AppBar(title: const BlinkBrandedTitle('My Moment')),
-        backgroundColor: BlinkColors.canvas,
-        body: ListView(children: [
-          BlinkLiveMomentCard(
-            moment: item,
-            myUserId: field(_profile, 'id'),
-            onDeleted: () => Navigator.of(detailContext).pop(),
-          ),
-        ]),
+      builder: (_) => BlinkMomentViewer(
+        moments: List<BlinkMoment>.of(_moments),
+        initialIndex: _moments.indexWhere((m) => m.id == item.id),
+        viewerId: field(_profile, 'id'),
       ),
     ));
     if (mounted) _load();
+  }
+
+  Future<void> _deleteMoment(BlinkMoment moment) async {
+    if (_profile == null || moment.senderId != field(_profile, 'id')) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete your Moment?'),
+        content: const Text('This permanently removes the Moment and its media.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await BlinkHomeApi.deleteMoment(moment.id);
+      if (!mounted) return;
+      setState(() => _moments.removeWhere((item) => item.id == moment.id));
+      liveNotice(context, 'Moment deleted from your profile.');
+    } catch (error) {
+      if (mounted) liveNotice(context, 'Unable to delete Moment: $error');
+    }
   }
 
   Future<void> _openReel(BlinkReel reel) async {
@@ -329,7 +349,8 @@ class _ProfileState extends State<LiveProfileScreen> {
                       return _ProfileMediaTile(
                         url: item.mediaType == 'video' ? null : BlinkHomeApi.mediaUrl(item.mediaUrl),
                         video: item.mediaType == 'video',
-                        onTap: () => _openMoment(item));
+                        onTap: () => _openMoment(item),
+                        onDelete: () => _deleteMoment(item));
                     },
                   ),
                   if (_hasMore)
@@ -581,13 +602,11 @@ class _PublicState extends State<LivePublicProfileScreen> {
   }
 
   Future<void> _openMoment(BlinkMoment moment) async {
-    await Navigator.push(context, MaterialPageRoute<void>(
-      builder: (_) => Scaffold(
-        appBar: AppBar(title: BlinkBrandedTitle(field(_profile, 'name', 'Moment'))),
-        backgroundColor: BlinkColors.canvas,
-        body: ListView(children: [
-          BlinkLiveMomentCard(moment: moment, myUserId: _viewerId),
-        ]),
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => BlinkMomentViewer(
+        moments: List<BlinkMoment>.of(_moments),
+        initialIndex: _moments.indexWhere((m) => m.id == moment.id),
+        viewerId: _viewerId,
       ),
     ));
   }
