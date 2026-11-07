@@ -9,10 +9,21 @@ import '../core/live_api.dart';
 import '../core/theme.dart';
 
 class BlinkLiveMomentCard extends StatefulWidget {
-  const BlinkLiveMomentCard({super.key, required this.moment, required this.myUserId, this.onDeleted});
+  const BlinkLiveMomentCard({
+    super.key,
+    required this.moment,
+    required this.myUserId,
+    this.onDeleted,
+    this.immersive = false,
+    this.active = true,
+  });
   final BlinkMoment moment;
   final String myUserId;
   final VoidCallback? onDeleted;
+  /// Full-screen, swipeable Moment viewer with web-parity interaction rail.
+  final bool immersive;
+  /// Keeps off-screen story videos paused when swiping between Moments.
+  final bool active;
 
   @override
   State<BlinkLiveMomentCard> createState() => _BlinkLiveMomentCardState();
@@ -36,12 +47,27 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
     if (widget.moment.mediaType == 'video') _initVideo();
   }
 
+  @override
+  void didUpdateWidget(covariant BlinkLiveMomentCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.immersive || widget.active == oldWidget.active) return;
+    final video = _video;
+    if (video != null && video.value.isInitialized) {
+      if (widget.active) {
+        video.play();
+      } else {
+        video.pause();
+      }
+    }
+  }
+
   Future<void> _initVideo() async {
     final video = VideoPlayerController.networkUrl(Uri.parse(BlinkHomeApi.mediaUrl(widget.moment.mediaUrl)));
     _video = video;
     try {
       await video.initialize();
       await video.setLooping(true);
+      if (widget.immersive && widget.active && mounted) await video.play();
       if (mounted) setState(() {});
     } catch (_) {
       if (mounted) setState(() => _videoError = 'Could not play this video.');
@@ -71,6 +97,20 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
     if (!mounted) return;
     setState(() => _saved = value);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value ? 'Saved on this device' : 'Removed from saved items')));
+  }
+
+  Future<void> _like() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      // Same endpoint and same toggle behavior as the Blink web Like button.
+      await BlinkHomeApi.react(widget.moment.id, '❤️');
+      await _loadActivity();
+    } catch (error) {
+      _notify('Could not like this Moment: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _reaction() async {
@@ -156,28 +196,156 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
     } catch (e) { _notify('Unable to load viewers: $e'); }
   }
 
+  /// Matches the six amounts, balance display and conditional submit of the
+  /// web's MomentActions panel. The NestJS endpoint is the source of truth:
+  /// it validates ownership/balance and transfers funds atomically.
   Future<void> _giftBp() async {
     if (widget.myUserId == widget.moment.senderId || _busy) return;
-    final balance = _activity?['myBalance'];
-    final amount = await showDialog<int>(context: context, builder: (ctx) => SimpleDialog(
-      title: const Text('Gift Blink Points'),
-      children: [
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Text('Your balance: ' + (balance?.toString() ?? '—') + ' BP')),
-        ...[1, 2, 5, 10, 25, 50, 100].map((n) => SimpleDialogOption(
-          onPressed: () => Navigator.pop(ctx, n),
-          child: Text('Send $n BP', style: const TextStyle(color: BlinkColors.orange)))),
-      ],
-    ));
-    if (amount == null || !mounted) return;
-    setState(() => _busy = true);
-    try {
-      await BlinkHomeApi.request('POST', '/moments/' + Uri.encodeComponent(widget.moment.id) + '/bp',
-        data: {'amount': amount});
-      await _loadActivity();
-      _notify('$amount BP sent successfully!');
-    } catch (e) { _notify('BP gift failed: $e'); }
-    finally { if (mounted) setState(() => _busy = false); }
+    await _loadActivity();
+    if (!mounted) return;
+    if (_activity == null) {
+      _notify('Cannot check your BP balance. Try again when connected.');
+      return;
+    }
+
+    const amounts = <int>[1, 5, 10, 25, 50, 100];
+    int selected = 5;
+    bool sending = false;
+    String? error;
+    final rawBalance = _activity!['myBalance'];
+    final balance = rawBalance is num
+        ? rawBalance.toDouble()
+        : double.tryParse('$rawBalance') ?? 0;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: BlinkColors.surface,
+      showDragHandle: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, update) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Row(children: [
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('BLINK MOMENTS', style: TextStyle(
+                        fontSize: 10, fontWeight: FontWeight.w900,
+                        letterSpacing: 1.6, color: BlinkColors.orangeDark)),
+                      const SizedBox(height: 5),
+                      Text('Give Blink Points', style:
+                        Theme.of(sheetContext).textTheme.titleLarge),
+                    ],
+                  )),
+                  IconButton.filledTonal(
+                    tooltip: 'Close',
+                    onPressed: sending ? null : () => Navigator.pop(sheetContext),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ]),
+                const Divider(height: 27),
+                const Text('🧡', style: TextStyle(fontSize: 58)),
+                const SizedBox(height: 10),
+                const Text('Appreciate this Moment by sending Blink Points.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: BlinkColors.muted)),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+                  decoration: BoxDecoration(
+                    color: BlinkColors.orangeSoft,
+                    borderRadius: BorderRadius.circular(13)),
+                  child: Row(children: [
+                    const Expanded(child: Text('Your balance',
+                      style: TextStyle(color: BlinkColors.ink))),
+                    Text('${balance.toStringAsFixed(1)} BP', style:
+                      const TextStyle(color: BlinkColors.orangeDark,
+                        fontWeight: FontWeight.w900)),
+                  ]),
+                ),
+                const SizedBox(height: 14),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: amounts.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisExtent: 50,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8),
+                  itemBuilder: (_, i) {
+                    final amount = amounts[i];
+                    final chosen = amount == selected;
+                    return OutlinedButton(
+                      onPressed: sending ? null : () => update(() => selected = amount),
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        backgroundColor: chosen ? BlinkColors.orangeSoft : Colors.white,
+                        side: BorderSide(
+                          color: chosen ? BlinkColors.orange : BlinkColors.line,
+                          width: chosen ? 1.5 : 1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(11))),
+                      child: Text('$amount BP', style: TextStyle(
+                        color: chosen ? BlinkColors.orangeDark : BlinkColors.ink,
+                        fontWeight: chosen ? FontWeight.w800 : FontWeight.w500)),
+                    );
+                  },
+                ),
+                if (error != null) Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(error!, textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red)),
+                ),
+                if (balance < selected) const Padding(
+                  padding: EdgeInsets.only(top: 9),
+                  child: Text('Insufficient BP balance for this gift.',
+                    style: TextStyle(color: BlinkColors.muted, fontSize: 12)),
+                ),
+                const SizedBox(height: 15),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: sending || balance < selected ? null : () async {
+                      update(() { sending = true; error = null; });
+                      try {
+                        await BlinkHomeApi.request(
+                          'POST',
+                          '/moments/${Uri.encodeComponent(widget.moment.id)}/bp',
+                          data: {'amount': selected},
+                        );
+                        await _loadActivity();
+                        if (sheetContext.mounted) Navigator.pop(sheetContext);
+                        _notify('$selected BP sent successfully!');
+                      } catch (failure) {
+                        if (sheetContext.mounted) update(() {
+                          error = failure.toString();
+                          sending = false;
+                        });
+                      }
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: BlinkColors.orange,
+                      disabledBackgroundColor: const Color(0xFFFFBB91),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(48)),
+                    child: Text(sending ? 'Sending BP...' : 'Send $selected BP'),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _shareToInbox() async {
@@ -311,8 +479,197 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
     return '${d.inDays}d ago';
   }
 
+  Widget _actionTile({
+    required Widget symbol,
+    required String label,
+    required VoidCallback onPressed,
+    String? tooltip,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 7),
+    child: Tooltip(
+      message: tooltip ?? label,
+      child: Material(
+        color: const Color(0xDF24242D),
+        borderRadius: BorderRadius.circular(13),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(13),
+          child: SizedBox(
+            width: 56, height: 57,
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              symbol,
+              const SizedBox(height: 3),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(label, maxLines: 1, style: const TextStyle(
+                  color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  Widget _buildImmersive() {
+    final video = _video;
+    final mine = widget.moment.senderId == widget.myUserId;
+    final myReaction = (_activity?['myReaction'] ?? '').toString();
+    final reactions = (_activity?['reactionTotal'] ?? 0).toString();
+    final comments = (_activity?['commentCount'] ?? 0).toString();
+
+    return Stack(fit: StackFit.expand, children: [
+      const ColoredBox(color: Colors.black),
+      if (widget.moment.mediaType == 'video') ...[
+        if (video != null && video.value.isInitialized)
+          FittedBox(
+            fit: BoxFit.contain,
+            child: SizedBox(
+              width: video.value.size.width,
+              height: video.value.size.height,
+              child: VideoPlayer(video)),
+          )
+        else
+          Center(child: _videoError == null
+            ? const CircularProgressIndicator(color: BlinkColors.orange)
+            : const Icon(Icons.videocam_off_outlined,
+                color: Colors.white54, size: 46)),
+        if (video != null && video.value.isInitialized)
+          Positioned.fill(child: GestureDetector(
+            onTap: _togglePlayback,
+            behavior: HitTestBehavior.translucent,
+            child: Center(child: IgnorePointer(child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 160),
+              opacity: video.value.isPlaying ? 0 : 1,
+              child: const Icon(Icons.play_circle_fill_rounded,
+                color: Colors.white, size: 72),
+            ))),
+          )),
+      ] else
+        Image.network(
+          BlinkHomeApi.mediaUrl(widget.moment.mediaUrl),
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) =>
+            const Center(child: Icon(Icons.broken_image_outlined,
+              color: Colors.white54, size: 50)),
+        ),
+      const IgnorePointer(child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xB9000000), Colors.transparent, Color(0xBE000000)],
+            stops: [0, .33, 1],
+          )),
+      )),
+      SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(15, 56, 15, 28),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Spacer(),
+            Row(children: [
+              CircleAvatar(
+                radius: 19, backgroundColor: BlinkColors.orange,
+                backgroundImage: widget.moment.avatarKey == null
+                  ? null : NetworkImage(
+                      BlinkHomeApi.mediaUrl(widget.moment.avatarKey!)),
+                child: widget.moment.avatarKey == null
+                  ? const Icon(Icons.person_rounded, color: Colors.white)
+                  : null,
+              ),
+              const SizedBox(width: 9),
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(widget.moment.author,
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white,
+                      fontSize: 14, fontWeight: FontWeight.w900)),
+                  Text(_ago(widget.moment.createdAt),
+                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                ],
+              )),
+              IconButton(
+                tooltip: 'Share Moment',
+                onPressed: _shareOptions,
+                icon: const Icon(Icons.send_outlined, color: Colors.white)),
+            ]),
+            if ((widget.moment.caption ?? '').isNotEmpty) ...[
+              const SizedBox(height: 9),
+              Padding(
+                padding: const EdgeInsets.only(right: 64),
+                child: Text(widget.moment.caption!,
+                  maxLines: 3, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 13)),
+              ),
+            ],
+            if (blinkOriginalTrack(widget.moment.musicTrackId) != null)
+              TextButton.icon(
+                onPressed: _toggleSoundtrack,
+                icon: Icon(_soundtrackPlaying ? Icons.pause_circle_outline
+                  : Icons.music_note_rounded, color: Colors.white, size: 18),
+                label: Text(blinkOriginalTrack(widget.moment.musicTrackId)!.title,
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 11)),
+              ),
+          ]),
+        ),
+      ),
+      SafeArea(
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 10, top: 30, bottom: 46),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * .70),
+              child: SingleChildScrollView(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  _actionTile(
+                    symbol: Icon(myReaction == '❤️'
+                      ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
+                      color: myReaction == '❤️' ? BlinkColors.orange : Colors.white,
+                      size: 25),
+                    label: reactions, tooltip: 'Like Moment',
+                    onPressed: _busy ? () {} : _like,
+                  ),
+                  _actionTile(
+                    symbol: Text(myReaction.isNotEmpty && myReaction != '❤️'
+                      ? myReaction : '😊',
+                      style: const TextStyle(fontSize: 24)),
+                    label: 'React', onPressed: _reaction,
+                  ),
+                  _actionTile(
+                    symbol: const Icon(Icons.mode_comment_outlined,
+                      color: Colors.white, size: 25),
+                    label: comments, tooltip: 'Comments',
+                    onPressed: _comments,
+                  ),
+                  _actionTile(
+                    symbol: Icon(mine ? Icons.visibility_outlined
+                        : Icons.card_giftcard_rounded,
+                      color: const Color(0xFFFFB27F), size: 25),
+                    label: mine ? 'Viewers' : 'BP',
+                    tooltip: mine ? 'Moment viewers' : 'Give Blink Points',
+                    onPressed: mine ? _viewers : _giftBp,
+                  ),
+                  _actionTile(
+                    symbol: const Icon(Icons.send_outlined,
+                      color: Colors.white, size: 25),
+                    label: 'Share', onPressed: _shareOptions,
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (widget.immersive) return _buildImmersive();
     final reaction = (_activity?['myReaction'] ?? '').toString();
     final total = _activity?['reactionTotal'] ?? 0;
     final comments = _activity?['commentCount'] ?? 0;
