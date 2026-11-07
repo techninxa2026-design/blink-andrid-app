@@ -548,13 +548,16 @@ class _OnboardPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 9),
-              Text(
+              Flexible(child: Text(
                 caption,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: BlinkColors.muted,
                   fontSize: 12,
                 ),
-              ),
+              )),
             ],
           ),
         ],
