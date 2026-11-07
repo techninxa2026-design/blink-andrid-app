@@ -5,7 +5,6 @@ import 'package:get_video_thumbnail/get_video_thumbnail.dart' as thumb;
 import 'package:get_video_thumbnail/index.dart' as thumbnail_format;
 
 import '../core/blink_home_api.dart';
-import '../core/theme.dart';
 import 'blink_live_moment_card.dart';
 
 /// Compact, horizontal Instagram-style Moment previews from the actual API.
