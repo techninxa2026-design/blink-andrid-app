@@ -84,7 +84,7 @@ class BlinkTaskUploads {
           }
         }
         if (!done) throw LiveApiError('Video upload interrupted: $previous');
-        onProgress?.call((next * 100 ~/ total).clamp(0, 100));
+        onProgress?.call((next * 100 ~/ total).clamp(0, 100).toInt());
       }
       await LiveApi.call('POST', prefix + '/' + Uri.encodeComponent(id) + '/complete');
       return id;
