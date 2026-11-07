@@ -244,12 +244,38 @@ class _IrlState extends State<FullIrlScreen>{
             final plan=obj(raw),id=field(plan,'id');
             final owner=field(plan,'creatorId')==myId;
             final interested=arr(plan['interests']).any((i)=>field(i,'userId')==myId);
-            return Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(
+            return BlinkProCard(child:Column(
               crossAxisAlignment:CrossAxisAlignment.start,children:[
-                Text(field(plan,'title'),style:Theme.of(context).textTheme.titleLarge),
-                Text(field(plan,'category')+' · '+field(plan,'place')),
-                Text(field(plan,'description')),
-                Text('Starts: '+field(plan,'startsAt')),
+                Row(children:[
+                  Container(width:49,height:49,decoration:BoxDecoration(
+                    color:BlinkColors.orangeSoft,
+                    borderRadius:BorderRadius.circular(15)),
+                    child:const Icon(Icons.groups_2_outlined,color:BlinkColors.orangeDark,size:26)),
+                  const SizedBox(width:12),
+                  Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    Text(owner?'YOUR IRL PLAN':'YOUR CIRCLE · IRL',
+                      style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,
+                        letterSpacing:1,color:BlinkColors.orangeDark)),
+                    const SizedBox(height:4),
+                    Text(field(plan,'title'),maxLines:2,overflow:TextOverflow.ellipsis,
+                      style:Theme.of(context).textTheme.titleLarge),
+                  ])),
+                ]),
+                const SizedBox(height:13),
+                Wrap(spacing:7,runSpacing:7,children:[
+                  BlinkInfoPill(field(plan,'category','Hangout'),
+                    icon:Icons.category_outlined,highlight:true),
+                  if(field(plan,'place').isNotEmpty)
+                    BlinkInfoPill(field(plan,'place'),icon:Icons.location_on_outlined),
+                  BlinkInfoPill(field(plan,'startsAt'),icon:Icons.event_outlined),
+                ]),
+                if(field(plan,'description').isNotEmpty)...[
+                  const SizedBox(height:12),
+                  Text(field(plan,'description'),maxLines:4,
+                    overflow:TextOverflow.ellipsis,
+                    style:const TextStyle(height:1.5,color:BlinkColors.ink)),
+                ],
+                const SizedBox(height:10),
                 if(field(plan,'meetupUrl').isNotEmpty)
                   TextButton.icon(onPressed:()=>_openMaps(field(plan,'meetupUrl')),
                     icon:const Icon(Icons.location_on_outlined),label:const Text('Google Maps location')),
@@ -279,7 +305,7 @@ class _IrlState extends State<FullIrlScreen>{
                         :TextButton(onPressed:()=>_invite(id,userId),child:const Text('Invite')));
                   }),
                 ],
-              ])));
+              ]));
           }),
         ])),
     );
