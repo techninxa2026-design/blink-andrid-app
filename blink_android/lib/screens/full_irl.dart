@@ -143,16 +143,33 @@ class _IrlState extends State<FullIrlScreen>{
       body:loading?const Center(child:CircularProgressIndicator(color:BlinkColors.orange))
         :error.isNotEmpty?liveError(error,_load)
         :RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
-          Row(children:[
-            Expanded(child:DropdownButtonFormField<String>(initialValue:filter,
-              decoration:const InputDecoration(labelText:'Category'),
-              items:_irlCategories.map((c)=>DropdownMenuItem(value:c,child:Text(c))).toList(),
-              onChanged:(v){if(v!=null)setState(()=>filter=v);})),
-            const SizedBox(width:10),
-            FilterChip(label:const Text('My plans'),selected:mine,
+          LayoutBuilder(builder:(context,constraints) {
+            final category = DropdownButtonFormField<String>(
+              key: ValueKey(filter),
+              initialValue: filter,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText:'Category'),
+              items: _irlCategories.map((c) =>
+                DropdownMenuItem(value:c,child:Text(c,
+                  overflow:TextOverflow.ellipsis))).toList(),
+              onChanged:(v){if(v!=null)setState(()=>filter=v);},
+            );
+            final own = FilterChip(label:const Text('My plans'),selected:mine,
               selectedColor:BlinkColors.orangeSoft,
-              onSelected:(v)=>setState(()=>mine=v)),
-          ]),
+              onSelected:(v)=>setState(()=>mine=v));
+            if (constraints.maxWidth < 380) {
+              return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                category,
+                const SizedBox(height:8),
+                Align(alignment:Alignment.centerLeft,child:own),
+              ]);
+            }
+            return Row(children:[
+              Expanded(child:category),
+              const SizedBox(width:10),
+              own,
+            ]);
+          }),
           if(visible.isEmpty)const ListTile(title:Text('No IRL plans in this category.')),
           ...visible.map((raw){
             final plan=obj(raw),id=field(plan,'id');

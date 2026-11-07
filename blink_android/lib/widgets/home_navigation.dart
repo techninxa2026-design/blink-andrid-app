@@ -45,7 +45,9 @@ class BlinkHomeBottomBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: MediaQuery.textScalerOf(context).scale(9) > 9
+              ? 64 + (MediaQuery.textScalerOf(context).scale(9) - 9)
+              : 64,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: const [
@@ -217,12 +219,13 @@ class _CaptureNavItem extends StatelessWidget {
 
               const SizedBox(height: 2),
 
-              const Text(
-                'Capture',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w800,
+              const SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Capture', maxLines: 1, softWrap: false,
+                    style: TextStyle(color: Colors.white,
+                      fontSize: 9, fontWeight: FontWeight.w800)),
                 ),
               ),
             ],
@@ -632,8 +635,10 @@ class BlinkHomeCheckins extends StatelessWidget {
           final heading = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: 7,
+                runSpacing: 3,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
                     '🧡',
@@ -712,20 +717,14 @@ class BlinkHomeCheckins extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: heading,
-                    ),
-                    Flexible(
-                      child: seeAll,
-                    ),
-                  ],
+                heading,
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [writeNote, seeAll],
                 ),
-
-                const SizedBox(height: 10),
-
-                writeNote,
               ],
             );
           }

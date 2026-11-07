@@ -12,22 +12,31 @@ import '../core/data.dart';
 
 class BlinkLogo extends StatelessWidget {
   final double fontSize;
+  final double? maxWidth;
   final Color? color;
 
   const BlinkLogo({
     super.key,
     this.fontSize = 27,
+    this.maxWidth,
     this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    // The official final.png is intentionally wide. An unconstrained Image in
+    // an AppBar/Row previously forced siblings off-screen on compact devices.
+    final proposed = MediaQuery.sizeOf(context).width * .48;
+    final limit = maxWidth ?? 160.0;
+    final width = proposed > limit ? limit : proposed;
     return Image.asset(
       'assets/branding/final.png',
+      width: width,
       height: fontSize,
       fit: BoxFit.contain,
+      alignment: Alignment.centerLeft,
       filterQuality: FilterQuality.high,
-      semanticLabel: 'Blink',
+      semanticLabel: 'Blink official logo',
     );
   }
 }
@@ -42,7 +51,7 @@ class BlinkBrandedTitle extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      const BlinkLogo(fontSize: 23),
+      const BlinkLogo(fontSize: 23, maxWidth: 72),
       const SizedBox(width: 10),
       Container(width: 1, height: 20, color: BlinkColors.line),
       const SizedBox(width: 10),
@@ -50,6 +59,41 @@ class BlinkBrandedTitle extends StatelessWidget {
         maxLines: 1, style: const TextStyle(
           fontWeight: FontWeight.w800, fontSize: 15, color: BlinkColors.ink))),
     ],
+  );
+}
+
+/// A segmented filter that stays usable at narrow widths and larger text
+/// scales rather than forcing the screen into a horizontal RenderFlex overflow.
+class BlinkAdaptiveSegments<T> extends StatelessWidget {
+  const BlinkAdaptiveSegments({
+    super.key,
+    required this.segments,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<ButtonSegment<T>> segments;
+  final Set<T> selected;
+  final ValueChanged<Set<T>> onChanged;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: constraints.maxWidth),
+        child: SegmentedButton<T>(
+          showSelectedIcon: false,
+          segments: segments,
+          selected: selected,
+          onSelectionChanged: onChanged,
+          style: const ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.padded,
+          ),
+        ),
+      ),
+    ),
   );
 }
 
@@ -150,7 +194,10 @@ class BlinkBottomBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 74,
+          // Preserve the camera label even at large accessibility text scales.
+          height: MediaQuery.textScalerOf(context).scale(10) > 10
+              ? 74 + (MediaQuery.textScalerOf(context).scale(10) - 10)
+              : 74,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -203,12 +250,13 @@ class BlinkBottomBar extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 3),
-                        const Text(
-                          'Capture',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
+                        const SizedBox(
+                          width: double.infinity,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text('Capture', maxLines: 1, softWrap: false,
+                              style: TextStyle(color: Colors.white,
+                                fontSize: 10, fontWeight: FontWeight.w800)),
                           ),
                         ),
                       ],
@@ -333,9 +381,10 @@ class BlinkButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scaledMinHeight = MediaQuery.textScalerOf(context).scale(14) * 2 + 18;
     return SizedBox(
       width: double.infinity,
-      height: height,
+      height: scaledMinHeight > height ? scaledMinHeight : height,
       child: outline
           ? OutlinedButton.icon(
         style: OutlinedButton.styleFrom(
@@ -353,6 +402,9 @@ class BlinkButton extends StatelessWidget {
             : Icon(icon, size: 17),
         label: Text(
           text,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
           style: const TextStyle(
             fontWeight: FontWeight.w700,
           ),
@@ -367,7 +419,8 @@ class BlinkButton extends StatelessWidget {
               Icon(icon, size: 18),
               const SizedBox(width: 7),
             ],
-            Text(text),
+            Flexible(child: Text(text, maxLines: 2,
+              overflow: TextOverflow.ellipsis, textAlign: TextAlign.center)),
           ],
         ),
       ),

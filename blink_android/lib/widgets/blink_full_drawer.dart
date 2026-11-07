@@ -24,16 +24,23 @@ class BlinkFullDrawer extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.bolt_rounded, size: 32, color: Colors.white),
-                  const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Blink', style: TextStyle(
-                          color: Colors.white, fontSize: 29,
-                          fontWeight: FontWeight.w900)),
-                        Text('Your world, one moment at a time',
+                        Container(
+                          constraints: const BoxConstraints(maxWidth: 165),
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10)),
+                          child: Image.asset('assets/branding/final.png',
+                            height: 25, fit: BoxFit.contain,
+                            semanticLabel: 'Blink official logo'),
+                        ),
+                        const SizedBox(height: 7),
+                        const Text('Your world, one moment at a time',
+                          maxLines: 2, overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: Colors.white, fontSize: 11)),
                       ],
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
 import '../core/blink_auth_api.dart';
 import '../core/live_api.dart';
 import '../core/theme.dart';
@@ -68,25 +69,25 @@ class _ReviewState extends State<FullTaskReviews>{
       if(url.isEmpty)throw const LiveApiError('Video URL unavailable.');
       if(!mounted)return;
       Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>Scaffold(
-        appBar:AppBar(title:const Text('Evidence video')),
+        appBar:AppBar(title:const BlinkBrandedTitle('Evidence video')),
         body:TaskMediaVideo(url:LiveApi.root+url))));
     }catch(e){if(mounted)liveNotice(context,e.toString());}
   }
   @override Widget build(BuildContext context){
     final entries=arr(data['submissions']).where((p)=>filter=='ALL'||
       field(p,'status')==filter).toList();
-    return Scaffold(appBar:AppBar(title:const Text('Task Verification'),
+    return Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Task Verification'),
       actions:[IconButton(tooltip:'Refresh',onPressed:_load,icon:const Icon(Icons.refresh))]),
       body:loading?const Center(child:CircularProgressIndicator(color:BlinkColors.orange))
       :error.isNotEmpty?liveError(error,_load)
       :ListView(padding:const EdgeInsets.all(12),children:[
         Text(field(data['task'],'title'),style:Theme.of(context).textTheme.titleLarge),
         const SizedBox(height:12),
-        SegmentedButton<String>(segments:const [
+        BlinkAdaptiveSegments<String>(segments:const [
           ButtonSegment(value:'SUBMITTED',label:Text('Pending')),
           ButtonSegment(value:'REVIEWED',label:Text('Reviewed')),
           ButtonSegment(value:'ALL',label:Text('All')),
-        ],selected:{filter},onSelectionChanged:(value)=>setState(()=>filter=value.first)),
+        ],selected:{filter},onChanged:(value)=>setState(()=>filter=value.first)),
         if(entries.isEmpty)const ListTile(title:Text('No submissions in this category.')),
         ...entries.map((raw){
           final person=obj(raw);

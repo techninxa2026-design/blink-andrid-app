@@ -37,11 +37,33 @@ class _LiveInboxState extends State<LiveInboxScreen> {
     }).toList();
     return Scaffold(
       drawer: const BlinkFullDrawer(),
-      bottomNavigationBar: const BlinkBottomBar(active: 'inbox'),
+      // Hide the tab bar while the search keyboard is open; otherwise the
+      // remaining message-list area collapses on small screens.
+      bottomNavigationBar: MediaQuery.viewInsetsOf(context).bottom > 0
+          ? null : const BlinkBottomBar(active: 'inbox'),
       appBar: AppBar(title: const BlinkBrandedTitle('Inbox'), actions: [
-        IconButton(tooltip:'New chat', icon:const Icon(Icons.edit_square),onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveNewChatScreen())).then((_){_load();})),
-        IconButton(tooltip:'Create group', icon:const Icon(Icons.group_add_outlined),onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveCreateGroupScreen())).then((_){_load();})),
-        IconButton(tooltip:'Refresh', icon:const Icon(Icons.refresh),onPressed:_load),
+        IconButton(
+          tooltip: 'New chat',
+          icon: const Icon(Icons.edit_square),
+          onPressed: () => Navigator.push(context, MaterialPageRoute<void>(
+            builder: (_) => const LiveNewChatScreen())).then((_) => _load()),
+        ),
+        PopupMenuButton<String>(
+          tooltip: 'More Inbox actions',
+          icon: const Icon(Icons.more_vert_rounded),
+          onSelected: (value) {
+            if (value == 'group') {
+              Navigator.push(context, MaterialPageRoute<void>(
+                builder: (_) => const LiveCreateGroupScreen())).then((_) => _load());
+            } else if (value == 'refresh') {
+              _load();
+            }
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'group', child: Text('Create group')),
+            PopupMenuItem(value: 'refresh', child: Text('Refresh Inbox')),
+          ],
+        ),
       ]),
       body: Column(children:[
         Padding(padding:const EdgeInsets.all(14),child:TextField(
@@ -479,7 +501,7 @@ class _LiveChatState extends State<LiveChatScreen>{
     );
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:Text(widget.title),actions:[
+    appBar:AppBar(title:BlinkBrandedTitle(widget.title),actions:[
       PopupMenuButton<String>(tooltip:'Conversation options',
         onSelected:_conversationAction,itemBuilder:(_)=>[
           const PopupMenuItem(value:'search',child:Text('Search messages')),

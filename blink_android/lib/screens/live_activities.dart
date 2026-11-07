@@ -296,15 +296,14 @@ class _CheckinsState extends State<LiveCheckinsScreen> {
             const Text('Only you and your friends can see your Check-Ins.',
               style: TextStyle(color: BlinkColors.muted, fontSize: 12)),
             const SizedBox(height: 14),
-            SegmentedButton<String>(
-              showSelectedIcon: false,
+            BlinkAdaptiveSegments<String>(
               segments: const [
                 ButtonSegment(value: 'all', label: Text('All')),
                 ButtonSegment(value: 'friends', label: Text('Friends')),
                 ButtonSegment(value: 'mine', label: Text('Mine')),
               ],
               selected: {tab},
-              onSelectionChanged: (value) => setState(() => tab = value.first),
+              onChanged: (value) => setState(() => tab = value.first),
             ),
             const SizedBox(height: 14),
             if (visible.isEmpty) Container(
@@ -551,11 +550,11 @@ class _SecretsState extends State<LiveSecretsScreen>{
       :error!=null?liveError(error,_load)
       :RefreshIndicator(onRefresh:_load,child:ListView(
         padding:const EdgeInsets.all(12),children:[
-          SegmentedButton<String>(segments:const [
+          BlinkAdaptiveSegments<String>(segments:const [
             ButtonSegment(value:'all',label:Text('Explore')),
             ButtonSegment(value:'mine',label:Text('My Secrets')),
             ButtonSegment(value:'answered',label:Text('Answered')),
-          ],selected:{filter},onSelectionChanged:(values)=>
+          ],selected:{filter},onChanged:(values)=>
             setState(()=>filter=values.first)),
           const SizedBox(height:12),
           if(visible.isEmpty)const ListTile(title:Text('No Secrets found for this tab.')),
@@ -802,7 +801,7 @@ class _IrlChatState extends State<LiveIrlChatScreen>{
     try{await LiveApi.call('POST','/irl/plans/${widget.planId}/messages',{'text':text.text.trim()});
       text.clear();await _load();
     }catch(e){if(mounted)liveNotice(context,e.toString());}}
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(widget.title)),body:Column(children:[
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:BlinkBrandedTitle(widget.title)),body:Column(children:[
     if(error!=null)liveError(error,_load),
     Expanded(child:ListView(children:messages.map((m)=>ListTile(
       title:Text(field(obj(m)['sender'],'name','Blink member')),subtitle:Text(field(m,'text')))).toList())),

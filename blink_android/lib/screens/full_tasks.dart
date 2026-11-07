@@ -174,7 +174,7 @@ class _EditorState extends State<FullCreatorEditor>{
     finally{if(mounted)setState(()=>busy=false);}
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:Text(widget.task==null?'New Creator Task':'Edit Creator Task')),
+    appBar:AppBar(title:BlinkBrandedTitle(widget.task==null?'New Creator Task':'Edit Creator Task')),
     body:ListView(padding:const EdgeInsets.all(16),children:[
       TextField(controller:title,maxLength:140,decoration:const InputDecoration(labelText:'Title')),
       TextField(controller:description,maxLength:4000,minLines:4,maxLines:8,
@@ -199,19 +199,35 @@ class _EditorState extends State<FullCreatorEditor>{
           decoration:const InputDecoration(labelText:'Checklist name'),onChanged:(v)=>g.name=v)),
           IconButton(onPressed:busy?null:()=>setState(()=>groups.remove(g)),
             icon:const Icon(Icons.delete_outline))]),
-        ...g.steps.map((step)=>Padding(padding:const EdgeInsets.only(top:8),
-          child:Row(children:[
-            Expanded(flex:4,child:TextFormField(key:ObjectKey(step),initialValue:step.text,
+        ...g.steps.map((step)=>Padding(
+          padding:const EdgeInsets.only(top:8),
+          child:LayoutBuilder(builder:(context,constraints) {
+            final task = TextFormField(key:ObjectKey(step),initialValue:step.text,
               decoration:const InputDecoration(labelText:'Checklist task'),
-              onChanged:(v)=>step.text=v)),
-            const SizedBox(width:7),
-            Expanded(flex:2,child:TextFormField(initialValue:step.reward.toString(),
+              onChanged:(v)=>step.text=v);
+            final reward = TextFormField(initialValue:step.reward.toString(),
               keyboardType:const TextInputType.numberWithOptions(decimal:true),
               decoration:const InputDecoration(labelText:'BP 0–5'),
-              onChanged:(v)=>step.reward=double.tryParse(v)??0)),
-            IconButton(onPressed:busy?null:()=>setState(()=>g.steps.remove(step)),
-              icon:const Icon(Icons.remove_circle_outline)),
-          ]))),
+              onChanged:(v)=>step.reward=double.tryParse(v)??0);
+            final remove = IconButton(
+              tooltip:'Remove checklist step',
+              onPressed:busy?null:()=>setState(()=>g.steps.remove(step)),
+              icon:const Icon(Icons.remove_circle_outline));
+            if (constraints.maxWidth < 330) {
+              return Column(children:[
+                Row(children:[Expanded(child:task),remove]),
+                const SizedBox(height:8),
+                reward,
+              ]);
+            }
+            return Row(children:[
+              Expanded(flex:4,child:task),
+              const SizedBox(width:8),
+              Expanded(flex:2,child:reward),
+              remove,
+            ]);
+          }),
+        )),
         TextButton.icon(onPressed:busy||g.steps.length>=30?null:()=>
           setState(()=>g.steps.add(_Step('','',0))),icon:const Icon(Icons.add),
           label:const Text('Add task step')),

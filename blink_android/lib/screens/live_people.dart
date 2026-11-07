@@ -524,7 +524,7 @@ class _PublicState extends State<LivePublicProfileScreen> {
   Future<void> _openMoment(BlinkMoment moment) async {
     await Navigator.push(context, MaterialPageRoute<void>(
       builder: (_) => Scaffold(
-        appBar: AppBar(title: Text(field(_profile, 'name', 'Moment'))),
+        appBar: AppBar(title: BlinkBrandedTitle(field(_profile, 'name', 'Moment'))),
         backgroundColor: BlinkColors.canvas,
         body: ListView(children: [
           BlinkLiveMomentCard(moment: moment, myUserId: _viewerId),
@@ -539,7 +539,7 @@ class _PublicState extends State<LivePublicProfileScreen> {
     final relationship = field(p, 'relationship');
     return Scaffold(
       backgroundColor: BlinkColors.canvas,
-      appBar: AppBar(title: Text(field(p, 'name', 'Blink Profile'))),
+      appBar: AppBar(title: BlinkBrandedTitle(field(p, 'name', 'Blink Profile'))),
       body: _loading
         ? const Center(child: CircularProgressIndicator(color: BlinkColors.orange))
         : _error != null

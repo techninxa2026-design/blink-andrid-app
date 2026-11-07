@@ -58,7 +58,8 @@ class _OrangeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 54,
+      height: MediaQuery.textScalerOf(context).scale(15) * 2 + 18 > 54
+          ? MediaQuery.textScalerOf(context).scale(15) * 2 + 18 : 54,
       child: FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
@@ -73,13 +74,16 @@ class _OrangeButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
+            Flexible(child: Text(
               title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
-            ),
+            )),
             if (icon != null) ...[
               const SizedBox(width: 10),
               Icon(icon, size: 20),
@@ -146,11 +150,14 @@ class SplashScreen extends StatelessWidget {
               ),
             ),
             SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  26, 12, 26, 24,
-                ),
-                child: Column(
+              child: LayoutBuilder(builder: (context, viewport) =>
+                SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: viewport.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(26, 12, 26, 24),
+                        child: Column(
                   children: [
                     const Spacer(),
 
@@ -228,21 +235,17 @@ class SplashScreen extends StatelessWidget {
                                 ),
                               ),
                               child: const Row(
-                                mainAxisAlignment:
-                                MainAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    'Get Started',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight:
-                                      FontWeight.w900,
-                                    ),
-                                  ),
-                                  SizedBox(width: 10),
-                                  Icon(
-                                    Icons.arrow_forward_rounded,
-                                  ),
+                                  Flexible(child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text('Get Started', maxLines: 1,
+                                      softWrap: false,
+                                      style: TextStyle(fontSize: 15,
+                                        fontWeight: FontWeight.w900)),
+                                  )),
+                                  SizedBox(width: 8),
+                                  Icon(Icons.arrow_forward_rounded),
                                 ],
                               ),
                             ),
@@ -256,12 +259,17 @@ class SplashScreen extends StatelessWidget {
                               '/login',
                               replace: true,
                             ),
-                            child: const Text(
-                              'Already have an account? Sign in',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight:
-                                FontWeight.w700,
+                            child: SizedBox(
+                              width: MediaQuery.sizeOf(context).width - 95,
+                              child: const Text(
+                                'Already have an account? Sign in',
+                                textAlign: TextAlign.center,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                           ),
@@ -269,9 +277,12 @@ class SplashScreen extends StatelessWidget {
                       ),
                     ),
                   ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              )),
           ],
         ),
       ),
@@ -347,8 +358,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               child: Row(
                 children: [
-                  const BlinkLogo(fontSize: 34),
-                  const Spacer(),
+                  const Expanded(child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: BlinkLogo(fontSize: 34, maxWidth: 160),
+                  )),
                   if (_page != 2)
                     TextButton(
                       onPressed: () => go(
@@ -481,11 +494,14 @@ class _OnboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        24, 18, 24, 4,
-      ),
-      child: Column(
+    return LayoutBuilder(builder: (context, viewport) =>
+      SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: viewport.maxHeight),
+          child: IntrinsicHeight(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 18, 24, 4),
+              child: Column(
         children: [
           Text(
             title,
@@ -532,16 +548,23 @@ class _OnboardPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 9),
-              Text(
+              Flexible(child: Text(
                 caption,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: BlinkColors.muted,
                   fontSize: 12,
                 ),
-              ),
+              )),
             ],
           ),
         ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -894,31 +917,37 @@ class _FeatureTile extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 37,
-            height: 37,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFE5D5),
-              borderRadius: BorderRadius.circular(12),
+      // The artwork is a fixed-size illustration. Scale the tile artwork
+      // internally so large Android font settings never clip its labels.
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE5D5),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: _orange, size: 19),
+                ),
+              ),
             ),
-            child: Icon(
-              icon,
-              color: _orange,
-              size: 21,
+            SizedBox(
+              height: 18,
+              width: double.infinity,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(title, maxLines: 1, softWrap: false,
+                  style: const TextStyle(fontSize: 12,
+                    fontWeight: FontWeight.w800)),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
