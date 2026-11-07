@@ -73,4 +73,17 @@ void main() {
       isEmpty);
     expect(visibleReelsForViewer([reel('b1', 'B')], ''), isEmpty);
   });
+
+  test('legacy Moment expired errors explain server deployment mismatch', () {
+    final message = BlinkHomeApi.momentActionError(
+      const BlinkHomeError('Moment is unavailable or expired.', status: 404));
+    expect(message, contains('update and restart'));
+    expect(message, contains('Refresh the feed'));
+  });
+
+  test('unrelated errors are not hidden by Moment recovery guidance', () {
+    final message = BlinkHomeApi.momentActionError(
+      const BlinkHomeError('Network connection interrupted', status: 503));
+    expect(message, 'Network connection interrupted');
+  });
 }

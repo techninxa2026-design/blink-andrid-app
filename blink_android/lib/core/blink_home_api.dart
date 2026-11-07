@@ -124,6 +124,29 @@ class BlinkReelPage {
 class BlinkHomeApi {
   BlinkHomeApi._();
 
+  /// A Moment in the public feed should also be accepted by the interaction
+  /// endpoint. A legacy API may still apply the old 24-hour expiry to react
+  /// and BP routes even though the public feed displays the Moment.
+  /// Do not claim a gift or reaction succeeded when the server rejected it.
+  static String momentActionError(Object error) {
+    if (error is BlinkHomeError) {
+      final message = error.message.toLowerCase();
+      final isMomentUnavailable =
+          message.contains('moment') &&
+          (message.contains('expired') ||
+           message.contains('unavailable') ||
+           message.contains('not found') ||
+           message.contains('not public'));
+      if (isMomentUnavailable) {
+        return 'This Blink server rejected the Moment. Refresh the feed. '
+            'If the same Moment is still visible, update and restart the '
+            'NestJS Blink API: older server builds can incorrectly reject '
+            'public Moments as expired.';
+      }
+    }
+    return error.toString();
+  }
+
   static String get baseUrl => BlinkAuthApi.baseUrl;
 
   static String mediaUrl(String raw) {
