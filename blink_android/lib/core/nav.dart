@@ -43,7 +43,7 @@ class BlinkRoutes {
     '/profile': (_) => const LiveProfileScreen(),
     '/profile/edit': (_) => const LiveEditProfileScreen(),
     '/checkins': (_) => const LiveCheckinsScreen(),
-    '/checkin/create': (_) => const LiveCheckinsScreen(),
+    '/checkin/create': (_) => const LiveCheckinsScreen(openComposer: true),
     '/irl': (_) => const FullIrlScreen(),
     '/irl/detail': (_) => const FullIrlScreen(),
     '/irl/chat': (_) => const FullIrlScreen(),
