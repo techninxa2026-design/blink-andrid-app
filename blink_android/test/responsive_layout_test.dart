@@ -20,12 +20,16 @@ void main() {
     });
   }
 
-  Widget app(Widget child, {double scale = 1}) => MediaQuery(
-    data: MediaQueryData(textScaler: TextScaler.linear(scale)),
-    child: MaterialApp(
-      theme: blinkTheme(),
-      home: child,
+  // Preserve the real View's width/insets while overriding font scaling.
+  // A MediaQueryData constructed with no size would incorrectly report 0px.
+  Widget app(Widget child, {double scale = 1}) => MaterialApp(
+    theme: blinkTheme(),
+    builder: (context, page) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(scale)),
+      child: page ?? const SizedBox.shrink(),
     ),
+    home: child,
   );
 
   for (final width in [280.0, 320.0, 360.0, 412.0]) {
