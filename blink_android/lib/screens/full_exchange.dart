@@ -480,19 +480,24 @@ class _FullExchangeThreadState extends State<FullExchangeThread> {
     final amount = TextEditingController(text: field(offer, 'amount'));
     String currency = field(offer, 'currency', 'BDT');
     final data = await showDialog<Map<String, String>>(context: context,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, update) => AlertDialog(
-        title: const Text('Private price offer'),
+      builder: (ctx) => StatefulBuilder(builder: (ctx, update) => BlinkFormDialog(
+        title: 'Private price offer',
+        subtitle: 'Only this conversation can see your price proposal.',
+        icon: Icons.local_offer_outlined,
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: amount, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Amount')),
+            onChanged: (_) => update(() {}),
+            decoration: const InputDecoration(labelText: 'Amount',prefixIcon: Icon(Icons.payments_outlined))),
           const SizedBox(height: 12),
-          DropdownButtonFormField<String>(initialValue: currency,
+          DropdownButtonFormField<String>(initialValue: currency, isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Currency'),
             items: _exchangeCurrencies.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
             onChanged: (v) { if (v != null) update(() => currency = v); }),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx,
+          FilledButton(onPressed: double.tryParse(amount.text.trim()) == null ||
+            (double.tryParse(amount.text.trim()) ?? 0) <= 0 ? null : () => Navigator.pop(ctx,
             {'amount': amount.text.trim(), 'currency': currency}),
             child: const Text('Send offer')),
         ],
