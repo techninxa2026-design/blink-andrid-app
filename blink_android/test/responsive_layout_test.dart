@@ -116,7 +116,17 @@ void main() {
 
     await tester.pumpWidget(app(const OnboardingScreen(), scale: 1.6));
     await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
+    final onboardingError = tester.takeException();
+    if (onboardingError != null) {
+      final lines = tester.renderObject(find.byType(OnboardingScreen))
+          .toStringDeep().split('\n');
+      for (var index = 0; index < lines.length; index++) {
+        if (lines[index].contains('OVERFLOWING')) {
+          debugPrint(lines.skip(index > 4 ? index - 4 : 0).take(12).join('\n'));
+        }
+      }
+    }
+    expect(onboardingError, isNull);
   });
 
   testWidgets('Explore cards remain readable at 280px with large text',
