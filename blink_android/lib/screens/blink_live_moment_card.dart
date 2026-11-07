@@ -196,26 +196,20 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
     } catch (e) { _notify('Unable to load viewers: $e'); }
   }
 
-  /// Matches the six amounts, balance display and conditional submit of the
-  /// web's MomentActions panel. The NestJS endpoint is the source of truth:
-  /// it validates ownership/balance and transfers funds atomically.
+  /// Same free BP gift choices as web. The server only credits the Moment
+  /// owner and records a gift; no points are deducted from the sender.
   Future<void> _giftBp() async {
     if (widget.myUserId == widget.moment.senderId || _busy) return;
     await _loadActivity();
     if (!mounted) return;
-    if (_activity == null) {
-      _notify('Cannot check your BP balance. Try again when connected.');
-      return;
-    }
-
     const amounts = <int>[1, 5, 10, 25, 50, 100];
     int selected = 5;
     bool sending = false;
     String? error;
-    final rawBalance = _activity!['myBalance'];
-    final balance = rawBalance is num
+    final rawBalance = _activity?['myBalance'];
+    final earned = rawBalance is num
         ? rawBalance.toDouble()
-        : double.tryParse('$rawBalance') ?? 0;
+        : double.tryParse('$rawBalance');
 
     await showModalBottomSheet<void>(
       context: context,
@@ -264,9 +258,9 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
                     color: BlinkColors.orangeSoft,
                     borderRadius: BorderRadius.circular(13)),
                   child: Row(children: [
-                    const Expanded(child: Text('Your balance',
+                    const Expanded(child: Text('Your earned BP',
                       style: TextStyle(color: BlinkColors.ink))),
-                    Text('${balance.toStringAsFixed(1)} BP', style:
+                    Text('${earned?.toStringAsFixed(1) ?? '—'} BP', style:
                       const TextStyle(color: BlinkColors.orangeDark,
                         fontWeight: FontWeight.w900)),
                   ]),
@@ -305,16 +299,18 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
                   child: Text(error!, textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.red)),
                 ),
-                if (balance < selected) const Padding(
-                  padding: EdgeInsets.only(top: 9),
-                  child: Text('Insufficient BP balance for this gift.',
+                const Padding(
+                  padding: EdgeInsets.only(top: 11),
+                  child: Text(
+                    'Free appreciation: the creator earns BP, and your BP is not deducted.',
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: BlinkColors.muted, fontSize: 12)),
                 ),
                 const SizedBox(height: 15),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: sending || balance < selected ? null : () async {
+                    onPressed: sending ? null : () async {
                       update(() { sending = true; error = null; });
                       try {
                         await BlinkHomeApi.request(

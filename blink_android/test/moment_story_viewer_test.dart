@@ -28,7 +28,7 @@ void main() {
     const Size(320, 640),
     const Size(390, 844),
   ]) {
-    testWidgets('Moment strip fits ${size.width.toInt()}px mobile screen',
+    testWidgets('four Moment tiles per row in a vertical page at ${size.width.toInt()}px',
       (tester) async {
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1;
@@ -36,27 +36,42 @@ void main() {
           tester.view.resetPhysicalSize();
           tester.view.resetDevicePixelRatio();
         });
-
+        final many = List<BlinkMoment>.generate(28, (index) => BlinkMoment(
+          id: 'moment-$index',
+          senderId: 'author-$index',
+          mediaUrl: 'https://example.com/$index.jpg',
+          mediaType: 'photo',
+          createdAt: DateTime.utc(2026, 11, 7),
+          author: 'Member $index',
+        ));
         int? chosen;
         await tester.pumpWidget(MaterialApp(
           home: Scaffold(
-            body: Column(children: [
-              const Text('Moments'),
-              BlinkMomentStoryStrip(
-                moments: moments,
-                onOpen: (index) => chosen = index,
-              ),
-            ]),
+            body: CustomScrollView(
+              slivers: [
+                const SliverToBoxAdapter(child: Text('Moments')),
+                BlinkMomentStoryGrid(
+                  moments: many,
+                  onOpen: (index) => chosen = index,
+                ),
+              ],
+            ),
           ),
         ));
         await tester.pump();
-        expect(find.byKey(const ValueKey('blink-moment-story-strip')),
+        expect(find.byKey(const ValueKey('blink-moment-story-grid')),
           findsOneWidget);
-        expect(find.byKey(const ValueKey('story-one')), findsOneWidget);
+        final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
+        final delegate = grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+        expect(delegate.crossAxisCount, 4);
+        expect(tester.widgetList<Scrollable>(find.byType(Scrollable))
+          .every((s) => s.axisDirection == AxisDirection.down), isTrue);
         expect(tester.takeException(), isNull);
-
-        await tester.tap(find.byKey(const ValueKey('story-one')));
+        await tester.tap(find.byKey(const ValueKey('story-moment-0')));
         expect(chosen, 0);
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -420));
+        await tester.pump();
+        expect(tester.takeException(), isNull);
       },
     );
   }

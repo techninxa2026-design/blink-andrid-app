@@ -723,7 +723,9 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
   // ==========================================================
   // MAIN FEED UI
   //
-  // A lightweight thumbnail strip avoids creating all video players at once.
+  // One continuous top-to-bottom scroll. The four-column Moments grid is a
+  // lazy SliverGrid (no nested sideways carousel and no nested scroll view).
+  // Reels remain a separate vertical PageView in reels.dart.
   // ==========================================================
 
   @override
@@ -731,20 +733,12 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
     return RefreshIndicator(
       color: BlinkColors.orange,
       onRefresh: _refresh,
-      child: ListView.builder(
+      child: CustomScrollView(
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 20),
-
-        // Instagram-style: header, horizontal portrait Moment strip, footer.
-        // Do not instantiate a full video player for every feed item.
-        itemCount: 3,
-
-        itemBuilder: (context, index) {
-          if (index == 0) return _buildHeader();
-          if (index == 2) return _buildFooter();
-
-          return BlinkMomentStoryStrip(
+        slivers: [
+          SliverToBoxAdapter(child: _buildHeader()),
+          BlinkMomentStoryGrid(
             moments: _items,
             onOpen: (selected) async {
               await Navigator.of(context).push(MaterialPageRoute<void>(
@@ -754,11 +748,12 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
                   viewerId: _viewerId,
                 ),
               ));
-              // Refresh public and own counts after likes, BP gifts or comments.
               if (mounted) await _refresh();
             },
-          );
-        },
+          ),
+          SliverToBoxAdapter(child: _buildFooter()),
+          const SliverToBoxAdapter(child: SizedBox(height: 20)),
+        ],
       ),
     );
   }
