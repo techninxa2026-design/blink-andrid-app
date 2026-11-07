@@ -26,32 +26,94 @@ class _BusinessState extends State<LiveBusinessScreen>{
       if(mounted)setState((){profile=p;matches=found;requests=req;connections=con;error=null;loading=false;});
     }catch(e){if(mounted)setState((){error=e.toString();loading=false;});}
   }
-  Future<void> _edit()async{
-    final values=<String,TextEditingController>{
-      for(final k in ['name','headline','industry','location','skills','about','lookingFor'])
-        k:TextEditingController(text:field(profile,k)),
+  Future<void> _edit() async {
+    const keys = ['name', 'headline', 'industry', 'location',
+      'skills', 'about', 'lookingFor'];
+    const labels = <String, String>{
+      'name': 'Business or professional name',
+      'headline': 'Professional headline',
+      'industry': 'Industry',
+      'location': 'Location',
+      'skills': 'Skills and specialties',
+      'about': 'About you or your company',
+      'lookingFor': 'Looking for',
     };
-    String kind=field(profile,'type','PROFESSIONAL');
-    final data=await showDialog<Map<String,dynamic>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-      title:const Text('Business / Professional Profile'),
-      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        DropdownButton<String>(value:kind,isExpanded:true,items:const [
-          DropdownMenuItem(value:'PROFESSIONAL',child:Text('Individual Professional')),
-          DropdownMenuItem(value:'COMPANY',child:Text('Company')),
-        ],onChanged:(v){if(v!=null)update(()=>kind=v);}),
-        ...values.entries.map((entry)=>TextField(controller:entry.value,maxLines:entry.key=='about'?3:1,
-          decoration:InputDecoration(labelText:entry.key))),
-      ])),
-      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
-        FilledButton(onPressed:()=>Navigator.pop(ctx,{
-          'type':kind,...values.map((key,value)=>MapEntry(key,value.text.trim())),
-        }),child:const Text('Save'))],
-    )));
-    for(final c in values.values){c.dispose();}
-    if(data==null)return;
-    try{await LiveApi.call('PUT','/business-match/me',data);await _load();}
-    catch(e){if(mounted)liveNotice(context,e.toString());}
+    final values = <String, TextEditingController>{
+      for (final key in keys)
+        key: TextEditingController(text: field(profile, key)),
+    };
+    String kind = field(profile, 'type', 'PROFESSIONAL');
+    if (kind != 'PROFESSIONAL' && kind != 'COMPANY') kind = 'PROFESSIONAL';
+    final data = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, update) => BlinkFormDialog(
+          title: 'Business Profile',
+          subtitle: 'Let people discover who you are and what you offer.',
+          icon: Icons.business_center_outlined,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: kind,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Profile type'),
+                items: const [
+                  DropdownMenuItem(value: 'PROFESSIONAL',
+                    child: Text('Individual Professional')),
+                  DropdownMenuItem(value: 'COMPANY',
+                    child: Text('Company')),
+                ],
+                onChanged: (v) {
+                  if (v != null) update(() => kind = v);
+                },
+              ),
+              const SizedBox(height: 14),
+              ...values.entries.map((entry) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: entry.value,
+                  maxLines: entry.key == 'about' ? 4 : 1,
+                  textCapitalization: TextCapitalization.sentences,
+                  onChanged: (_) => update(() {}),
+                  decoration: InputDecoration(
+                    labelText: labels[entry.key],
+                    alignLabelWithHint: entry.key == 'about',
+                  ),
+                ),
+              )),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
+            FilledButton(
+              onPressed: values['name']!.text.trim().isEmpty
+                ? null
+                : () => Navigator.pop(ctx, <String, dynamic>{
+                    'type': kind,
+                    ...values.map((key, value) =>
+                      MapEntry(key, value.text.trim())),
+                  }),
+              child: const Text('Save profile'),
+            ),
+          ],
+        ),
+      ),
+    );
+    for (final controller in values.values) {
+      controller.dispose();
+    }
+    if (data == null) return;
+    try {
+      await LiveApi.call('PUT', '/business-match/me', data);
+      await _load();
+    } catch (error) {
+      if (mounted) liveNotice(context, error.toString());
+    }
   }
+
   Future<void> _activation(bool value)async{
     try{await LiveApi.call('PATCH','/business-match/me/activation',{'active':value});await _load();}
     catch(e){if(mounted)liveNotice(context,e.toString());}
