@@ -29,17 +29,95 @@ class _ApiResult {
 class BlinkAuthApi {
   BlinkAuthApi._();
 
-  // Standard Android emulator default.
-  // Override for a physical phone using --dart-define.
-  static const String _url = String.fromEnvironment(
+  // 127.0.0.1 means the Android device itself, NOT the developer's PC.
+  // Android Studio's emulator reaches the PC with 10.0.2.2. A physical
+  // phone must use the computer's LAN IP (or the deployed HTTPS API).
+  static const String _buildServerUrl = String.fromEnvironment(
     'BLINK_API_URL',
-    defaultValue: 'http://127.0.0.1:3000',
+    defaultValue: 'http://10.0.2.2:3000',
   );
 
-  static String get baseUrl =>
-      _url.replaceFirst(RegExp(r'/$'), '');
-
   static const _storage = FlutterSecureStorage();
+  static const _serverKey = 'blink_api_server_url';
+  static String? _savedServerUrl;
+
+  /// Every Android API client, including Moments, BP and Inbox, uses this
+  /// SAME origin. A saved override lets the user correct a device connection
+  /// without rebuilding the APK.
+  static String get baseUrl =>
+      _savedServerUrl ?? normalizeServerUrl(_buildServerUrl);
+
+  /// Validate a trusted API origin. Never accept paths, credentials, query
+  /// parameters or fragments: they can redirect authenticated requests.
+  static String normalizeServerUrl(String input) {
+    final value = input.trim();
+    final uri = Uri.tryParse(value);
+    if (uri == null ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty ||
+        (uri.path.isNotEmpty && uri.path != '/') ||
+        uri.hasQuery || uri.hasFragment) {
+      throw const BlinkAuthException(
+        'Enter the Blink API origin, for example http://192.168.1.10:3000 '
+        '(not the web frontend address).',
+      );
+    }
+    return uri.origin;
+  }
+
+  /// Called before runApp so login, Moment feed and BP always use one server.
+  static Future<void> loadServerUrl() async {
+    try {
+      final saved = await _storage.read(key: _serverKey);
+      _savedServerUrl = saved == null ? null : normalizeServerUrl(saved);
+    } catch (_) {
+      _savedServerUrl = null;
+    }
+  }
+
+  /// Checks the real NestJS API WITHOUT sending any stored access token.
+  /// /profile/me should answer with JSON 401 if unauthenticated.
+  static Future<void> verifyServerUrl(String proposed) async {
+    final origin = normalizeServerUrl(proposed);
+    http.Response response;
+    try {
+      response = await http.get(
+        Uri.parse('$origin/profile/me'),
+        headers: const {'Accept': 'application/json'},
+      ).timeout(const Duration(seconds: 12));
+    } on TimeoutException {
+      throw BlinkAuthException('Timed out connecting to $origin. '
+        'Make sure NestJS is running and reachable from this phone.');
+    } on SocketException {
+      throw BlinkAuthException('Cannot reach $origin from this device. '
+        'On a real phone, use the PC LAN IP and port 3000, not 127.0.0.1.');
+    } on HandshakeException {
+      throw const BlinkAuthException('The API HTTPS certificate is not trusted.');
+    } on http.ClientException {
+      throw BlinkAuthException('Could not contact the Blink API at $origin.');
+    }
+    final contentType = response.headers['content-type'] ?? '';
+    if ((response.statusCode != 200 &&
+         response.statusCode != 401 &&
+         response.statusCode != 403) ||
+        !contentType.toLowerCase().contains('json')) {
+      throw BlinkAuthException('The server at $origin did not respond like '
+        'the Blink NestJS API (HTTP ${response.statusCode}). '
+        'Use the API port, not the Vite web page.');
+    }
+  }
+
+  /// Switching servers invalidates the previous server's credentials. Never
+  /// send the old access token to a newly configured host.
+  static Future<void> changeServerUrl(String proposed) async {
+    final normalized = normalizeServerUrl(proposed);
+    if (normalized == baseUrl) return;
+    await verifyServerUrl(normalized);
+    await logout();
+    await _storage.write(key: _serverKey, value: normalized);
+    _savedServerUrl = normalized;
+  }
 
   static const _tokenKey = 'blink_access_token';
   static const _userKey = 'blink_user';
