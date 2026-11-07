@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:http/http.dart' as http;
@@ -44,7 +45,7 @@ class _RecorderState extends State<BlinkVoiceRecordScreen>{
     finally{if(mounted)setState(()=>busy=false);}
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('Blink Voice Message')),
+    appBar:AppBar(title:const BlinkBrandedTitle('Blink Voice Message')),
     body:Center(child:Padding(padding:const EdgeInsets.all(24),
       child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
         CircleAvatar(radius:52,backgroundColor:BlinkColors.orangeSoft,
