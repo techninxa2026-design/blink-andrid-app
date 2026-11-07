@@ -91,9 +91,17 @@ class _ReviewState extends State<FullTaskReviews>{
         if(entries.isEmpty)const ListTile(title:Text('No submissions in this category.')),
         ...entries.map((raw){
           final person=obj(raw);
-          return Card(child:ExpansionTile(
-            title:Text(field(person['participant'],'name','Participant')),
-            subtitle:Text(field(person,'status')+' · '+field(person,'earnedBp','0')+' BP earned'),
+          return BlinkProCard(padding:EdgeInsets.zero,child:ExpansionTile(
+            leading:Container(width:44,height:44,decoration:BoxDecoration(
+              color:BlinkColors.orangeSoft,borderRadius:BorderRadius.circular(14)),
+              child:const Icon(Icons.fact_check_rounded,color:BlinkColors.orangeDark)),
+            title:Text(field(person['participant'],'name','Participant'),
+              style:const TextStyle(fontWeight:FontWeight.w900)),
+            subtitle:Wrap(spacing:6,runSpacing:6,children:[
+              BlinkInfoPill(field(person,'status'),icon:Icons.task_alt_rounded,highlight:true),
+              BlinkInfoPill('${field(person,'earnedBp','0')} BP',
+                icon:Icons.stars_rounded),
+            ]),
             children:arr(person['steps']).map((rawStep){
               final step=obj(rawStep);
               return Padding(padding:const EdgeInsets.all(12),child:Column(
