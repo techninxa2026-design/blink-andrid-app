@@ -17,6 +17,7 @@ import '../core/blink_home_api.dart';
 import '../core/blink_original_music.dart';
 import '../core/nav.dart';
 import '../core/theme.dart';
+import '../widgets/ui.dart';
 
 /// Full camera + gallery + authenticated upload to the existing Blink API.
 class BlinkRealCaptureScreen extends StatefulWidget {
@@ -611,6 +612,9 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     final camera = _camera;
     if (_uploading || camera == null || !camera.value.isInitialized) return;
     try {
+      // CameraX cannot reliably take still photographs while the analysis
+      // image stream is active. Freeze the last face position before capture.
+      if (camera.value.isStreamingImages) await _stopFaceTracking(camera);
       if (_videoMode) {
         if (_recording) {
           final video = await camera.stopVideoRecording();
@@ -641,6 +645,9 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     });
     // Hide CameraPreview before releasing the native camera surface.
     _suspendCamera();
+    if (!video && _lens != 'none') {
+      unawaited(_detectPhotoFace(file));
+    }
 
     final previousPreview = _preview;
     _preview = null;
@@ -682,6 +689,7 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
       _musicTrackId = null;
       _picked = null;
       _error = null;
+      _faceBounds = null;
       _recording = false;
     });
     if (_appActive) _initCamera();
@@ -705,7 +713,8 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     setState(() { _uploading = true; _error = null; });
     await _soundtrackPlayer.stop();
     try {
-      final file = File(_picked!.path);
+      final file = !_videoMode && _lens != 'none'
+          ? await _renderFilteredPhoto() : File(_picked!.path);
       if (_videoMode && _publishReel) {
         final Uint8List jpeg =
         await thumb.VideoThumbnail.thumbnailData(
@@ -748,6 +757,7 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     });
     _preview?.dispose();
     _soundtrackPlayer.dispose();
+    unawaited(_faceDetector.close());
     _caption.dispose();
     for (final dir in _temporaryMediaDirectories) {
       dir.delete(recursive: true).ignore();
@@ -813,7 +823,13 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(children: [
-        Positioned.fill(child: _background()),
+        Positioned.fill(child: RepaintBoundary(
+          key: _mediaBoundary,
+          child: Stack(fit: StackFit.expand, children: [
+            _background(),
+            if (_lens != 'none' && !_videoMode) _faceEffects(),
+          ]),
+        )),
         Positioned.fill(child: IgnorePointer(child: Container(decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0x55000000), Colors.transparent, Color(0xAA000000)],
@@ -825,9 +841,12 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
             IconButton(onPressed: _uploading ? null : () => Navigator.maybePop(context),
               icon: const Icon(Icons.close_rounded, color: Colors.white, size: 29)),
             const Spacer(),
+            const BlinkLogo(fontSize: 26),
+            const Spacer(),
             if (!preview) IconButton(onPressed: _switchCamera,
               icon: const Icon(Icons.cameraswitch_outlined, color: Colors.white)),
           ])),
+          if (!_videoMode && !_recording) _lensPicker(),
           const Spacer(),
           if (preview) ...[
             Padding(padding: const EdgeInsets.symmetric(horizontal: 17), child: TextField(
@@ -907,8 +926,8 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
             ])),
           ] else ...[
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              _modeButton('Photo', !_videoMode, true, () { if (!_recording) setState(() => _videoMode = false); }),
-              _modeButton('Video', _videoMode, false, () { if (!_recording) setState(() => _videoMode = true); }),
+              _modeButton('Photo', !_videoMode, true, () => _changeMode(false)),
+              _modeButton('Video', _videoMode, false, () => _changeMode(true)),
             ]),
             const SizedBox(height: 25),
             Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
