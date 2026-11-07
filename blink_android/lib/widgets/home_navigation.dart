@@ -219,12 +219,13 @@ class _CaptureNavItem extends StatelessWidget {
 
               const SizedBox(height: 2),
 
-              const Text(
-                'Capture',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w800,
+              const SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Capture', maxLines: 1, softWrap: false,
+                    style: TextStyle(color: Colors.white,
+                      fontSize: 9, fontWeight: FontWeight.w800)),
                 ),
               ),
             ],
@@ -634,8 +635,10 @@ class BlinkHomeCheckins extends StatelessWidget {
           final heading = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: 7,
+                runSpacing: 3,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
                     '🧡',
