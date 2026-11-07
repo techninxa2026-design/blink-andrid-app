@@ -45,7 +45,9 @@ class BlinkHomeBottomBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: MediaQuery.textScalerOf(context).scale(9) > 9
+              ? 64 + (MediaQuery.textScalerOf(context).scale(9) - 9)
+              : 64,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: const [
