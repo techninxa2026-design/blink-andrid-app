@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
 
 import '../core/blink_home_api.dart';
+import '../core/blink_original_music.dart';
 import '../core/live_api.dart';
 import '../core/theme.dart';
 
@@ -20,6 +21,8 @@ class BlinkLiveMomentCard extends StatefulWidget {
 class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
   Map<String, dynamic>? _activity;
   VideoPlayerController? _video;
+  BlinkOriginalPlayer? _soundtrack;
+  bool _soundtrackPlaying = false;
   bool _saved = false;
   bool _busy = false;
   String? _error;
@@ -231,6 +234,18 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
     } catch (e) { _notify('Could not delete Moment: $e'); }
   }
 
+  Future<void> _toggleSoundtrack() async {
+    final id = widget.moment.musicTrackId;
+    if (id == null || blinkOriginalTrack(id) == null) return;
+    final player = _soundtrack ??= BlinkOriginalPlayer();
+    try {
+      await player.play(id);
+      if (mounted) setState(() => _soundtrackPlaying = player.isPlaying);
+    } catch (error) {
+      _notify('Unable to play Blink soundtrack: $error');
+    }
+  }
+
   Future<void> _togglePlayback() async {
     final controller = _video;
     if (controller == null || !controller.value.isInitialized) return;
@@ -281,6 +296,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
   @override
   void dispose() {
     _video?.dispose();
+    _soundtrack?.dispose();
     super.dispose();
   }
 
@@ -419,6 +435,15 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
           IconButton(onPressed: _toggleSave,
             icon: Icon(_saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded)),
         ]),
+        if (blinkOriginalTrack(widget.moment.musicTrackId) != null)
+          Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: TextButton.icon(
+              onPressed: _toggleSoundtrack,
+              icon: Icon(_soundtrackPlaying ? Icons.pause_circle_outline : Icons.music_note,
+                color: BlinkColors.orange),
+              label: Text('♪ ' + blinkOriginalTrack(widget.moment.musicTrackId)!.title +
+                (_soundtrackPlaying ? ' · Stop' : ' · Play')),
+            )),
         if ((widget.moment.caption ?? '').isNotEmpty)
           Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
             child: Text(widget.moment.caption!, style: const TextStyle(fontSize: 12.5))),
