@@ -69,14 +69,14 @@ class _ReviewState extends State<FullTaskReviews>{
       if(url.isEmpty)throw const LiveApiError('Video URL unavailable.');
       if(!mounted)return;
       Navigator.push<void>(context,MaterialPageRoute(builder:(_)=>Scaffold(
-        appBar:AppBar(title:const Text('Evidence video')),
+        appBar:AppBar(title:const BlinkBrandedTitle('Evidence video')),
         body:TaskMediaVideo(url:LiveApi.root+url))));
     }catch(e){if(mounted)liveNotice(context,e.toString());}
   }
   @override Widget build(BuildContext context){
     final entries=arr(data['submissions']).where((p)=>filter=='ALL'||
       field(p,'status')==filter).toList();
-    return Scaffold(appBar:AppBar(title:const Text('Task Verification'),
+    return Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Task Verification'),
       actions:[IconButton(tooltip:'Refresh',onPressed:_load,icon:const Icon(Icons.refresh))]),
       body:loading?const Center(child:CircularProgressIndicator(color:BlinkColors.orange))
       :error.isNotEmpty?liveError(error,_load)
