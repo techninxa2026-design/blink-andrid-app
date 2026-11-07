@@ -847,7 +847,12 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
             IconButton(onPressed: _uploading ? null : () => Navigator.maybePop(context),
               icon: const Icon(Icons.close_rounded, color: Colors.white, size: 29)),
             const Spacer(),
-            const BlinkLogo(fontSize: 26),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+              decoration: BoxDecoration(color: Colors.white,
+                borderRadius: BorderRadius.circular(12)),
+              child: const BlinkLogo(fontSize: 25),
+            ),
             const Spacer(),
             if (!preview) IconButton(onPressed: _switchCamera,
               icon: const Icon(Icons.cameraswitch_outlined, color: Colors.white)),
