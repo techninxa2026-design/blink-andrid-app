@@ -25,7 +25,7 @@ class BlinkMomentStoryStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     if (moments.isEmpty) return const SizedBox.shrink();
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final width = (screenWidth * .51).clamp(145.0, 205.0);
+    final width = (screenWidth * .51).clamp(145.0, 205.0).toDouble();
     return SizedBox(
       height: 277,
       child: ListView.separated(
@@ -181,7 +181,7 @@ class _BlinkMomentViewerState extends State<BlinkMomentViewer> {
   @override
   void initState() {
     super.initState();
-    _index = widget.initialIndex.clamp(0, widget.moments.length - 1);
+    _index = widget.initialIndex.clamp(0, widget.moments.length - 1).toInt();
     _controller = PageController(initialPage: _index);
     WidgetsBinding.instance.addPostFrameCallback((_) => _recordView(_index));
   }
