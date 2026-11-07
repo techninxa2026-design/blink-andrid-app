@@ -8,7 +8,7 @@ class LiveBusinessScreen extends StatefulWidget {
 }
 class _BusinessState extends State<LiveBusinessScreen>{
   Map<String,dynamic> profile={};List<dynamic> matches=[],requests=[],connections=[];
-  String query='';String? error;bool loading=true;
+  String query='',type='';int page=1;String? error;bool loading=true;
   @override void initState(){super.initState();_load();}
   Future<void> _load()async{
     try{
@@ -16,7 +16,7 @@ class _BusinessState extends State<LiveBusinessScreen>{
       List<dynamic> found=[],req=[],con=[];
       if(p['active']==true){
         final results=await Future.wait([
-          LiveApi.call('GET','/business-match/discover?q=${Uri.encodeQueryComponent(query)}'),
+          LiveApi.call('GET','/business-match/discover?q='+Uri.encodeQueryComponent(query)+'&page='+page.toString()+(type.isEmpty?'':'&type='+type)),
           LiveApi.call('GET','/business-match/requests'),
           LiveApi.call('GET','/business-match/connections'),
         ]);
@@ -55,6 +55,31 @@ class _BusinessState extends State<LiveBusinessScreen>{
     try{await LiveApi.call('PATCH','/business-match/me/activation',{'active':value});await _load();}
     catch(e){if(mounted)liveNotice(context,e.toString());}
   }
+
+  Future<void> _profileDetails(String id)async{
+    try{
+      final p=obj(await LiveApi.call('GET','/business-match/profiles/'+Uri.encodeComponent(id)));
+      if(!mounted)return;
+      await showModalBottomSheet<void>(context:context,isScrollControlled:true,
+        builder:(ctx)=>SafeArea(child:ListView(shrinkWrap:true,
+          padding:const EdgeInsets.all(18),children:[
+            Text(field(p,'name'),style:Theme.of(ctx).textTheme.titleLarge),
+            Text(field(p,'headline')),
+            const SizedBox(height:12),
+            Text('Profile type: '+field(p,'type')),
+            Text('Industry: '+field(p,'industry')),
+            Text('Location: '+field(p,'location')),
+            Text('Skills: '+field(p,'skills')),
+            Text('About: '+field(p,'about')),
+            Text('Looking for: '+field(p,'lookingFor')),
+            const SizedBox(height:16),
+            FilledButton.icon(onPressed:(){Navigator.pop(ctx);_send(id);},
+              icon:const Icon(Icons.person_add_alt_outlined),
+              label:const Text('Send connection request')),
+          ])));
+    }catch(e){if(mounted)liveNotice(context,e.toString());}
+  }
+
   Future<void> _send(String id)async{
     try{await LiveApi.call('POST','/business-match/requests',{'profileId':id});await _load();}
     catch(e){if(mounted)liveNotice(context,e.toString());}
@@ -81,11 +106,23 @@ class _BusinessState extends State<LiveBusinessScreen>{
           Padding(padding:const EdgeInsets.all(10),child:TextField(
             decoration:InputDecoration(hintText:'Search connections',
               suffixIcon:IconButton(icon:const Icon(Icons.search),onPressed:_load)),
-            onChanged:(v)=>query=v,onSubmitted:(_)=>_load())),
+            onChanged:(v)=>query=v,onSubmitted:(_){page=1;_load();})),
+          DropdownButtonFormField<String>(initialValue:type,
+            decoration:const InputDecoration(labelText:'Profile type'),
+            items:const [DropdownMenuItem(value:'',child:Text('All profiles')),
+              DropdownMenuItem(value:'PROFESSIONAL',child:Text('Professionals')),
+              DropdownMenuItem(value:'COMPANY',child:Text('Companies'))],
+            onChanged:(v){type=v??'';page=1;_load();}),
           const ListTile(title:Text('Discover professionals',style:TextStyle(fontWeight:FontWeight.bold))),
           ...matches.map((m)=>Card(child:ListTile(title:Text(field(m,'name')),
-            subtitle:Text('${field(m,'headline')} · ${field(m,'industry')}'),
+            subtitle:Text(field(m,'headline')+' · '+field(m,'industry')),
+            onTap:()=>_profileDetails(field(m,'id')),
             trailing:IconButton(tooltip:'Connect',icon:const Icon(Icons.person_add),onPressed:()=>_send(field(m,'id')))))),
+          Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+            TextButton(onPressed:page>1?(){page--;_load();}:null,child:const Text('Previous')),
+            Text('Page $page'),
+            TextButton(onPressed:matches.length==20?(){page++;_load();}:null,child:const Text('Next')),
+          ]),
           const ListTile(title:Text('Requests',style:TextStyle(fontWeight:FontWeight.bold))),
           ...requests.map((r)=>ListTile(
             title:Text(field(obj(r)['profile'],'name')),
