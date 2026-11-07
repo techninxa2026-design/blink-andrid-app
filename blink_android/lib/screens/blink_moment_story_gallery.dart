@@ -7,11 +7,11 @@ import 'package:get_video_thumbnail/index.dart' as thumbnail_format;
 import '../core/blink_home_api.dart';
 import 'blink_live_moment_card.dart';
 
-/// Compact, horizontal Instagram-style Moment previews from the actual API.
-/// Video thumbnails are decoded lazily and not played in the feed, preventing
-/// many simultaneous VideoPlayers and reducing mobile memory consumption.
-class BlinkMomentStoryStrip extends StatelessWidget {
-  const BlinkMomentStoryStrip({
+/// Four portrait Moment thumbnails per row, matching the approved mobile
+/// design. This is a Sliver: the parent page scrolls VERTICALLY, not sideways.
+/// The SliverGrid lazily builds visible items, so large galleries stay light.
+class BlinkMomentStoryGrid extends StatelessWidget {
+  const BlinkMomentStoryGrid({
     super.key,
     required this.moments,
     required this.onOpen,
@@ -21,29 +21,27 @@ class BlinkMomentStoryStrip extends StatelessWidget {
   final ValueChanged<int> onOpen;
 
   @override
-  Widget build(BuildContext context) {
-    if (moments.isEmpty) return const SizedBox.shrink();
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final width = (screenWidth * .51).clamp(145.0, 205.0).toDouble();
-    return SizedBox(
-      height: 277,
-      child: ListView.separated(
-        key: const ValueKey('blink-moment-story-strip'),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        scrollDirection: Axis.horizontal,
-        itemCount: moments.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 9),
-        itemBuilder: (context, index) => SizedBox(
-          width: width,
-          child: _MomentStoryThumbnail(
-            key: ValueKey('story-${moments[index].id}'),
-            moment: moments[index],
-            onTap: () => onOpen(index),
-          ),
-        ),
+  Widget build(BuildContext context) => SliverPadding(
+    key: const ValueKey('blink-moment-story-grid'),
+    padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+    sliver: SliverGrid(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        // Preserve the tall portrait thumbnail proportions at any width.
+        childAspectRatio: .59,
+        crossAxisSpacing: 7,
+        mainAxisSpacing: 8,
       ),
-    );
-  }
+      delegate: SliverChildBuilderDelegate(
+        (context, index) => _MomentStoryThumbnail(
+          key: ValueKey('story-${moments[index].id}'),
+          moment: moments[index],
+          onTap: () => onOpen(index),
+        ),
+        childCount: moments.length,
+      ),
+    ),
+  );
 }
 
 class _MomentStoryThumbnail extends StatefulWidget {
