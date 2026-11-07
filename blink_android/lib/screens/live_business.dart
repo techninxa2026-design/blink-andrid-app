@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
 import '../core/live_api.dart';
 import '../core/theme.dart';
 
@@ -89,7 +90,7 @@ class _BusinessState extends State<LiveBusinessScreen>{
     catch(e){if(mounted)liveNotice(context,e.toString());}
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const Text('Business Match'),actions:[
+    appBar:AppBar(title:const BlinkBrandedTitle('Business Match'),actions:[
       IconButton(tooltip:'Edit business profile',icon:const Icon(Icons.manage_accounts),onPressed:_edit),
       IconButton(tooltip:'Refresh',icon:const Icon(Icons.refresh),onPressed:_load),
     ]),
@@ -260,7 +261,7 @@ class _MeetingsState extends State<LiveBusinessMeetings>{
     try{await LiveApi.call('PATCH','/business-match/meetings/$id/$action');await _load();}
     catch(e){if(mounted)liveNotice(context,e.toString());}
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Business Meetings'),actions:[
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Business Meetings'),actions:[
       IconButton(tooltip:'Schedule meeting',onPressed:_create,
         icon:const Icon(Icons.add_circle_outline))]),
     body:error!=null?liveError(error,_load):RefreshIndicator(onRefresh:_load,
