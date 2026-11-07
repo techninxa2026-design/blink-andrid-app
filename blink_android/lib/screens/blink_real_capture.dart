@@ -38,6 +38,15 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
   bool _recording = false;
   bool _uploading = false;
   bool _flash = false;
+  String? _musicTrackId;
+  static const _soundtracks = <String, String>{
+    'sunny-pop': '☀️ Sunny Pop',
+    'dream-cloud': '☁️ Dream Cloud',
+    'neon-night': '🌃 Neon Night',
+    'golden-hour': '🌅 Golden Hour',
+    'little-steps': '✨ Little Steps',
+    'soft-waves': '🌊 Soft Waves',
+  };
   late bool _publishReel;
   int _cameraIndex = 0;
   String? _cameraError;
@@ -371,6 +380,7 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     if (!mounted || _closed) return;
     _caption.clear();
     setState(() {
+      _musicTrackId = null;
       _picked = null;
       _error = null;
       _recording = false;
@@ -396,7 +406,7 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
         }
         await BlinkHomeApi.uploadReel(file, jpeg, caption: _caption.text);
       } else {
-        await BlinkHomeApi.uploadMoment(file, caption: _caption.text);
+        await BlinkHomeApi.uploadMoment(file, caption: _caption.text, musicTrackId: _musicTrackId);
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -520,6 +530,36 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             )),
+            if (!_videoMode || !_publishReel) Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  canvasColor: const Color(0xFF242424),
+                ),
+                child: DropdownButtonFormField<String>(
+                  key: ValueKey(_musicTrackId ?? 'none'),
+                  initialValue: _musicTrackId ?? '',
+                  isExpanded: true,
+                  dropdownColor: const Color(0xFF242424),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: '🎵 Blink Original soundtrack',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    filled: true,
+                    fillColor: const Color(0xCC191919),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  items: <DropdownMenuItem<String>>[
+                    const DropdownMenuItem(value: '', child: Text('🔇 No music')),
+                    ..._soundtracks.entries.map(
+                      (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
+                    ),
+                  ],
+                  onChanged: _uploading ? null : (value) =>
+                    setState(() => _musicTrackId = value == null || value.isEmpty ? null : value),
+                ),
+              ),
+            ),
             if (_videoMode) Padding(padding: const EdgeInsets.only(bottom: 10), child: Wrap(spacing: 9, children: [
               ChoiceChip(label: const Text('Reel'), selected: _publishReel,
                 onSelected: _uploading ? null : (_) => setState(() => _publishReel = true)),
