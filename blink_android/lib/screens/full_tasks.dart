@@ -173,70 +173,170 @@ class _EditorState extends State<FullCreatorEditor>{
     }catch(e){if(mounted)liveNotice(context,e.toString());}
     finally{if(mounted)setState(()=>busy=false);}
   }
-  @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:BlinkBrandedTitle(widget.task==null?'New Creator Task':'Edit Creator Task')),
-    body:ListView(padding:const EdgeInsets.all(16),children:[
-      TextField(controller:title,maxLength:140,decoration:const InputDecoration(labelText:'Title')),
-      TextField(controller:description,maxLength:4000,minLines:4,maxLines:8,
-        decoration:const InputDecoration(labelText:'Instructions')),
-      DropdownButtonFormField<String>(initialValue:status,
-        items:['DRAFT','PUBLISHED'].map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),
-        onChanged:busy?null:(v){if(v!=null)setState(()=>status=v);}),
-      OutlinedButton.icon(onPressed:busy?null:_pickImages,
-        icon:const Icon(Icons.add_photo_alternate_outlined),
-        label:Text('Task images ('+pictures.length.toString()+'/8)')),
-      ...pictures.map((f)=>ListTile(title:Text(f.name),
-        trailing:IconButton(icon:const Icon(Icons.close),
-          onPressed:()=>setState(()=>pictures.remove(f))))),
-      OutlinedButton.icon(onPressed:busy?null:_pickVideo,
-        icon:const Icon(Icons.video_library_outlined),
-        label:Text(video?.name??(widget.task?['hasVideo']==true?'Replace video':'Attach video to publish'))),
-      if(progress>0)LinearProgressIndicator(value:progress/100,color:BlinkColors.orange),
-      const Divider(height:30),
-      Text('Named Checklists & BP',style:Theme.of(context).textTheme.titleLarge),
-      ...groups.map((g)=>Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[
-        Row(children:[Expanded(child:TextFormField(initialValue:g.name,
-          decoration:const InputDecoration(labelText:'Checklist name'),onChanged:(v)=>g.name=v)),
-          IconButton(onPressed:busy?null:()=>setState(()=>groups.remove(g)),
-            icon:const Icon(Icons.delete_outline))]),
-        ...g.steps.map((step)=>Padding(
-          padding:const EdgeInsets.only(top:8),
-          child:LayoutBuilder(builder:(context,constraints) {
-            final task = TextFormField(key:ObjectKey(step),initialValue:step.text,
-              decoration:const InputDecoration(labelText:'Checklist task'),
-              onChanged:(v)=>step.text=v);
-            final reward = TextFormField(initialValue:step.reward.toString(),
-              keyboardType:const TextInputType.numberWithOptions(decimal:true),
-              decoration:const InputDecoration(labelText:'BP 0–5'),
-              onChanged:(v)=>step.reward=double.tryParse(v)??0);
-            final remove = IconButton(
-              tooltip:'Remove checklist step',
-              onPressed:busy?null:()=>setState(()=>g.steps.remove(step)),
-              icon:const Icon(Icons.remove_circle_outline));
-            if (constraints.maxWidth < 330) {
-              return Column(children:[
-                Row(children:[Expanded(child:task),remove]),
-                const SizedBox(height:8),
-                reward,
-              ]);
-            }
-            return Row(children:[
-              Expanded(flex:4,child:task),
-              const SizedBox(width:8),
-              Expanded(flex:2,child:reward),
-              remove,
-            ]);
-          }),
-        )),
-        TextButton.icon(onPressed:busy||g.steps.length>=30?null:()=>
-          setState(()=>g.steps.add(_Step('','',0))),icon:const Icon(Icons.add),
-          label:const Text('Add task step')),
-      ])))),
-      OutlinedButton.icon(onPressed:busy||groups.length>=12?null:()=>
-        setState(()=>groups.add(_Group('','New Checklist',[_Step('','',0)]))),
-        icon:const Icon(Icons.playlist_add),label:const Text('Add Checklist')),
-      const SizedBox(height:16),
-      FilledButton.icon(onPressed:busy?null:_save,icon:const Icon(Icons.publish_outlined),
-        label:Text(busy?'Uploading/saving... $progress%':'Save Creator Task')),
-    ]));
+  @override
+  Widget build(BuildContext context) => BlinkCreateLayout(
+    title: widget.task == null ? 'New Creator Task' : 'Edit Creator Task',
+    subtitle: 'Publish a challenge with clear steps and rewards.',
+    icon: Icons.task_alt_rounded,
+    busy: busy,
+    primaryLabel: busy ? 'Saving... $progress%' : 'Save Creator Task',
+    onSubmit: _save,
+    progress: progress > 0
+        ? LinearProgressIndicator(value: progress / 100,
+            color: BlinkColors.orange)
+        : null,
+    content: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      BlinkFormSection(
+        heading: 'Task details',
+        helper: 'Explain the challenge and choose when it should be visible.',
+        children: [
+          TextField(
+            controller: title, maxLength: 140,
+            textCapitalization: TextCapitalization.sentences,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(labelText: 'Task title'),
+          ),
+          const SizedBox(height: 9),
+          TextField(
+            controller: description, maxLength: 4000,
+            minLines: 4, maxLines: 8,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Instructions', alignLabelWithHint: true),
+          ),
+          const SizedBox(height: 9),
+          DropdownButtonFormField<String>(
+            initialValue: status, isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Visibility'),
+            items: ['DRAFT','PUBLISHED'].map((v) =>
+              DropdownMenuItem(value: v, child: Text(v))).toList(),
+            onChanged: busy ? null : (v) {
+              if (v != null) setState(() => status = v);
+            },
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      BlinkFormSection(
+        heading: 'Photos & video',
+        helper: 'Attach examples so participants understand the expected work.',
+        children: [
+          SizedBox(width: double.infinity, child: OutlinedButton.icon(
+            onPressed: busy ? null : _pickImages,
+            icon: const Icon(Icons.add_photo_alternate_outlined),
+            label: Text('Task photos (${pictures.length}/8)'),
+          )),
+          ...pictures.map((f) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.image_outlined,
+              color: BlinkColors.orange),
+            title: Text(f.name, maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+            trailing: IconButton(
+              tooltip: 'Remove image',
+              icon: const Icon(Icons.close),
+              onPressed: busy ? null : () =>
+                setState(() => pictures.remove(f)),
+            ),
+          )),
+          const SizedBox(height: 10),
+          SizedBox(width: double.infinity, child: OutlinedButton.icon(
+            onPressed: busy ? null : _pickVideo,
+            icon: const Icon(Icons.video_library_outlined),
+            label: Text(video?.name ??
+              (widget.task?['hasVideo'] == true
+                ? 'Replace task video' : 'Attach task video'),
+              maxLines: 1, overflow: TextOverflow.ellipsis),
+          )),
+        ],
+      ),
+      const SizedBox(height: 16),
+      BlinkFormSection(
+        heading: 'Checklist & BP rewards',
+        helper: 'Each step can award 0 to 5 BP when verified.',
+        children: [
+          ...groups.map((g) => Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(children: [
+                    Expanded(child: TextFormField(
+                      initialValue: g.name,
+                      decoration: const InputDecoration(
+                        labelText: 'Checklist name'),
+                      onChanged: (v) => g.name = v,
+                    )),
+                    IconButton(
+                      tooltip: 'Remove checklist',
+                      onPressed: busy ? null :
+                        () => setState(() => groups.remove(g)),
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                  ]),
+                  ...g.steps.map((step) => Padding(
+                    padding: const EdgeInsets.only(top: 11),
+                    child: LayoutBuilder(builder: (context, constraints) {
+                      final task = TextFormField(
+                        key: ObjectKey(step), initialValue: step.text,
+                        decoration: const InputDecoration(
+                          labelText: 'Checklist step'),
+                        onChanged: (v) => step.text = v,
+                      );
+                      final reward = TextFormField(
+                        initialValue: step.reward.toString(),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Reward (0–5 BP)'),
+                        onChanged: (v) =>
+                          step.reward = double.tryParse(v) ?? 0,
+                      );
+                      final remove = IconButton(
+                        tooltip: 'Remove step',
+                        onPressed: busy ? null :
+                          () => setState(() => g.steps.remove(step)),
+                        icon: const Icon(Icons.remove_circle_outline),
+                      );
+                      if (constraints.maxWidth < 335) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(children: [Expanded(child: task), remove]),
+                            const SizedBox(height: 8),
+                            reward,
+                          ],
+                        );
+                      }
+                      return Row(children: [
+                        Expanded(flex: 4, child: task),
+                        const SizedBox(width: 8),
+                        Expanded(flex: 2, child: reward),
+                        remove,
+                      ]);
+                    }),
+                  )),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: busy || g.steps.length >= 30 ? null :
+                      () => setState(() => g.steps.add(_Step('', '', 0))),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add step'),
+                  ),
+                ],
+              ),
+            ),
+          )),
+          OutlinedButton.icon(
+            onPressed: busy || groups.length >= 12 ? null :
+              () => setState(() => groups.add(
+                _Group('', 'New Checklist', [_Step('', '', 0)]))),
+            icon: const Icon(Icons.playlist_add),
+            label: const Text('Add Checklist'),
+          ),
+        ],
+      ),
+    ]),
+  );
 }
