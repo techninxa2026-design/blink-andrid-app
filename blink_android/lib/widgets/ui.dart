@@ -663,13 +663,21 @@ class BlinkPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final standard = color == Colors.white;
     return Container(
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(17),
+        color: standard ? null : color,
+        gradient: standard ? const LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Colors.white, Color(0xFFFFFAF7)]) : null,
+        borderRadius: BorderRadius.circular(21),
         border: Border.all(
-          color: BlinkColors.line,
+          color: standard ? const Color(0xFFFFDAC6) : BlinkColors.line,
         ),
+        boxShadow: standard ? const [
+          BoxShadow(color: Color(0x105A2A10),
+            blurRadius: 17, offset: Offset(0, 7)),
+        ] : null,
       ),
       padding: padding,
       child: child,
@@ -762,14 +770,19 @@ class BlinkInfoPill extends StatelessWidget {
         Icon(icon, size: 14, color: BlinkColors.orangeDark),
         const SizedBox(width: 5),
       ],
-      Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          color: BlinkColors.ink,
+      ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * .62),
+        child: Text(
+          label,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: BlinkColors.ink,
+          ),
         ),
       ),
     ]),
