@@ -296,7 +296,7 @@ class _CheckinsState extends State<LiveCheckinsScreen> {
             const Text('Only you and your friends can see your Check-Ins.',
               style: TextStyle(color: BlinkColors.muted, fontSize: 12)),
             const SizedBox(height: 14),
-            SegmentedButton<String>(
+            BlinkAdaptiveSegments<String>(
               showSelectedIcon: false,
               segments: const [
                 ButtonSegment(value: 'all', label: Text('All')),
@@ -304,7 +304,7 @@ class _CheckinsState extends State<LiveCheckinsScreen> {
                 ButtonSegment(value: 'mine', label: Text('Mine')),
               ],
               selected: {tab},
-              onSelectionChanged: (value) => setState(() => tab = value.first),
+              onChanged: (value) => setState(() => tab = value.first),
             ),
             const SizedBox(height: 14),
             if (visible.isEmpty) Container(
@@ -551,11 +551,11 @@ class _SecretsState extends State<LiveSecretsScreen>{
       :error!=null?liveError(error,_load)
       :RefreshIndicator(onRefresh:_load,child:ListView(
         padding:const EdgeInsets.all(12),children:[
-          SegmentedButton<String>(segments:const [
+          BlinkAdaptiveSegments<String>(segments:const [
             ButtonSegment(value:'all',label:Text('Explore')),
             ButtonSegment(value:'mine',label:Text('My Secrets')),
             ButtonSegment(value:'answered',label:Text('Answered')),
-          ],selected:{filter},onSelectionChanged:(values)=>
+          ],selected:{filter},onChanged:(values)=>
             setState(()=>filter=values.first)),
           const SizedBox(height:12),
           if(visible.isEmpty)const ListTile(title:Text('No Secrets found for this tab.')),
