@@ -59,17 +59,21 @@ class LiveApi {
     }
   }
 
-  static Future<dynamic> upload(String path, File file, {String field = 'file'}) async {
+  static Future<dynamic> upload(String path, File file, {String field = 'file', Map<String, String>? fields}) async {
     final token = await BlinkAuthApi.getToken();
     if (token == null || token.isEmpty) throw const LiveApiError('Please log in again.');
     final request = http.MultipartRequest('POST', Uri.parse('$root$path'));
     request.headers['Authorization'] = 'Bearer $token';
+    if (fields != null) request.fields.addAll(fields);
     final extension = file.path.toLowerCase();
     final mime = extension.endsWith('.png') ? 'image/png' :
       extension.endsWith('.webp') ? 'image/webp' :
       extension.endsWith('.jpg') || extension.endsWith('.jpeg') ? 'image/jpeg' :
       extension.endsWith('.mp4') ? 'video/mp4' :
-      extension.endsWith('.mov') ? 'video/quicktime' : 'application/octet-stream';
+      extension.endsWith('.mov') ? 'video/quicktime' :
+      extension.endsWith('.m4a') ? 'audio/mp4' :
+      extension.endsWith('.aac') ? 'audio/aac' :
+      extension.endsWith('.webm') ? 'video/webm' : 'application/octet-stream';
     request.files.add(await http.MultipartFile.fromPath(field, file.path,
       contentType: MediaType.parse(mime)));
     final stream = await request.send().timeout(const Duration(minutes: 2));
