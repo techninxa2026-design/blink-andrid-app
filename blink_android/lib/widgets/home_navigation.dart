@@ -712,20 +712,14 @@ class BlinkHomeCheckins extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: heading,
-                    ),
-                    Flexible(
-                      child: seeAll,
-                    ),
-                  ],
+                heading,
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [writeNote, seeAll],
                 ),
-
-                const SizedBox(height: 10),
-
-                writeNote,
               ],
             );
           }
