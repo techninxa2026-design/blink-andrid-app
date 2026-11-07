@@ -116,6 +116,7 @@ class LiveChatScreen extends StatefulWidget {
 class _LiveChatState extends State<LiveChatScreen>{
   final input=TextEditingController();
   List<dynamic> messages=[];String? error;String myId='';String bearer='';bool busy=false;bool loading=true;
+  Map<String,dynamic> conversation={}; Map<String,dynamic>? replyTo;
   Timer? timer;
   @override void initState(){super.initState();_load();timer=Timer.periodic(const Duration(seconds:12),(_)=>_load(silent:true));}
   @override void dispose(){timer?.cancel();input.dispose();super.dispose();}
@@ -125,23 +126,33 @@ class _LiveChatState extends State<LiveChatScreen>{
       final token=await BlinkAuthApi.getToken() ?? '';
       final data=obj(await LiveApi.call('GET','/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}'));
       if(!mounted)return;
-      setState((){myId=field(self,'id');bearer=token;messages=arr(data['messages']);error=null;loading=false;});
+      setState((){myId=field(self,'id');bearer=token;conversation=data;messages=arr(data['messages']);error=null;loading=false;});
       if(!silent)await LiveApi.call('POST','/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}/read');
     }catch(e){if(mounted&&!silent)setState((){error=e.toString();loading=false;});}
   }
   Future<void> _send()async{
     final text=input.text.trim();if(text.isEmpty||busy)return;
     setState(()=>busy=true);
-    try{await LiveApi.call('POST','/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}/messages',{'body':text});
-      input.clear();await _load();
+    try{await LiveApi.call('POST','/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}/messages',{'body':text,if(replyTo!=null)'replyToId':field(replyTo,'id')});
+      input.clear();setState(()=>replyTo=null);await _load();
     }catch(e){if(mounted)liveNotice(context,e.toString());}
     finally{if(mounted)setState(()=>busy=false);}
   }
   Future<void> _upload()async{
+    final selection = await showModalBottomSheet<bool>(context:context,builder:(ctx)=>SafeArea(
+      child:Column(mainAxisSize:MainAxisSize.min,children:[
+        ListTile(leading:const Icon(Icons.photo_outlined),title:const Text('Send normal photo or video'),
+          onTap:()=>Navigator.pop(ctx,false)),
+        ListTile(leading:const Icon(Icons.lock_outline,color:BlinkColors.orange),
+          title:const Text('Send one-time private media'),
+          subtitle:const Text('Recipient can open the attachment once'),
+          onTap:()=>Navigator.pop(ctx,true)),
+      ])));
+    if(selection==null||!mounted)return;
     final asset=await ImagePicker().pickMedia();
     if(asset==null)return;setState(()=>busy=true);
-    try{await LiveApi.upload('/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}/media',
-      File(asset.path));
+    try{await LiveApi.upload('/inbox/conversations/'+Uri.encodeComponent(widget.conversationId)+'/media',
+      File(asset.path),fields:{'isPrivate':selection.toString()});
       await _load();
     }catch(e){if(mounted)liveNotice(context,e.toString());}
     finally{if(mounted)setState(()=>busy=false);}
@@ -149,6 +160,193 @@ class _LiveChatState extends State<LiveChatScreen>{
   Future<void> _action(String method,String path,[Map<String,dynamic>? body])async{
     try{await LiveApi.call(method,path,body);await _load();}catch(e){if(mounted)liveNotice(context,e.toString());}
   }
+
+  Future<void> _editMessage(Map<String,dynamic> message)async{
+    final controller=TextEditingController(text:field(message,'body'));
+    final updated=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Edit Message'),content:TextField(controller:controller,maxLines:4),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+        FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),
+          child:const Text('Save'))]));
+    controller.dispose();if(updated==null||updated.isEmpty)return;
+    await _action('PATCH','/inbox/messages/'+Uri.encodeComponent(field(message,'id')),
+      {'body':updated});
+  }
+
+  Future<void> _forward(Map<String,dynamic> message)async{
+    try{
+      final friends=arr(await LiveApi.call('GET','/inbox/friends'));
+      if(!mounted)return;
+      final selected=<String>{};
+      final recipients=await showModalBottomSheet<List<String>>(context:context,isScrollControlled:true,
+        builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>SafeArea(
+          child:SizedBox(height:MediaQuery.sizeOf(ctx).height*.7,
+            child:Column(children:[
+              const Padding(padding:EdgeInsets.all(14),child:Text('Forward to Blink friends',
+                style:TextStyle(fontWeight:FontWeight.w800,fontSize:17))),
+              Expanded(child:ListView(children:friends.map((person){
+                final id=field(person,'id');
+                return CheckboxListTile(secondary:liveAvatar(person),title:Text(field(person,'name')),
+                  value:selected.contains(id),onChanged:(v)=>refresh((){
+                    if(v==true){selected.add(id);}else{selected.remove(id);}
+                  }));
+              }).toList())),
+              Padding(padding:const EdgeInsets.all(12),child:FilledButton(
+                onPressed:selected.isEmpty?null:()=>Navigator.pop(ctx,selected.toList()),
+                child:const Text('Forward message'))),
+            ]))));
+      if(recipients==null||recipients.isEmpty)return;
+      await _action('POST','/inbox/messages/'+Uri.encodeComponent(field(message,'id'))+'/forward',
+        {'friendIds':recipients});
+    }catch(e){if(mounted)liveNotice(context,e.toString());}
+  }
+
+  Future<void> _messageAction(String action,Map<String,dynamic> message)async{
+    final id=field(message,'id');
+    switch(action){
+      case 'reply':setState(()=>replyTo=message);break;
+      case 'edit':await _editMessage(message);break;
+      case 'forward':await _forward(message);break;
+      case 'pin':
+        await _action('PATCH','/inbox/conversations/'+
+          Uri.encodeComponent(widget.conversationId)+'/pin',{'messageId':id});
+        break;
+      case 'unpin':
+        await _action('PATCH','/inbox/conversations/'+
+          Uri.encodeComponent(widget.conversationId)+'/pin',{'messageId':null});
+        break;
+      case 'unsend':await _action('POST','/inbox/messages/'+Uri.encodeComponent(id)+'/unsend');break;
+      case 'hide':await _action('DELETE','/inbox/messages/'+Uri.encodeComponent(id));break;
+    }
+  }
+
+  Future<void> _searchConversation()async{
+    final term=TextEditingController();
+    final query=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Search this conversation'),
+      content:TextField(controller:term,decoration:const InputDecoration(labelText:'Search messages')),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+        FilledButton(onPressed:()=>Navigator.pop(ctx,term.text.trim()),child:const Text('Search'))]));
+    term.dispose();if(query==null||query.isEmpty)return;
+    try{
+      final rows=arr(await LiveApi.call('GET','/inbox/conversations/'+
+        Uri.encodeComponent(widget.conversationId)+'/search?q='+Uri.encodeQueryComponent(query)));
+      if(!mounted)return;
+      await showModalBottomSheet<void>(context:context,isScrollControlled:true,
+        builder:(ctx)=>SafeArea(child:SizedBox(height:MediaQuery.sizeOf(ctx).height*.67,
+          child:Column(children:[
+            Padding(padding:const EdgeInsets.all(16),child:Text('Search results for '+query,
+              style:const TextStyle(fontWeight:FontWeight.w800))),
+            Expanded(child:ListView(children:rows.map((m)=>ListTile(
+              title:Text(field(m,'body')),subtitle:Text(field(m,'createdAt')),
+              onTap:()async{
+                Navigator.pop(ctx);
+                try{
+                  final value=obj(await LiveApi.call('GET','/inbox/conversations/'+
+                    Uri.encodeComponent(widget.conversationId)+'?around='+
+                    Uri.encodeComponent(field(m,'id'))));
+                  if(mounted)setState(()=>messages=arr(value['messages']));
+                }catch(e){if(mounted)liveNotice(context,e.toString());}
+              },
+            )).toList())),
+          ]))));
+    }catch(e){if(mounted)liveNotice(context,e.toString());}
+  }
+
+  Future<void> _renameGroup()async{
+    final controller=TextEditingController(text:field(conversation,'groupName'));
+    final name=await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Rename Blink Group'),
+      content:TextField(controller:controller,maxLength:80),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
+        FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),child:const Text('Save'))]));
+    controller.dispose();
+    if(name==null||name.isEmpty)return;
+    await _action('PATCH','/inbox/groups/'+
+      Uri.encodeComponent(widget.conversationId)+'/name',{'name':name});
+  }
+
+  Future<void> _addGroupMembers()async{
+    try{
+      final friends=arr(await LiveApi.call('GET','/inbox/friends'));
+      if(!mounted)return;
+      final existing=arr(conversation['members'])
+        .map((m)=>field(obj(m)['user'],'id')).toSet();
+      final selected=<String>{};
+      final ids=await showModalBottomSheet<List<String>>(context:context,isScrollControlled:true,
+        builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>SafeArea(
+          child:SizedBox(height:MediaQuery.sizeOf(ctx).height*.7,
+            child:Column(children:[
+              const ListTile(title:Text('Invite friends to this group')),
+              Expanded(child:ListView(children:friends.where((u)=>
+                !existing.contains(field(u,'id'))).map((u){
+                final id=field(u,'id');
+                return CheckboxListTile(secondary:liveAvatar(u),title:Text(field(u,'name')),
+                  value:selected.contains(id),onChanged:(v)=>refresh((){
+                    if(v==true){selected.add(id);}else{selected.remove(id);}
+                  }));
+              }).toList())),
+              FilledButton(onPressed:selected.isEmpty?null:()=>Navigator.pop(ctx,selected.toList()),
+                child:const Text('Add selected members')),
+            ]))));
+      if(ids==null||ids.isEmpty)return;
+      await _action('POST','/inbox/groups/'+Uri.encodeComponent(widget.conversationId)+'/members',
+        {'friendIds':ids});
+    }catch(e){if(mounted)liveNotice(context,e.toString());}
+  }
+
+  Future<void> _groupMembers()async{
+    final members=arr(conversation['members']);
+    final owner=field(conversation,'groupOwnerId')==myId;
+    await showModalBottomSheet<void>(context:context,builder:(ctx)=>SafeArea(
+      child:ListView(shrinkWrap:true,children:[
+        const ListTile(title:Text('Group members')),
+        ...members.map((m){
+          final user=obj(obj(m)['user']),id=field(user,'id');
+          return ListTile(leading:liveAvatar(user),title:Text(field(user,'name')),
+            trailing:owner&&id!=myId?IconButton(tooltip:'Remove member',
+              icon:const Icon(Icons.person_remove_outlined),onPressed:()async{
+                Navigator.pop(ctx);
+                await _action('DELETE','/inbox/groups/'+
+                  Uri.encodeComponent(widget.conversationId)+'/members/'+Uri.encodeComponent(id));
+              }):null);
+        }),
+      ])));
+  }
+
+  Future<void> _conversationAction(String action)async{
+    final base='/inbox/conversations/'+Uri.encodeComponent(widget.conversationId);
+    final group=conversation['isGroup']==true;
+    final personId=field(conversation['otherUser'],'id');
+    switch(action){
+      case 'search':await _searchConversation();break;
+      case 'mute':await _action('PATCH',base+'/mute',{'muted':conversation['muted']!=true});break;
+      case 'clear':
+        final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+          title:const Text('Clear this conversation?'),
+          content:const Text('Messages will be cleared from your view.'),
+          actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancel')),
+            FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Clear'))]));
+        if(yes==true)await _action('DELETE',base);
+        break;
+      case 'block':
+        if(!group&&personId.isNotEmpty)await _action('PATCH',
+          '/inbox/blocks/'+Uri.encodeComponent(personId),
+          {'blocked':conversation['blockedByMe']!=true});
+        break;
+      case 'rename':await _renameGroup();break;
+      case 'add':await _addGroupMembers();break;
+      case 'members':await _groupMembers();break;
+      case 'leave':
+        try{
+          await LiveApi.call('POST','/inbox/groups/'+
+            Uri.encodeComponent(widget.conversationId)+'/leave');
+          if(mounted)Navigator.pop(context);
+        }catch(e){if(mounted)liveNotice(context,e.toString());}
+        break;
+    }
+  }
+
   Future<void> _openPrivate(Map<String,dynamic> m) async {
     final id = field(m,'id');
     if(id.isEmpty) return;
@@ -240,7 +438,19 @@ class _LiveChatState extends State<LiveChatScreen>{
           else Text(field(m,'body')),
           const SizedBox(height:5),
           Row(mainAxisSize:MainAxisSize.min,children:[
-            if(!removed)TextButton(onPressed:()=>_action('POST','/inbox/messages/${field(m,'id')}/reaction',{'emoji':'❤️'}),
+            if(!removed)PopupMenuButton<String>(tooltip:'Message actions',
+              icon:const Icon(Icons.more_horiz,size:18),
+              onSelected:(action)=>_messageAction(action,m),
+              itemBuilder:(_)=>[
+                const PopupMenuItem(value:'reply',child:Text('Reply')),
+                const PopupMenuItem(value:'forward',child:Text('Forward')),
+                const PopupMenuItem(value:'pin',child:Text('Pin')),
+                if(own)const PopupMenuItem(value:'edit',child:Text('Edit')),
+                if(own)const PopupMenuItem(value:'unsend',child:Text('Unsend')),
+                const PopupMenuItem(value:'hide',child:Text('Hide')),
+              ]),
+            if(!removed)TextButton(onPressed:()=>_action('POST','/inbox/messages/'+
+              Uri.encodeComponent(field(m,'id'))+'/reaction',{'emoji':'❤️'}),
               child:const Text('❤️',style:TextStyle(fontSize:11))),
             if(own&&!removed)TextButton(onPressed:()=>_action('POST','/inbox/messages/${field(m,'id')}/unsend'),
               child:const Text('Unsend',style:TextStyle(fontSize:11))),
@@ -252,8 +462,33 @@ class _LiveChatState extends State<LiveChatScreen>{
     );
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:Text(widget.title)),
+    appBar:AppBar(title:Text(widget.title),actions:[
+      PopupMenuButton<String>(tooltip:'Conversation options',
+        onSelected:_conversationAction,itemBuilder:(_)=>[
+          const PopupMenuItem(value:'search',child:Text('Search messages')),
+          PopupMenuItem(value:'mute',child:Text(conversation['muted']==true?'Unmute':'Mute')),
+          const PopupMenuItem(value:'clear',child:Text('Clear messages')),
+          if(conversation['isGroup']==true)...[
+            const PopupMenuItem(value:'members',child:Text('Group members')),
+            if(field(conversation,'groupOwnerId')==myId)...[
+              const PopupMenuItem(value:'rename',child:Text('Rename group')),
+              const PopupMenuItem(value:'add',child:Text('Add members')),
+            ],
+            const PopupMenuItem(value:'leave',child:Text('Leave group')),
+          ]else PopupMenuItem(value:'block',child:Text(
+            conversation['blockedByMe']==true?'Unblock user':'Block user')),
+        ]),
+    ]),
     body:Column(children:[
+      if(obj(conversation['pinnedMessage']).isNotEmpty)
+        ListTile(dense:true,leading:const Icon(Icons.push_pin,color:BlinkColors.orange),
+          title:Text(field(conversation['pinnedMessage'],'body','Pinned message')),
+          trailing:IconButton(icon:const Icon(Icons.close),
+            onPressed:()=>_messageAction('unpin',obj(conversation['pinnedMessage'])))),
+      if(replyTo!=null)ListTile(dense:true,leading:const Icon(Icons.reply,color:BlinkColors.orange),
+        title:Text('Reply to: '+field(replyTo,'body','Attachment'),maxLines:1),
+        trailing:IconButton(icon:const Icon(Icons.close),
+          onPressed:()=>setState(()=>replyTo=null))),
       if(error!=null)liveError(error,()=>_load()),
       Expanded(child:loading?const Center(child:CircularProgressIndicator()):
         RefreshIndicator(onRefresh:_load,child:ListView.builder(
