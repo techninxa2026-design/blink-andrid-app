@@ -874,14 +874,16 @@ class ExploreScreen extends StatelessWidget {
 
           Padding(
             padding: const EdgeInsets.fromLTRB(15, 7, 15, 18),
-            child: GridView.builder(
+            child: LayoutBuilder(builder: (context, constraints) => GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: items.length,
-              gridDelegate:
-              const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 1.12,
+                // Fixed aspect ratios truncate cards at large accessibility
+                // sizes. Give subtitles enough room instead of overflow.
+                mainAxisExtent: 112 +
+                  34 * MediaQuery.textScalerOf(context).scale(1.0),
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
               ),
@@ -943,7 +945,7 @@ class ExploreScreen extends StatelessWidget {
                   ),
                 );
               },
-            ),
+            )),
           ),
         ],
       ),
