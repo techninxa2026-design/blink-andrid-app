@@ -1,133 +1,223 @@
 
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 import '../core/nav.dart';
 import '../core/blink_auth_api.dart';
 import '../core/blink_home_api.dart';
+
 import '../widgets/ui.dart';
 import '../widgets/home_navigation.dart';
 import '../widgets/blink_full_drawer.dart';
+
 import 'blink_live_moment_card.dart';
 import 'blink_real_capture.dart';
 
-// ==================================================
+// ============================================================
 // BLINK MOMENTS CONFIGURATION
-// ==================================================
-
-// Public Moments = other users' public posts.
-// My Moments = current user's posts.
-//
-// Includes both image and video Moments.
-//
-// NestJS currently returns only active,
-// non-expired public Moments.
+// ============================================================
 
 const int _momentPageSize = 40;
 
-// ==================================================
-// SHARED MOMENTS FILTER
-// ==================================================
+// Public Moments: every OTHER user's public Moments.
+// My Moments: only the currently authenticated user's Moments.
+//
+// The API must use the same database as the Blink web application.
 
 List<BlinkMoment> filterMomentsForViewer(
     List<BlinkMoment> moments,
     String userId, {
       required bool mine,
     }) {
-  if (userId.isEmpty) {
+  if (userId.trim().isEmpty) {
     return <BlinkMoment>[];
   }
 
   return moments.where((moment) {
-    if (moment.id.isEmpty ||
-        moment.senderId.isEmpty) {
+    if (moment.id.trim().isEmpty ||
+        moment.senderId.trim().isEmpty) {
       return false;
     }
 
     if (mine) {
-      // My Moments:
-      // ONLY currently logged-in user's posts.
       return moment.senderId == userId;
     }
 
-    // Public Moments:
-    // ALL OTHER users' public posts.
     return moment.senderId != userId;
   }).toList();
 }
 
-// ==================================================
-// HOME SCREEN
-// ==================================================
+// ============================================================
+// PAGINATION RESULT
+// ============================================================
 
-class HomeScreen extends StatefulWidget {
+class _MomentBatch {
+  const _MomentBatch({
+    required this.items,
+    required this.seenIds,
+    required this.nextOffset,
+    required this.hasMore,
+    required this.serverCount,
+  });
+
+  final List<BlinkMoment> items;
+  final Set<String> seenIds;
+  final int nextOffset;
+  final bool hasMore;
+  final int serverCount;
+}
+
+// ============================================================
+// HOME SCREEN
+// ============================================================
+
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() =>
-      _HomeScreenState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: BlinkColors.canvas,
+
+      drawer: const BlinkFullDrawer(),
+
+      appBar: AppBar(
+        backgroundColor: BlinkColors.surface,
+        centerTitle: true,
+        elevation: 0,
+
+        title: const BlinkLogo(
+          fontSize: 33,
+        ),
+
+        leading: Builder(
+          builder: (scaffoldContext) {
+            return IconButton(
+              tooltip: 'Open Blink navigation',
+              icon: const Icon(
+                Icons.menu_rounded,
+                color: BlinkColors.orangeDark,
+                size: 26,
+              ),
+              onPressed: () {
+                Scaffold.of(scaffoldContext).openDrawer();
+              },
+            );
+          },
+        ),
+
+        actions: const [
+          BlinkMessageButton(),
+          SizedBox(width: 8),
+        ],
+      ),
+
+      body: const _BlinkMomentsFeed(
+        showCheckins: true,
+      ),
+
+      bottomNavigationBar: const BlinkBottomBar(
+        active: 'home',
+      ),
+    );
+  }
 }
 
-class _HomeScreenState extends State<HomeScreen>
+// ============================================================
+// SEPARATE MOMENTS SCREEN
+// Supports:
+// /moments
+// /moments/mine
+// ============================================================
+
+class MomentsFeedScreen extends StatelessWidget {
+  const MomentsFeedScreen({
+    super.key,
+    this.initialMine = false,
+  });
+
+  final bool initialMine;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlinkScreen(
+      title: 'Moments',
+      active: 'home',
+      logoTitle: false,
+
+      trailing: IconButton(
+        tooltip: 'Create Moment',
+        icon: const Icon(
+          Icons.add_circle_rounded,
+          color: BlinkColors.orange,
+          size: 27,
+        ),
+        onPressed: () {
+          go(context, '/capture');
+        },
+      ),
+
+      child: _BlinkMomentsFeed(
+        initialMine: initialMine,
+      ),
+    );
+  }
+}
+
+// ============================================================
+// REUSABLE REAL MOMENTS FEED
+// ============================================================
+
+class _BlinkMomentsFeed extends StatefulWidget {
+  const _BlinkMomentsFeed({
+    this.showCheckins = false,
+    this.initialMine = false,
+  });
+
+  final bool showCheckins;
+  final bool initialMine;
+
+  @override
+  State<_BlinkMomentsFeed> createState() =>
+      _BlinkMomentsFeedState();
+}
+
+class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
     with WidgetsBindingObserver {
-  final ScrollController _scroll =
-  ScrollController();
+  final ScrollController _scroll = ScrollController();
 
-  final Set<String> _seenServerIds =
-  <String>{};
+  final Set<String> _seenIds = <String>{};
 
-  // 0 = Public Moments
-  // 1 = My Moments
-  int selectedFeed = 0;
+  List<BlinkMoment> _items = <BlinkMoment>[];
 
-  String _myId = '';
-
-  List<BlinkMoment> _moments =
-  <BlinkMoment>[];
-
-  int _activeCount = 0;
+  late bool _mine;
 
   bool _loading = true;
   bool _loadingMore = false;
   bool _hasMore = false;
 
-  int _serverOffset = 0;
-  int _requestVersion = 0;
-  int _emptySearchPages = 0;
-
+  String _viewerId = '';
   String? _error;
 
-  bool get _mine => selectedFeed == 1;
-
-  // ==================================================
-  // INITIALIZE
-  // ==================================================
+  int _offset = 0;
+  int _requestVersion = 0;
+  int _checkinCount = 0;
+  int _serverCount = 0;
 
   @override
   void initState() {
     super.initState();
 
+    _mine = widget.initialMine;
+
     WidgetsBinding.instance.addObserver(this);
 
     _scroll.addListener(_onScroll);
 
-    _load();
-  }
-
-  void _onScroll() {
-    if (_scroll.hasClients &&
-        _scroll.position.extentAfter < 550) {
-      _loadNext();
-    }
-  }
-
-  @override
-  void didChangeAppLifecycleState(
-      AppLifecycleState state,
-      ) {
-    if (state == AppLifecycleState.resumed) {
-      _load();
-    }
+    _refresh();
   }
 
   @override
@@ -142,96 +232,227 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
-  // ==================================================
-  // SWITCH PUBLIC / MY MOMENTS
-  // ==================================================
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refresh();
+    }
+  }
 
-  void _changeFeed(int value) {
-    if (value == selectedFeed ||
-        (value != 0 && value != 1)) {
+  // ==========================================================
+  // INFINITE SCROLL
+  // ==========================================================
+
+  void _onScroll() {
+    if (!_scroll.hasClients) {
+      return;
+    }
+
+    if (_scroll.position.extentAfter < 550) {
+      _loadMore();
+    }
+  }
+
+  // ==========================================================
+  // SWITCH PUBLIC / MY MOMENTS
+  // ==========================================================
+
+  void _changeFeed(int index) {
+    final nextMine = index == 1;
+
+    if (_mine == nextMine) {
       return;
     }
 
     setState(() {
-      selectedFeed = value;
+      _mine = nextMine;
+      _items = <BlinkMoment>[];
     });
 
     if (_scroll.hasClients) {
       _scroll.jumpTo(0);
     }
 
-    _load();
+    _refresh();
   }
 
-  // ==================================================
-  // LOAD REAL MOMENTS FROM DATABASE
-  // ==================================================
+  // ==========================================================
+  // LOAD CHECK-INS INDEPENDENTLY
+  // Never block Moments waiting for Check-Ins.
+  // ==========================================================
 
-  Future<void> _load() async {
+  Future<void> _loadCheckins(int requestVersion) async {
+    try {
+      final count = await BlinkHomeApi.activeCheckinsCount();
+
+      if (!mounted || requestVersion != _requestVersion) {
+        return;
+      }
+
+      setState(() {
+        _checkinCount = count;
+      });
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('[Blink Check-Ins] $error');
+      }
+    }
+  }
+
+  // ==========================================================
+  // GET VISIBLE MOMENTS FROM SERVER
+  //
+  // Public:
+  // GET /moments?skip=0&take=40
+  //
+  // My:
+  // GET /moments/mine?skip=0&take=40
+  //
+  // The server applies the global feed visibility rule.
+  // Flutter also checks senderId for safety.
+  // ==========================================================
+
+  Future<_MomentBatch> _fetchBatch({
+    required bool mine,
+    required String viewerId,
+    required int startOffset,
+    required Set<String> existingIds,
+  }) async {
+    final collected = <BlinkMoment>[];
+    final seen = Set<String>.from(existingIds);
+
+    int offset = startOffset;
+    int returnedTotal = 0;
+    bool hasMore = false;
+
+    // Avoid appearing empty if an older server returns
+    // a page containing only the logged-in user's posts.
+    //
+    // At most five pages are scanned per operation.
+    // Further pages remain available through Load More.
+
+    for (int scan = 0; scan < 5; scan++) {
+      final page = await BlinkHomeApi.moments(
+        mine: mine,
+        skip: offset,
+        take: _momentPageSize,
+      );
+
+      returnedTotal += page.length;
+      offset += page.length;
+
+      final unseen = <BlinkMoment>[];
+
+      for (final moment in page) {
+        if (moment.id.isEmpty) {
+          continue;
+        }
+
+        if (seen.add(moment.id)) {
+          unseen.add(moment);
+        }
+      }
+
+      final visible = filterMomentsForViewer(
+        unseen,
+        viewerId,
+        mine: mine,
+      );
+
+      collected.addAll(visible);
+
+      if (kDebugMode) {
+        debugPrint('========== BLINK MOMENTS DEBUG ==========');
+        debugPrint('API: ${BlinkHomeApi.baseUrl}');
+        debugPrint('Viewer ID: $viewerId');
+        debugPrint('Feed: ${mine ? "MY MOMENTS" : "PUBLIC MOMENTS"}');
+        debugPrint('Page offset: ${offset - page.length}');
+        debugPrint('Server returned: ${page.length}');
+        debugPrint('Visible after filter: ${visible.length}');
+
+        for (final moment in page) {
+          debugPrint(
+            'Moment ID: ${moment.id} '
+                '| Owner: ${moment.senderId} '
+                '| Type: ${moment.mediaType}',
+          );
+        }
+
+        debugPrint('=========================================');
+      }
+
+      // If the backend repeats an existing page,
+      // stop instead of requesting the same data forever.
+      hasMore =
+          page.length == _momentPageSize && unseen.isNotEmpty;
+
+      if (!hasMore || collected.isNotEmpty) {
+        break;
+      }
+    }
+
+    return _MomentBatch(
+      items: collected,
+      seenIds: seen,
+      nextOffset: offset,
+      hasMore: hasMore,
+      serverCount: returnedTotal,
+    );
+  }
+
+  // ==========================================================
+  // REFRESH FEED
+  // ==========================================================
+
+  Future<void> _refresh() async {
     final request = ++_requestVersion;
     final mine = _mine;
 
     setState(() {
       _loading = true;
       _loadingMore = false;
-      _hasMore = false;
       _error = null;
+      _hasMore = false;
+
+      _items = <BlinkMoment>[];
+      _seenIds.clear();
+
+      _viewerId = '';
+      _offset = 0;
+      _serverCount = 0;
     });
 
-    try {
-      // Get authenticated user from NestJS.
-      final user =
-      await BlinkAuthApi.currentUser();
+    if (widget.showCheckins) {
+      unawaited(_loadCheckins(request));
+    }
 
-      if (!mounted ||
-          request != _requestVersion) {
+    try {
+      // Always verify the active account against NestJS.
+      final user = await BlinkAuthApi.currentUser();
+
+      if (!mounted || request != _requestVersion) {
         return;
       }
 
       if (user == null) {
-        go(
-          context,
-          '/login',
-          replace: true,
-        );
+        go(context, '/login', replace: true);
         return;
       }
 
-      final userId =
-      (user['id'] ?? '').toString();
+      final viewerId = (user['id'] ?? '').toString().trim();
 
-      if (userId.isEmpty) {
+      if (viewerId.isEmpty) {
         throw const BlinkHomeError(
-          'Cannot identify the signed-in account.',
+          'Cannot identify the logged-in Blink user.',
         );
       }
 
-      // PUBLIC:
-      // GET /moments
-      //
-      // Fetches all active public Moments,
-      // then excludes the logged-in user.
-      //
-      // MY MOMENTS:
-      // GET /moments/mine
-      //
-      // Fetches the current user's uploads.
-
-      final page = await BlinkHomeApi.moments(
+      final result = await _fetchBatch(
         mine: mine,
-        skip: 0,
-        take: _momentPageSize,
+        viewerId: viewerId,
+        startOffset: 0,
+        existingIds: <String>{},
       );
-
-      // Load active Check-ins separately.
-      int checkins = _activeCount;
-
-      try {
-        checkins =
-        await BlinkHomeApi.activeCheckinsCount();
-      } catch (_) {
-        // Check-ins errors must not hide Moments.
-      }
 
       if (!mounted ||
           request != _requestVersion ||
@@ -239,50 +460,33 @@ class _HomeScreenState extends State<HomeScreen>
         return;
       }
 
-      // Apply the real user-ID filter.
-      final visible = filterMomentsForViewer(
-        page,
-        userId,
-        mine: mine,
-      );
-
       setState(() {
-        _myId = userId;
+        _viewerId = viewerId;
 
-        _moments = visible;
+        _items = result.items;
 
-        // Remember ALL records returned by server,
-        // including records excluded from Public.
-        _seenServerIds
+        _seenIds
           ..clear()
-          ..addAll(
-            page
-                .map((moment) => moment.id)
-                .where((id) => id.isNotEmpty),
-          );
+          ..addAll(result.seenIds);
 
-        // Server offset counts original records,
-        // not only the filtered records.
-        _serverOffset = page.length;
+        _offset = result.nextOffset;
+        _hasMore = result.hasMore;
+        _serverCount = result.serverCount;
 
-        _hasMore = page.length == _momentPageSize;
-
-        _activeCount = checkins;
-        _emptySearchPages = 0;
         _loading = false;
+        _error = null;
       });
 
-      // If the first batch contains only the
-      // logged-in user's Moments, search farther
-      // instead of displaying a false empty state.
-      if (!mine &&
-          visible.isEmpty &&
-          _hasMore) {
-        _loadNext();
+      if (kDebugMode) {
+        debugPrint(
+          '[Blink Feed] Viewer=$viewerId '
+              'Mine=$mine '
+              'Server=$_serverCount '
+              'Visible=${_items.length}',
+        );
       }
     } catch (error) {
-      if (!mounted ||
-          request != _requestVersion) {
+      if (!mounted || request != _requestVersion) {
         return;
       }
 
@@ -290,36 +494,40 @@ class _HomeScreenState extends State<HomeScreen>
         _loading = false;
         _error = error.toString();
       });
+
+      if (kDebugMode) {
+        debugPrint('[Blink Feed Error] $error');
+      }
     }
   }
 
-  // ==================================================
-  // LOAD MORE PUBLIC MOMENTS
-  // ==================================================
+  // ==========================================================
+  // LOAD MORE MOMENTS
+  // ==========================================================
 
-  Future<void> _loadNext() async {
+  Future<void> _loadMore() async {
     if (!mounted ||
         _loading ||
         _loadingMore ||
         !_hasMore ||
-        _myId.isEmpty) {
+        _viewerId.isEmpty) {
       return;
     }
 
     final request = _requestVersion;
     final mine = _mine;
-    final offset = _serverOffset;
+    final offset = _offset;
 
     setState(() {
       _loadingMore = true;
     });
 
     try {
-      final page =
-      await BlinkHomeApi.moments(
+      final result = await _fetchBatch(
         mine: mine,
-        skip: offset,
-        take: _momentPageSize,
+        viewerId: _viewerId,
+        startOffset: offset,
+        existingIds: _seenIds,
       );
 
       if (!mounted ||
@@ -328,65 +536,21 @@ class _HomeScreenState extends State<HomeScreen>
         return;
       }
 
-      // Exclude records already returned by
-      // previous pages.
-      //
-      // This also stops repeated pagination
-      // if NestJS has not enabled skip/take.
-
-      final unseen = page.where((moment) {
-        return moment.id.isNotEmpty &&
-            !_seenServerIds.contains(moment.id);
-      }).toList();
-
-      // Exclude all of the current user's posts.
-      final visible = filterMomentsForViewer(
-        unseen,
-        _myId,
-        mine: mine,
-      );
-
       setState(() {
-        _seenServerIds.addAll(
-          page
-              .map((moment) => moment.id)
-              .where((id) => id.isNotEmpty),
-        );
+        _seenIds
+          ..clear()
+          ..addAll(result.seenIds);
 
-        final currentIds = _moments
-            .map((moment) => moment.id)
-            .toSet();
+        _items.addAll(result.items);
 
-        _moments.addAll(
-          visible.where(
-                (moment) =>
-            !currentIds.contains(moment.id),
-          ),
-        );
-
-        _serverOffset += page.length;
-
-        _hasMore = page.length == _momentPageSize && unseen.isNotEmpty;
+        _offset = result.nextOffset;
+        _hasMore = result.hasMore;
+        _serverCount += result.serverCount;
 
         _loadingMore = false;
-
-        _emptySearchPages =
-        visible.isEmpty
-            ? _emptySearchPages + 1
-            : 0;
       });
-
-      // Try a few more pages automatically
-      // when no other users' Moments have
-      // been found yet.
-      if (_moments.isEmpty &&
-          _hasMore &&
-          _emptySearchPages < 5) {
-        _loadNext();
-      }
     } catch (error) {
-      if (!mounted ||
-          request != _requestVersion) {
+      if (!mounted || request != _requestVersion) {
         return;
       }
 
@@ -396,731 +560,229 @@ class _HomeScreenState extends State<HomeScreen>
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Could not load more Moments: $error',
-          ),
+          content: Text('Could not load more Moments: $error'),
         ),
       );
     }
   }
 
-  // ==================================================
-  // HOME UI
-  // ==================================================
+  // ==========================================================
+  // FEED HEADER
+  // ==========================================================
 
-  @override
-  Widget build(BuildContext context) {
-    // Second-level safety filter.
-    //
-    // Even if old state contains a Moment
-    // from another tab, the wrong Moment
-    // cannot appear in this tab.
-
-    final visible = filterMomentsForViewer(
-      _moments,
-      _myId,
-      mine: _mine,
-    );
-
-    final showItems =
-        !_loading &&
-            _error == null &&
-            visible.isNotEmpty;
-
-    final itemCount =
-    showItems
-        ? visible.length + 3
-        : 3;
-
-    return Scaffold(
-      backgroundColor: BlinkColors.canvas,
-
-      // ORIGINAL EXPLORE DRAWER
-      drawer: const BlinkFullDrawer(),
-
-      // ORIGINAL BLINK HOME HEADER
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        centerTitle: true,
-
-        title: const BlinkLogo(
-          fontSize: 33,
-        ),
-
-        leading: Builder(
-          builder: (context) {
-            return IconButton(
-              tooltip: 'Explore features',
-
-              onPressed: () {
-                Scaffold.of(context).openDrawer();
-              },
-
-              icon: const Icon(
-                Icons.menu_rounded,
-                color: BlinkColors.ink,
-                size: 25,
-              ),
-            );
-          },
-        ),
-
-        actions: const [
-          BlinkMessageButton(),
-          SizedBox(width: 9),
-        ],
-      ),
-
-      // HOME CONTENT
-      body: RefreshIndicator(
-        onRefresh: _load,
-        color: BlinkColors.orange,
-
-        child: ListView.builder(
-          controller: _scroll,
-
-          physics:
-          const AlwaysScrollableScrollPhysics(),
-
-          padding: EdgeInsets.zero,
-
-          itemCount: itemCount,
-
-          itemBuilder: (context, index) {
-            // ==================================
-            // CHECK-INS
-            // ==================================
-
-            if (index == 0) {
-              return BlinkHomeCheckins(
-                activeCount: _activeCount,
-              );
-            }
-
-            // ==================================
-            // PUBLIC / MY MOMENTS TABS
-            // ==================================
-
-            if (index == 1) {
-              return Padding(
-                padding:
-                const EdgeInsets.symmetric(
-                  vertical: 13,
-                ),
-
-                child: BlinkChips(
-                  labels: const [
-                    'Public Moments',
-                    'My Moments',
-                  ],
-
-                  onChanged: _changeFeed,
-                ),
-              );
-            }
-
-            // ==================================
-            // LOADING STATE
-            // ==================================
-
-            if (index == 2 && _loading) {
-              return const Padding(
-                padding: EdgeInsets.all(32),
-
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: BlinkColors.orange,
-                  ),
-                ),
-              );
-            }
-
-            // ==================================
-            // ERROR STATE
-            // ==================================
-
-            if (index == 2 &&
-                _error != null) {
-              return _feedMessage(
-                _error!,
-                button: 'Retry',
-                onPressed: _load,
-                icon: Icons.refresh_rounded,
-              );
-            }
-
-            // ==================================
-            // EMPTY PUBLIC FEED
-            // ==================================
-
-            if (index == 2 &&
-                visible.isEmpty) {
-              if (_hasMore) {
-                return _feedMessage(
-                  _loadingMore
-                      ? 'Finding public Moments from other members...'
-                      : 'More public Moments may be available.',
-
-                  button:
-                  _loadingMore
-                      ? null
-                      : 'Find more',
-
-                  onPressed:
-                  _loadingMore
-                      ? null
-                      : _loadNext,
-
-                  icon: Icons.refresh_rounded,
-                );
-              }
-
-              return _feedMessage(
-                _mine
-                    ? 'You have not uploaded any Moments yet.'
-                    : 'No active public Moments from other members are available.',
-
-                button: 'Capture a Moment',
-
-                onPressed: () {
-                  go(context, '/capture');
-                },
-
-                icon: Icons.camera_alt_outlined,
-              );
-            }
-
-            // ==================================
-            // LOAD MORE FOOTER
-            // ==================================
-
-            if (index == visible.length + 2) {
-              if (!_hasMore) {
-                return const SizedBox(
-                  height: 25,
-                );
-              }
-
-              return Padding(
-                padding: const EdgeInsets.all(16),
-
-                child: Center(
-                  child: _loadingMore
-                      ? const CircularProgressIndicator(
-                    color: BlinkColors.orange,
-                  )
-                      : TextButton.icon(
-                    onPressed: _loadNext,
-
-                    icon: const Icon(
-                      Icons.expand_more_rounded,
-                    ),
-
-                    label: const Text(
-                      'Load more Moments',
-                    ),
-                  ),
-                ),
-              );
-            }
-
-            // ==================================
-            // REAL MOMENT CARD
-            // ==================================
-
-            final moment = visible[index - 2];
-
-            return BlinkLiveMomentCard(
-              key: ValueKey(
-                'home-${moment.id}',
-              ),
-
-              moment: moment,
-
-              myUserId: _myId,
-
-              onDeleted: _load,
-            );
-          },
-        ),
-      ),
-
-      // ORIGINAL BOTTOM NAVIGATION
-      bottomNavigationBar: const BlinkBottomBar(active: 'home'),
-    );
-  }
-}
-
-// ==================================================
-// SHARED EMPTY / ERROR MESSAGE
-// ==================================================
-
-Widget _feedMessage(
-    String message, {
-      String? button,
-      VoidCallback? onPressed,
-      IconData icon = Icons.refresh_rounded,
-    }) {
-  return Padding(
-    padding: const EdgeInsets.all(28),
-
-    child: Column(
+  Widget _buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          message,
-          textAlign: TextAlign.center,
+        if (widget.showCheckins)
+          BlinkHomeCheckins(
+            activeCount: _checkinCount,
+          ),
+
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 20, 16, 5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'YOUR PEOPLE, YOUR MOMENTS',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: BlinkColors.orange,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.3,
+                ),
+              ),
+              SizedBox(height: 6),
+              Text(
+                'Moments ✦',
+                style: TextStyle(
+                  fontSize: 26,
+                  color: BlinkColors.ink,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
         ),
 
-        if (button != null &&
-            onPressed != null) ...[
-          const SizedBox(height: 12),
+        const SizedBox(height: 12),
 
-          TextButton.icon(
+        BlinkChips(
+          key: ValueKey('moments-${_mine ? "mine" : "public"}'),
+          initial: _mine ? 1 : 0,
+          labels: const [
+            'Public Moments',
+            'My Moments',
+          ],
+          onChanged: _changeFeed,
+        ),
+
+        const SizedBox(height: 10),
+
+        if (kDebugMode && !_loading && _error == null)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 5,
+            ),
+            child: Text(
+              'DEBUG: API returned $_serverCount | '
+                  'Displayed ${_items.length} | '
+                  '${_mine ? "My Moments" : "Public Moments"}',
+              style: const TextStyle(
+                fontSize: 11,
+                color: BlinkColors.muted,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ==========================================================
+  // FEED FOOTER / LOADING / EMPTY
+  // ==========================================================
+
+  Widget _buildFooter() {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.all(34),
+        child: Center(
+          child: CircularProgressIndicator(
+            color: BlinkColors.orange,
+          ),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return _feedState(
+        icon: Icons.error_outline_rounded,
+        message: _error!,
+        action: 'Retry',
+        onPressed: _refresh,
+      );
+    }
+
+    if (_items.isEmpty) {
+      return _feedState(
+        icon: _mine
+            ? Icons.photo_library_outlined
+            : Icons.public_rounded,
+        message: _mine
+            ? 'You have not uploaded any Moments yet.'
+            : _hasMore
+            ? 'Searching more public Moments from other Blink members.'
+            : 'No public Moments from other members were returned by the server.',
+        action: _hasMore ? 'Find more Moments' : 'Refresh',
+        onPressed: _hasMore ? _loadMore : _refresh,
+      );
+    }
+
+    if (_hasMore) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: _loadingMore
+              ? const CircularProgressIndicator(
+            color: BlinkColors.orange,
+          )
+              : OutlinedButton.icon(
+            onPressed: _loadMore,
+            icon: const Icon(Icons.expand_more_rounded),
+            label: const Text('Load more Moments'),
+          ),
+        ),
+      );
+    }
+
+    return const SizedBox(height: 24);
+  }
+
+  Widget _feedState({
+    required IconData icon,
+    required String message,
+    required String action,
+    required VoidCallback onPressed,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 38, 22, 24),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            color: BlinkColors.orange,
+            size: 45,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: BlinkColors.ink,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 15),
+          FilledButton.icon(
             onPressed: onPressed,
-            icon: Icon(icon),
-            label: Text(button),
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text(action),
           ),
         ],
-      ],
-    ),
-  );
-}
-
-// ==================================================
-// SEPARATE MOMENTS SCREEN
-// Uses exactly the same feed rules as Home.
-// ==================================================
-
-class MomentsFeedScreen extends StatefulWidget {
-  const MomentsFeedScreen({super.key, this.initialMine = false});
-  final bool initialMine;
-
-  @override
-  State<MomentsFeedScreen> createState() =>
-      _MomentsFeedScreenState();
-}
-
-class _MomentsFeedScreenState
-    extends State<MomentsFeedScreen> {
-  final ScrollController _scroll =
-  ScrollController();
-
-  final Set<String> _seenServerIds =
-  <String>{};
-
-  late bool _mine;
-  bool _loading = true;
-  bool _loadingMore = false;
-  bool _hasMore = false;
-
-  int _serverOffset = 0;
-  int _requestVersion = 0;
-  int _emptySearchPages = 0;
-
-  String _myId = '';
-  String? _error;
-
-  List<BlinkMoment> _items =
-  <BlinkMoment>[];
-
-  @override
-  void initState() {
-    super.initState();
-
-    _mine = widget.initialMine;
-    _scroll.addListener(_onScroll);
-    _load();
+      ),
+    );
   }
 
-  void _onScroll() {
-    if (_scroll.hasClients &&
-        _scroll.position.extentAfter < 550) {
-      _loadNext();
-    }
-  }
-
-  @override
-  void dispose() {
-    ++_requestVersion;
-
-    _scroll.removeListener(_onScroll);
-    _scroll.dispose();
-
-    super.dispose();
-  }
-
-  void _changeTab(int index) {
-    final mine = index == 1;
-
-    if (_mine == mine) {
-      return;
-    }
-
-    setState(() {
-      _mine = mine;
-    });
-
-    if (_scroll.hasClients) {
-      _scroll.jumpTo(0);
-    }
-
-    _load();
-  }
-
-  // ================================================
-  // LOAD MOMENTS
-  // ================================================
-
-  Future<void> _load() async {
-    final request = ++_requestVersion;
-    final mine = _mine;
-
-    setState(() {
-      _loading = true;
-      _loadingMore = false;
-      _hasMore = false;
-      _error = null;
-    });
-
-    try {
-      final self =
-      await BlinkAuthApi.currentUser();
-
-      if (!mounted ||
-          request != _requestVersion) {
-        return;
-      }
-
-      if (self == null) {
-        go(
-          context,
-          '/login',
-          replace: true,
-        );
-        return;
-      }
-
-      final userId =
-      (self['id'] ?? '').toString();
-
-      if (userId.isEmpty) {
-        throw const BlinkHomeError(
-          'Missing signed-in account ID.',
-        );
-      }
-
-      final page =
-      await BlinkHomeApi.moments(
-        mine: mine,
-        skip: 0,
-        take: _momentPageSize,
-      );
-
-      if (!mounted ||
-          request != _requestVersion ||
-          mine != _mine) {
-        return;
-      }
-
-      final visible = filterMomentsForViewer(
-        page,
-        userId,
-        mine: mine,
-      );
-
-      setState(() {
-        _myId = userId;
-
-        _items = visible;
-
-        _seenServerIds
-          ..clear()
-          ..addAll(
-            page
-                .map((moment) => moment.id)
-                .where((id) => id.isNotEmpty),
-          );
-
-        _serverOffset = page.length;
-
-        _hasMore = page.length == _momentPageSize;
-
-        _emptySearchPages = 0;
-        _loading = false;
-      });
-
-      if (!mine &&
-          visible.isEmpty &&
-          _hasMore) {
-        _loadNext();
-      }
-    } catch (error) {
-      if (!mounted ||
-          request != _requestVersion) {
-        return;
-      }
-
-      setState(() {
-        _loading = false;
-        _error = error.toString();
-      });
-    }
-  }
-
-  // ================================================
-  // PAGINATE PUBLIC MOMENTS
-  // ================================================
-
-  Future<void> _loadNext() async {
-    if (!mounted ||
-        _loading ||
-        _loadingMore ||
-        !_hasMore ||
-        _myId.isEmpty) {
-      return;
-    }
-
-    final request = _requestVersion;
-    final mine = _mine;
-    final offset = _serverOffset;
-
-    setState(() {
-      _loadingMore = true;
-    });
-
-    try {
-      final page =
-      await BlinkHomeApi.moments(
-        mine: mine,
-        skip: offset,
-        take: _momentPageSize,
-      );
-
-      if (!mounted ||
-          request != _requestVersion ||
-          mine != _mine) {
-        return;
-      }
-
-      final unseen = page.where(
-            (moment) {
-          return moment.id.isNotEmpty &&
-              !_seenServerIds.contains(
-                moment.id,
-              );
-        },
-      ).toList();
-
-      final visible = filterMomentsForViewer(
-        unseen,
-        _myId,
-        mine: mine,
-      );
-
-      setState(() {
-        _seenServerIds.addAll(
-          page
-              .map((moment) => moment.id)
-              .where((id) => id.isNotEmpty),
-        );
-
-        final known = _items
-            .map((moment) => moment.id)
-            .toSet();
-
-        _items.addAll(
-          visible.where(
-                (moment) =>
-            !known.contains(moment.id),
-          ),
-        );
-
-        _serverOffset += page.length;
-
-        _hasMore = page.length == _momentPageSize && unseen.isNotEmpty;
-
-        _loadingMore = false;
-
-        _emptySearchPages =
-        visible.isEmpty
-            ? _emptySearchPages + 1
-            : 0;
-      });
-
-      if (_items.isEmpty &&
-          _hasMore &&
-          _emptySearchPages < 5) {
-        _loadNext();
-      }
-    } catch (error) {
-      if (!mounted ||
-          request != _requestVersion) {
-        return;
-      }
-
-      setState(() {
-        _loadingMore = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Could not load more Moments: $error',
-          ),
-        ),
-      );
-    }
-  }
-
-  // ================================================
-  // MOMENTS SCREEN UI
-  // ================================================
+  // ==========================================================
+  // MAIN FEED UI
+  //
+  // ListView.builder avoids creating all video players at once.
+  // ==========================================================
 
   @override
   Widget build(BuildContext context) {
-    final visible = filterMomentsForViewer(
-      _items,
-      _myId,
-      mine: _mine,
-    );
+    return RefreshIndicator(
+      color: BlinkColors.orange,
+      onRefresh: _refresh,
+      child: ListView.builder(
+        controller: _scroll,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 20),
 
-    return BlinkScreen(
-      title: 'Moments',
-      bottom: false,
+        // 1 header + N Moments + 1 footer
+        itemCount: _items.length + 2,
 
-      trailing: IconButton(
-        tooltip: 'Create Moment',
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return _buildHeader();
+          }
 
-        onPressed: () {
-          go(context, '/capture');
+          if (index == _items.length + 1) {
+            return _buildFooter();
+          }
+
+          final moment = _items[index - 1];
+
+          return BlinkLiveMomentCard(
+            key: ValueKey(
+              '${_mine ? "my" : "public"}-${moment.id}',
+            ),
+            moment: moment,
+            myUserId: _viewerId,
+            onDeleted: _refresh,
+          );
         },
-
-        icon: const Icon(
-          Icons.add_circle_rounded,
-          color: BlinkColors.orange,
-        ),
-      ),
-
-      child: RefreshIndicator(
-        color: BlinkColors.orange,
-        onRefresh: _load,
-
-        child: ListView(
-          controller: _scroll,
-
-          physics:
-          const AlwaysScrollableScrollPhysics(),
-
-          children: [
-            const SectionHeading(
-              'Moments',
-              subtitle:
-              'Public Moments from other Blink members',
-            ),
-
-            BlinkChips(
-              initial: widget.initialMine ? 1 : 0,
-              labels: const [
-                'Public Moments',
-                'My Moments',
-              ],
-              onChanged: _changeTab,
-            ),
-
-            const SizedBox(height: 8),
-
-            // LOADING
-            if (_loading)
-              const Padding(
-                padding: EdgeInsets.all(25),
-
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: BlinkColors.orange,
-                  ),
-                ),
-              ),
-
-            // ERROR
-            if (_error != null)
-              _feedMessage(
-                _error!,
-                button: 'Retry',
-                onPressed: _load,
-              ),
-
-            // EMPTY
-            if (!_loading &&
-                _error == null &&
-                visible.isEmpty)
-              _feedMessage(
-                _hasMore
-                    ? 'Looking for more Moments from other members...'
-                    : _mine
-                    ? 'You have not uploaded any Moments yet.'
-                    : 'No active public Moments from other members are available.',
-
-                button:
-                _hasMore && !_loadingMore
-                    ? 'Find more'
-                    : null,
-
-                onPressed:
-                _hasMore && !_loadingMore
-                    ? _loadNext
-                    : null,
-              ),
-
-            // REAL MOMENT CARDS
-            if (!_loading &&
-                _error == null)
-              ...visible.map(
-                    (moment) =>
-                    BlinkLiveMomentCard(
-                      key: ValueKey(
-                        'moments-${moment.id}',
-                      ),
-
-                      moment: moment,
-                      myUserId: _myId,
-                      onDeleted: _load,
-                    ),
-              ),
-
-            // LOAD MORE
-            if (!_loading &&
-                _error == null &&
-                _hasMore)
-              Padding(
-                padding: const EdgeInsets.all(16),
-
-                child: Center(
-                  child: _loadingMore
-                      ? const CircularProgressIndicator(
-                    color: BlinkColors.orange,
-                  )
-                      : TextButton(
-                    onPressed: _loadNext,
-
-                    child: const Text(
-                      'Load more Moments',
-                    ),
-                  ),
-                ),
-              ),
-
-            const SizedBox(height: 20),
-          ],
-        ),
       ),
     );
   }
 }
 
-// ==================================================
+// ============================================================
 // EXPLORE SCREEN
-// Original design and destinations preserved.
-// ==================================================
+// Preserves the existing Blink sections and destinations.
+// ============================================================
 
 class ExploreScreen extends StatelessWidget {
   const ExploreScreen({super.key});
@@ -1136,7 +798,6 @@ class ExploreScreen extends StatelessWidget {
         '/secrets',
         Color(0xFFED3552),
       ),
-
       _ExploreItem(
         'Hearts',
         'Express feelings',
@@ -1145,7 +806,6 @@ class ExploreScreen extends StatelessWidget {
         '/hearts',
         Color(0xFFF2466D),
       ),
-
       _ExploreItem(
         'Check-ins',
         'Create experiences',
@@ -1154,7 +814,6 @@ class ExploreScreen extends StatelessWidget {
         '/checkins',
         Color(0xFF2DA85B),
       ),
-
       _ExploreItem(
         'IRL Plans',
         'Connect offline',
@@ -1163,7 +822,6 @@ class ExploreScreen extends StatelessWidget {
         '/irl',
         Color(0xFF287BDA),
       ),
-
       _ExploreItem(
         'Exchange',
         'Explore services',
@@ -1172,7 +830,6 @@ class ExploreScreen extends StatelessWidget {
         '/exchange',
         Color(0xFFEF8D00),
       ),
-
       _ExploreItem(
         'Business Match',
         'Discover opportunities',
@@ -1181,7 +838,6 @@ class ExploreScreen extends StatelessWidget {
         '/business',
         Color(0xFFFF7900),
       ),
-
       _ExploreItem(
         'Creator Tasks',
         'Participate & earn',
@@ -1190,7 +846,6 @@ class ExploreScreen extends StatelessWidget {
         '/tasks',
         Color(0xFF964ACC),
       ),
-
       _ExploreItem(
         'BP Rewards',
         'Your Blink Points',
@@ -1199,7 +854,6 @@ class ExploreScreen extends StatelessWidget {
         '/wallet',
         Color(0xFF4084DB),
       ),
-
       _ExploreItem(
         'Moments',
         'Everyday moments',
@@ -1208,7 +862,6 @@ class ExploreScreen extends StatelessWidget {
         '/moments',
         BlinkColors.orange,
       ),
-
       _ExploreItem(
         'Messages',
         'Stay connected',
@@ -1221,35 +874,25 @@ class ExploreScreen extends StatelessWidget {
 
     return BlinkScreen(
       title: 'Explore',
+      active: 'explore',
       logoTitle: false,
-      bottom: false,
 
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
           const SectionHeading(
             'Explore Blink',
-            subtitle:
-            'Discover everything Blink has to offer',
+            subtitle: 'Discover everything Blink has to offer',
           ),
 
           const BlinkSearchBox(),
 
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              15,
-              7,
-              15,
-              18,
-            ),
-
+            padding: const EdgeInsets.fromLTRB(15, 7, 15, 18),
             child: GridView.builder(
               shrinkWrap: true,
-
-              physics:
-              const NeverScrollableScrollPhysics(),
-
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: items.length,
-
               gridDelegate:
               const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -1257,84 +900,54 @@ class ExploreScreen extends StatelessWidget {
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
               ),
-
               itemBuilder: (context, index) {
                 final tile = items[index];
 
                 return InkWell(
-                  borderRadius:
-                  BorderRadius.circular(17),
-
-                  onTap: () {
-                    go(context, tile.route);
-                  },
+                  borderRadius: BorderRadius.circular(17),
+                  onTap: () => go(context, tile.route),
 
                   child: Container(
-                    padding:
-                    const EdgeInsets.all(10),
-
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: tile.background,
-
-                      borderRadius:
-                      BorderRadius.circular(17),
+                      borderRadius: BorderRadius.circular(17),
                     ),
 
                     child: Column(
-                      mainAxisAlignment:
-                      MainAxisAlignment.center,
-
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
                           width: 46,
                           height: 46,
-
-                          decoration:
-                          const BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Color(0xCCFFFFFF),
                             shape: BoxShape.circle,
                           ),
-
                           child: Icon(
                             tile.icon,
                             color: tile.iconColor,
                             size: 25,
                           ),
                         ),
-
                         const SizedBox(height: 11),
-
                         Text(
                           tile.name,
-
                           maxLines: 1,
-
-                          overflow:
-                          TextOverflow.ellipsis,
-
-                          textAlign:
-                          TextAlign.center,
-
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 14,
-                            fontWeight:
-                            FontWeight.w800,
+                            color: BlinkColors.ink,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-
                         const SizedBox(height: 4),
-
                         Text(
                           tile.subtitle,
-
                           maxLines: 2,
-
-                          overflow:
-                          TextOverflow.ellipsis,
-
-                          textAlign:
-                          TextAlign.center,
-
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                           style: const TextStyle(
                             fontSize: 10.5,
                             color: Color(0xFF686868),
@@ -1353,9 +966,9 @@ class ExploreScreen extends StatelessWidget {
   }
 }
 
-// ==================================================
-// EXPLORE ITEM
-// ==================================================
+// ============================================================
+// EXPLORE ITEM MODEL
+// ============================================================
 
 class _ExploreItem {
   final String name;
@@ -1375,10 +988,10 @@ class _ExploreItem {
       );
 }
 
-// ==================================================
+// ============================================================
 // CAPTURE SCREEN
-// Uses the real camera/gallery/upload screen.
-// ==================================================
+// Same real camera/gallery/upload implementation.
+// ============================================================
 
 class CaptureScreen extends StatelessWidget {
   const CaptureScreen({super.key});
