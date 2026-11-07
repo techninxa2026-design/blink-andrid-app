@@ -270,21 +270,30 @@ class _MeetingsState extends State<LiveBusinessMeetings>{
       var startsAt=DateTime.now().add(const Duration(days:1));
       var endsAt=startsAt.add(const Duration(hours:1));
       final values=await showDialog<Map<String,dynamic>>(context:context,
-        builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-          title:const Text('Schedule Business Meeting'),
+        builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>BlinkFormDialog(
+          title:'Schedule Business Meeting',
+          subtitle:'Invite a connection and set a clear time and agenda.',
+          icon:Icons.event_available_outlined,
           content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-            DropdownButtonFormField<String>(initialValue:connectionId,
+            DropdownButtonFormField<String>(initialValue:connectionId,isExpanded:true,
               decoration:const InputDecoration(labelText:'Business connection'),
               items:connections.map((c)=>DropdownMenuItem(
-                value:field(c,'id'),child:Text(field(obj(c)['profile'],'name','Partner')))).toList(),
+                value:field(c,'id'),child:Text(field(obj(c)['profile'],'name','Partner'),overflow:TextOverflow.ellipsis))).toList(),
               onChanged:(v){if(v!=null)update(()=>connectionId=v);}),
+            const SizedBox(height:12),
             TextField(controller:title,maxLength:120,
+              textCapitalization:TextCapitalization.sentences,
+              onChanged:(_)=>update((){}),
               decoration:const InputDecoration(labelText:'Meeting title')),
+            const SizedBox(height:7),
             TextField(controller:agenda,maxLength:1000,maxLines:3,
-              decoration:const InputDecoration(labelText:'Agenda')),
+              textCapitalization:TextCapitalization.sentences,
+              decoration:const InputDecoration(labelText:'Agenda',alignLabelWithHint:true)),
+            const SizedBox(height:7),
             TextField(controller:location,maxLength:300,
               decoration:const InputDecoration(labelText:'Meeting link or location')),
-            TextButton.icon(icon:const Icon(Icons.event),label:Text('Starts: '+startsAt.toString().substring(0,16)),
+            const SizedBox(height:9),
+            OutlinedButton.icon(icon:const Icon(Icons.event),label:Text('Starts: '+startsAt.toString().substring(0,16),maxLines:1,overflow:TextOverflow.ellipsis),
               onPressed:()async{
                 final date=await showDatePicker(context:ctx,initialDate:startsAt,
                   firstDate:DateTime.now(),lastDate:DateTime.now().add(const Duration(days:365)));
@@ -295,16 +304,17 @@ class _MeetingsState extends State<LiveBusinessMeetings>{
                   endsAt=startsAt.add(const Duration(hours:1));
                 });
               }),
-            TextButton.icon(icon:const Icon(Icons.access_time),label:Text('Ends: '+endsAt.toString().substring(0,16)),
+            OutlinedButton.icon(icon:const Icon(Icons.access_time),label:Text('Ends: '+endsAt.toString().substring(0,16),maxLines:1,overflow:TextOverflow.ellipsis),
               onPressed:()async{
                 final tm=await showTimePicker(context:ctx,initialTime:TimeOfDay.fromDateTime(endsAt));
                 if(tm!=null)update(()=>endsAt=DateTime(
                   startsAt.year,startsAt.month,startsAt.day,tm.hour,tm.minute));
               }),
-            const Text('Meeting duration must be 8 hours or less.'),
+            const Text('Meeting duration must be 8 hours or less.',style:TextStyle(fontSize:12,color:BlinkColors.muted)),
           ])),
           actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
-            FilledButton(onPressed:()=>Navigator.pop(ctx,{
+            FilledButton(onPressed:title.text.trim().isEmpty || !endsAt.isAfter(startsAt) ||
+              endsAt.difference(startsAt).inMinutes>480 ? null : ()=>Navigator.pop(ctx,{
               'connectionId':connectionId,'title':title.text.trim(),
               'agenda':agenda.text.trim(),'location':location.text.trim(),
               'startsAt':startsAt.toUtc().toIso8601String(),
