@@ -307,11 +307,15 @@ class BlinkHomeApi {
     String path,
     List<http.MultipartFile> files, {
     required String caption,
+    String? musicTrackId,
   }) async {
     final token = await _token();
     final req = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'));
     req.headers['Authorization'] = 'Bearer $token';
     req.fields['caption'] = caption.trim();
+    if (musicTrackId != null && musicTrackId.isNotEmpty) {
+      req.fields['musicTrackId'] = musicTrackId;
+    }
     req.files.addAll(files);
     try {
       final streamed = await req.send().timeout(const Duration(minutes: 3));
@@ -333,7 +337,7 @@ class BlinkHomeApi {
     }
   }
 
-  static Future<void> uploadMoment(File file, {required String caption}) async {
+  static Future<void> uploadMoment(File file, {required String caption, String? musicTrackId}) async {
     final bytes = await file.length();
     if (bytes <= 0 || bytes > 50 * 1024 * 1024) {
       throw const BlinkHomeError('Moments must be under 50 MB.');
@@ -350,7 +354,7 @@ class BlinkHomeApi {
     final parts = mime.split('/');
     final multi = await http.MultipartFile.fromPath('file', file.path,
         contentType: MediaType(parts[0], parts[1]));
-    await _upload('/moments/upload', [multi], caption: caption);
+    await _upload('/moments/upload', [multi], caption: caption, musicTrackId: musicTrackId);
   }
 
   static Future<void> uploadReel(File video, Uint8List jpegThumbnail, {required String caption}) async {
