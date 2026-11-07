@@ -165,7 +165,6 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
                 reel: _reels[index],
                 myUserId: _myId,
                 active: _appActive && index == _currentIndex,
-                onDeleted: _refresh,
               ),
             ),
           Positioned(
@@ -207,13 +206,11 @@ class ReelFullScreen extends StatefulWidget {
     required this.reel,
     required this.myUserId,
     required this.active,
-    this.onDeleted,
   });
 
   final BlinkReel reel;
   final String myUserId;
   final bool active;
-  final VoidCallback? onDeleted;
 
   @override
   State<ReelFullScreen> createState() => _ReelFullScreenState();
@@ -370,24 +367,6 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
     );
   }
 
-  Future<void> _delete() async {
-    if (widget.reel.authorId != widget.myUserId) return;
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Delete Reel?'),
-        content: const Text('This permanently removes your published Reel.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-    try { await BlinkHomeApi.deleteReel(widget.reel.id); widget.onDeleted?.call(); }
-    catch (e) { _toast('Cannot delete Reel: $e'); }
-  }
-
   Widget _action(IconData icon, String text, VoidCallback handler, {Color color = Colors.white}) {
     final compact = MediaQuery.sizeOf(context).height < 650;
     return Padding(
@@ -451,8 +430,6 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
           '$_reactionCount', _react, color: _reaction != null && _reaction!.isNotEmpty ? BlinkColors.orange : Colors.white),
         _action(Icons.mode_comment_outlined, '$_commentCount', _comments),
         _action(Icons.share_rounded, 'Share', _share),
-        if (widget.reel.authorId == widget.myUserId)
-          _action(Icons.delete_outline_rounded, 'Delete', _delete),
       ])),
       Positioned(left: 15, right: 70, bottom: 35, child: Column(
         crossAxisAlignment: CrossAxisAlignment.start, children: [
