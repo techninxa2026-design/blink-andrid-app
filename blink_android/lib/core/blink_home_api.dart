@@ -27,6 +27,7 @@ class BlinkMoment {
     required this.author,
     this.avatarKey,
     this.caption,
+    this.musicTrackId,
   });
 
   final String id;
@@ -37,6 +38,7 @@ class BlinkMoment {
   final String author;
   final String? avatarKey;
   final String? caption;
+  final String? musicTrackId;
 
   factory BlinkMoment.fromJson(Map<String, dynamic> json) {
     final sender = json['sender'];
@@ -50,6 +52,7 @@ class BlinkMoment {
       author: (user['name'] ?? 'Blink member').toString(),
       avatarKey: user['avatarKey']?.toString(),
       caption: json['caption']?.toString(),
+      musicTrackId: json['musicTrackId']?.toString(),
     );
   }
 }
