@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -200,9 +201,11 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
   /// owner and records a gift; no points are deducted from the sender.
   Future<void> _giftBp() async {
     if (widget.myUserId == widget.moment.senderId || _busy) return;
-    await _loadActivity();
+    // Never block a free gift on a balance/activity lookup. The public
+    // Moment itself and the backend gift endpoint are the source of truth.
+    if (_activity == null) unawaited(_loadActivity());
     if (!mounted) return;
-    const amounts = <int>[1, 5, 10, 25, 50, 100];
+    final amounts = BlinkHomeApi.momentGiftChoices;
     int selected = 5;
     bool sending = false;
     String? error;
@@ -313,14 +316,15 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
                     onPressed: sending ? null : () async {
                       update(() { sending = true; error = null; });
                       try {
-                        await BlinkHomeApi.request(
-                          'POST',
-                          '/moments/${Uri.encodeComponent(widget.moment.id)}/bp',
-                          data: {'amount': selected},
+                        await BlinkHomeApi.giftFreeBp(
+                          momentId: widget.moment.id,
+                          creatorId: widget.moment.senderId,
+                          senderId: widget.myUserId,
+                          amount: selected,
                         );
-                        await _loadActivity();
                         if (sheetContext.mounted) Navigator.pop(sheetContext);
-                        _notify('$selected BP sent successfully!');
+                        _notify('Creator earned $selected BP. Your BP was not deducted.');
+                        unawaited(_loadActivity());
                       } catch (failure) {
                         if (sheetContext.mounted) update(() {
                           error = BlinkHomeApi.momentActionError(failure);

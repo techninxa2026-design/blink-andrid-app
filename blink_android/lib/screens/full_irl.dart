@@ -23,42 +23,111 @@ class _IrlState extends State<FullIrlScreen>{
       if(mounted)setState((){plans=rows;myId=field(user,'id');error='';loading=false;});
     }catch(e){if(mounted)setState((){error=e.toString();loading=false;});}
   }
-  Future<void> _create()async{
-    final title=TextEditingController(),description=TextEditingController(),place=TextEditingController();
-    String category='Hangout';
-    var start=DateTime.now().add(const Duration(days:1));
-    final form=await showDialog<Map<String,dynamic>>(context:context,builder:(ctx)=>
-      StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-        title:const Text('Create an IRL plan'),
-        content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-          TextField(controller:title,maxLength:120,decoration:const InputDecoration(labelText:'Plan title')),
-          TextField(controller:description,maxLines:3,maxLength:1000,
-            decoration:const InputDecoration(labelText:'Description')),
-          TextField(controller:place,maxLength:180,decoration:const InputDecoration(labelText:'Place')),
-          DropdownButtonFormField<String>(initialValue:category,
-            items:_irlCategories.skip(1).map((c)=>DropdownMenuItem(value:c,child:Text(c))).toList(),
-            onChanged:(v){if(v!=null)update(()=>category=v);}),
-          TextButton.icon(icon:const Icon(Icons.calendar_month),
-            label:Text('Starts: '+start.toLocal().toString().substring(0,16)),
-            onPressed:()async{
-              final date=await showDatePicker(context:ctx,initialDate:start,
-                firstDate:DateTime.now(),lastDate:DateTime.now().add(const Duration(days:730)));
-              if(date==null||!ctx.mounted)return;
-              final t=await showTimePicker(context:ctx,initialTime:TimeOfDay.fromDateTime(start));
-              if(t!=null)update(()=>start=DateTime(date.year,date.month,date.day,t.hour,t.minute));
-            }),
-        ])),
-        actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
-          FilledButton(onPressed:()=>Navigator.pop(ctx,{
-            'title':title.text.trim(),'description':description.text.trim(),
-            'place':place.text.trim(),'category':category,'startsAt':start.toUtc().toIso8601String(),
-          }),child:const Text('Create'))],
-      )));
-    title.dispose();description.dispose();place.dispose();
-    if(form==null)return;
-    try{await LiveApi.call('POST','/irl/plans',form);_load();}
-    catch(e){if(mounted)liveNotice(context,e.toString());}
+  Future<void> _create() async {
+    final title = TextEditingController();
+    final description = TextEditingController();
+    final place = TextEditingController();
+    String category = 'Hangout';
+    var start = DateTime.now().add(const Duration(days: 1));
+    final form = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, update) => BlinkFormDialog(
+          title: 'Create IRL Plan',
+          subtitle: 'Invite your friends to meet and make real memories.',
+          icon: Icons.event_available_outlined,
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+              controller: title, maxLength: 120,
+              textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => update(() {}),
+              decoration: const InputDecoration(labelText: 'Plan title',
+                hintText: 'What are you planning?'),
+            ),
+            const SizedBox(height: 9),
+            TextField(
+              controller: description, maxLines: 3, maxLength: 1000,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Details', alignLabelWithHint: true),
+            ),
+            const SizedBox(height: 9),
+            TextField(
+              controller: place, maxLength: 180,
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => update(() {}),
+              decoration: const InputDecoration(
+                labelText: 'Meeting location',
+                prefixIcon: Icon(Icons.place_outlined)),
+            ),
+            const SizedBox(height: 9),
+            DropdownButtonFormField<String>(
+              initialValue: category, isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Category'),
+              items: _irlCategories.skip(1).map((c) =>
+                DropdownMenuItem(value: c, child: Text(c))).toList(),
+              onChanged: (v) {
+                if (v != null) update(() => category = v);
+              },
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.calendar_month_rounded),
+                label: Text('Starts: ${start.toLocal().toString().substring(0, 16)}',
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                onPressed: () async {
+                  final date = await showDatePicker(
+                    context: ctx, initialDate: start,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 730)));
+                  if (date == null || !ctx.mounted) return;
+                  final time = await showTimePicker(
+                    context: ctx,
+                    initialTime: TimeOfDay.fromDateTime(start));
+                  if (time != null) update(() => start =
+                    DateTime(date.year, date.month, date.day,
+                      time.hour, time.minute));
+                },
+              ),
+            ),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
+            FilledButton(
+              onPressed: title.text.trim().isEmpty ||
+                  place.text.trim().isEmpty
+                ? null
+                : () => Navigator.pop(ctx, <String, dynamic>{
+                    'title': title.text.trim(),
+                    'description': description.text.trim(),
+                    'place': place.text.trim(),
+                    'category': category,
+                    'startsAt': start.toUtc().toIso8601String(),
+                  }),
+              child: const Text('Create plan'),
+            ),
+          ],
+        ),
+      ),
+    );
+    title.dispose();
+    description.dispose();
+    place.dispose();
+    if (form == null) return;
+    try {
+      await LiveApi.call('POST', '/irl/plans', form);
+      _load();
+    } catch (error) {
+      if (mounted) liveNotice(context, error.toString());
+    }
   }
+
   Future<void> _interest(String id,bool withdrawn)async{
     final controller=TextEditingController();
     String? reply;

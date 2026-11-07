@@ -381,76 +381,99 @@ class _CheckinEditorState extends State<_CheckinEditor> {
   @override
   Widget build(BuildContext context) {
     final edit = widget.existing.isNotEmpty;
-    return Scaffold(
-      appBar: AppBar(title: const BlinkLogo()),
-      body: SafeArea(child: ListView(padding: const EdgeInsets.all(20), children: [
-        Text(edit ? 'Edit Check-In' : 'New Check-In',
-          style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 7),
-        const Text('A small update can make a big connection.',
-          style: TextStyle(color: BlinkColors.muted)),
-        const SizedBox(height: 24),
-        const Text('Your status', style: TextStyle(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 9),
-        TextField(controller: status, maxLength: 80, autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(hintText: "What's on your mind?")),
-        const SizedBox(height: 13),
-        const Text('How are you feeling?', style: TextStyle(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12),
-        Wrap(spacing: 8, runSpacing: 10, children: emojis.map((choice) => InkWell(
-          onTap: submitting ? null : () => setState(() => emoji = choice),
-          borderRadius: BorderRadius.circular(14),
-          child: AnimatedContainer(duration: const Duration(milliseconds: 160),
-            width: 50, height: 50, alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: emoji == choice ? BlinkColors.orangeSoft : Colors.white,
-              border: Border.all(color: emoji == choice ? BlinkColors.orange : BlinkColors.line,
-                width: emoji == choice ? 2 : 1),
-              borderRadius: BorderRadius.circular(14),
+    return BlinkCreateLayout(
+      title: edit ? 'Edit Check-In' : 'New Check-In',
+      subtitle: 'Share a little about your day with your Blink friends.',
+      icon: Icons.waving_hand_outlined,
+      busy: submitting,
+      primaryLabel: submitting ? 'Saving...' :
+          edit ? 'Save Check-In' : 'Publish Check-In',
+      onSubmit: status.text.trim().isEmpty ? null : _publish,
+      content: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        BlinkFormSection(
+          heading: 'Your update',
+          helper: 'A simple status helps your friends know how you feel.',
+          children: [
+            TextField(
+              controller: status,
+              maxLength: 80,
+              textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                labelText: 'What is on your mind?',
+                hintText: 'Write a short status...',
+              ),
             ),
-            child: Text(choice, style: const TextStyle(fontSize: 26)),
-          ),
-        )).toList()),
-        const SizedBox(height: 25),
-        const Text('Add a note (optional)', style: TextStyle(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 9),
-        TextField(controller: note, maxLength: 280, maxLines: 3,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(hintText: 'Tell your friends a little more...')),
-        const SizedBox(height: 15),
-        const Text('Keep it visible for', style: TextStyle(fontWeight: FontWeight.w800)),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: duration, isExpanded: true,
-          items: const [
-            DropdownMenuItem(value: '24h', child: Text('24 hours')),
-            DropdownMenuItem(value: '48h', child: Text('48 hours')),
-            DropdownMenuItem(value: 'until_removed', child: Text('Until I remove it')),
+            const SizedBox(height: 12),
+            const Text('How are you feeling?',
+              style: TextStyle(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 9, children: emojis.map((choice) =>
+              InkWell(
+                onTap: submitting ? null : () => setState(() => emoji = choice),
+                borderRadius: BorderRadius.circular(14),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  width: 49, height: 49,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: emoji == choice
+                        ? BlinkColors.orangeSoft : Colors.white,
+                    border: Border.all(
+                      color: emoji == choice
+                          ? BlinkColors.orange : BlinkColors.line,
+                      width: emoji == choice ? 2 : 1),
+                    borderRadius: BorderRadius.circular(14)),
+                  child: Text(choice, style: const TextStyle(fontSize: 25)),
+                ),
+              ),
+            ).toList()),
+            const SizedBox(height: 18),
+            TextField(
+              controller: note, maxLength: 280, maxLines: 3,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'A little more (optional)',
+                alignLabelWithHint: true,
+                hintText: 'Tell your friends a little more...',
+              ),
+            ),
           ],
-          onChanged: submitting ? null : (value) {
-            if (value != null) setState(() => duration = value);
-          },
         ),
-        const SizedBox(height: 14),
-        const Row(children: [
-          Icon(Icons.lock_outline, color: BlinkColors.muted, size: 17),
-          SizedBox(width: 7),
-          Expanded(child: Text('Only your Blink friends can see this Check-In.',
-            style: TextStyle(color: BlinkColors.muted, fontSize: 12))),
-        ]),
-        if (error != null) Padding(padding: const EdgeInsets.only(top: 15),
-          child: Text(error!, style: const TextStyle(color: Colors.red))),
-        const SizedBox(height: 25),
-        FilledButton.icon(
-          onPressed: submitting ? null : _publish,
-          icon: submitting ? const SizedBox(width: 17, height: 17,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Icon(Icons.arrow_forward_rounded),
-          label: Text(submitting ? 'Saving...' :
-            edit ? 'Save Changes' : 'Publish Check-In'),
+        const SizedBox(height: 16),
+        BlinkFormSection(
+          heading: 'Visibility',
+          helper: 'Choose how long your friends can see this Check-In.',
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: duration, isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Visible for'),
+              items: const [
+                DropdownMenuItem(value: '24h', child: Text('24 hours')),
+                DropdownMenuItem(value: '48h', child: Text('48 hours')),
+                DropdownMenuItem(value: 'until_removed',
+                  child: Text('Until I remove it')),
+              ],
+              onChanged: submitting ? null : (value) {
+                if (value != null) setState(() => duration = value);
+              },
+            ),
+            const SizedBox(height: 12),
+            const Row(children: [
+              Icon(Icons.lock_outline, color: BlinkColors.orange, size: 18),
+              SizedBox(width: 8),
+              Expanded(child: Text(
+                'Visible to your Blink friends only.',
+                style: TextStyle(color: BlinkColors.muted, fontSize: 12))),
+            ]),
+          ],
         ),
-      ])),
+        if (error != null) Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Text(error!, style: const TextStyle(color: Colors.red)),
+        ),
+      ]),
     );
   }
 }
@@ -479,22 +502,27 @@ class _SecretsState extends State<LiveSecretsScreen>{
     bool anonymous=field(existing,'visibility','ANONYMOUS')!='NAMED';
     int hours=24;
     final data=await showDialog<Map<String,dynamic>>(context:context,
-      builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-        title:Text(edit?'Edit Blink Secret':'Create Blink Secret'),
+      builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>BlinkFormDialog(
+        title:edit?'Edit Blink Secret':'Create Blink Secret',
+        subtitle:'Ask a question with a timed answer reveal.',
+        icon:Icons.help_outline_rounded,
         content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
           TextField(controller:prompt,maxLength:500,maxLines:3,
-            decoration:const InputDecoration(labelText:'Your question')),
+            textCapitalization:TextCapitalization.sentences,
+            decoration:const InputDecoration(labelText:'Your question',alignLabelWithHint:true)),
+          const SizedBox(height:12),
           TextField(controller:options,maxLines:5,
-            decoration:const InputDecoration(labelText:'Answer options (2–5, one per line)')),
-          DropdownButtonFormField<int>(initialValue:correct,
+            decoration:const InputDecoration(labelText:'Answer options (2–5, one per line)',alignLabelWithHint:true)),
+          const SizedBox(height:12),
+          DropdownButtonFormField<int>(initialValue:correct,isExpanded:true,
             decoration:const InputDecoration(labelText:'Correct answer position'),
             items:List.generate(5,(i)=>DropdownMenuItem(value:i,
               child:Text('Option '+(i+1).toString()))),
             onChanged:(v){if(v!=null)update(()=>correct=v);}),
-          SwitchListTile(title:const Text('Anonymous Secret'),value:anonymous,
+          SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Anonymous Secret'),value:anonymous,
             activeTrackColor:BlinkColors.orange,
             onChanged:(v)=>update(()=>anonymous=v)),
-          if(!edit)DropdownButtonFormField<int>(initialValue:hours,
+          if(!edit)DropdownButtonFormField<int>(initialValue:hours,isExpanded:true,
             decoration:const InputDecoration(labelText:'Reveal answers after'),
             items:const [
               DropdownMenuItem(value:1,child:Text('1 hour')),
@@ -613,8 +641,10 @@ class _HeartsState extends State<LiveHeartsScreen>{
   Future<void> _send()async{
     final search=TextEditingController();final message=TextEditingController();
     List<dynamic> found=[];String? selectedId;
-    final data=await showDialog<Map<String,String>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-      title:const Text('Send an anonymous Heart'),
+    final data=await showDialog<Map<String,String>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>BlinkFormDialog(
+      title:'Send an anonymous Heart',
+      subtitle:'Choose a Blink member and write a private note.',
+      icon:Icons.favorite_border_rounded,
       content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
         TextField(controller:search,decoration:InputDecoration(labelText:'Find member',
           suffixIcon:IconButton(icon:const Icon(Icons.search),onPressed:()async{
@@ -622,12 +652,16 @@ class _HeartsState extends State<LiveHeartsScreen>{
               if(ctx.mounted)update(()=>found=r);
             }catch(e){if(ctx.mounted)liveNotice(ctx,e.toString());}
           }))),
+        const SizedBox(height:12),
         ...found.map((u)=>RadioListTile<String>(title:Text(field(u,'name')),value:field(u,'id'),
           groupValue:selectedId,onChanged:(v)=>update(()=>selectedId=v))),
-        TextField(controller:message,maxLines:4,decoration:const InputDecoration(labelText:'Your private Heart message')),
+        TextField(controller:message,maxLines:4,maxLength:2000,
+          textCapitalization:TextCapitalization.sentences,
+          onChanged:(_)=>update((){}),
+          decoration:const InputDecoration(labelText:'Your private Heart message',alignLabelWithHint:true)),
       ])),
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
-        FilledButton(onPressed:selectedId==null?null:()=>Navigator.pop(ctx,{'receiverId':selectedId!,'text':message.text}),
+        FilledButton(onPressed:selectedId==null||message.text.trim().isEmpty?null:()=>Navigator.pop(ctx,{'receiverId':selectedId!,'text':message.text.trim()}),
           child:const Text('Send Heart'))],
     )));
     search.dispose();message.dispose();

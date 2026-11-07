@@ -663,28 +663,93 @@ class _CreateGroupState extends State<LiveCreateGroupScreen>{
     }catch(e){if(mounted)liveNotice(context,'$e');}
     finally{if(mounted)setState(()=>busy=false);}
   }
-  @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const BlinkBrandedTitle('Create Blink Group')),
-    body:loading?const Center(child:CircularProgressIndicator()):
-      error!=null?liveError(error,_load):
-      Column(children:[
-        Padding(padding:const EdgeInsets.all(14),child:TextField(controller:name,maxLength:60,
-          decoration:const InputDecoration(hintText:'Group name',prefixIcon:Icon(Icons.groups)))),
-        Padding(padding:const EdgeInsets.symmetric(horizontal:14),child:Text(
-          '${selected.length} members selected',style:Theme.of(context).textTheme.titleSmall)),
-        Expanded(child:ListView.builder(itemCount:friends.length,itemBuilder:(_,i){
-          final friend=friends[i],id=field(friend,'id');
-          return CheckboxListTile(
-            secondary:liveAvatar(friend),title:Text(field(friend,'name')),
-            activeColor:BlinkColors.orange,value:selected.contains(id),
-            onChanged:(v)=>setState((){
-              if(v==true){selected.add(id);}else{selected.remove(id);}
-            }));
-        })),
-        SafeArea(top:false,child:Padding(padding:const EdgeInsets.all(15),
-          child:SizedBox(width:double.infinity,child:FilledButton.icon(
-            onPressed:busy||name.text.trim().isEmpty||selected.isEmpty?null:_create,
-            icon:const Icon(Icons.group_add),label:Text(busy?'Creating...':'Create group'))))),
-      ]),
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    resizeToAvoidBottomInset: true,
+    appBar: AppBar(title: const BlinkBrandedTitle('Create Blink Group')),
+    body: loading
+      ? const Center(child: CircularProgressIndicator())
+      : error != null
+      ? liveError(error, _load)
+      : SafeArea(
+          bottom: false,
+          child: Column(children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(15, 15, 15, 10),
+              child: BlinkFormSection(
+                heading: 'New group',
+                helper: 'Give your group a name and choose who belongs.',
+                children: [
+                  TextField(
+                    controller: name,
+                    maxLength: 60,
+                    textCapitalization: TextCapitalization.words,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Group name',
+                      hintText: 'Friends, project team...',
+                      prefixIcon: Icon(Icons.groups_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 9),
+                  Row(children: [
+                    const Icon(Icons.group_add_outlined,
+                      color: BlinkColors.orange, size: 19),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(
+                      '${selected.length} member${selected.length == 1 ? '' : 's'} selected',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    )),
+                  ]),
+                ],
+              ),
+            ),
+            Expanded(child: ListView.builder(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(12, 3, 12, 12),
+              itemCount: friends.length,
+              itemBuilder: (_, i) {
+                final friend = friends[i];
+                final id = field(friend, 'id');
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 5),
+                  child: CheckboxListTile(
+                    secondary: liveAvatar(friend),
+                    title: Text(field(friend, 'name'),
+                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                    activeColor: BlinkColors.orange,
+                    value: selected.contains(id),
+                    onChanged: (checked) => setState(() {
+                      if (checked == true) {
+                        selected.add(id);
+                      } else {
+                        selected.remove(id);
+                      }
+                    }),
+                  ),
+                );
+              },
+            )),
+          ]),
+        ),
+    bottomNavigationBar: SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(15, 10, 15, 12),
+        child: SizedBox(
+          width: double.infinity, height: 49,
+          child: FilledButton.icon(
+            onPressed: busy || name.text.trim().isEmpty || selected.isEmpty
+                ? null : _create,
+            icon: busy
+                ? const SizedBox(width: 17, height: 17,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.group_add_rounded),
+            label: Text(busy ? 'Creating...' : 'Create group'),
+          ),
+        ),
+      ),
+    ),
   );
 }

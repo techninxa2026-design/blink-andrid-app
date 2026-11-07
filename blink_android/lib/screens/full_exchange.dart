@@ -198,47 +198,93 @@ class _FullExchangeEditorState extends State<FullExchangeEditor> {
     finally { if (mounted) setState(() => busy = false); }
   }
 
-  @override Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: BlinkBrandedTitle(widget.post == null ? 'Create Exchange Post' : 'Edit Exchange Post')),
-    body: ListView(padding: const EdgeInsets.all(16), children: [
-      TextField(controller: title, maxLength: 140,
-        decoration: const InputDecoration(labelText: 'Post title')),
-      const SizedBox(height: 12),
-      TextField(controller: description, minLines: 5, maxLines: 9, maxLength: 5000,
-        decoration: const InputDecoration(labelText: 'What do you offer or need?')),
-      const SizedBox(height: 12),
-      DropdownButtonFormField<String>(initialValue: kind,
-        decoration: const InputDecoration(labelText: 'Exchange type'),
-        items: _exchangeKinds.map((k) => DropdownMenuItem(value: k, child: Text(k))).toList(),
-        onChanged: (v) { if (v != null) setState(() => kind = v); }),
-      if (widget.post != null) ...[
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(initialValue: status,
-          decoration: const InputDecoration(labelText: 'Post status'),
-          items: ['OPEN','CLOSED'].map((k) =>
-              DropdownMenuItem(value: k, child: Text(k))).toList(),
-          onChanged: (v) { if (v != null) setState(() => status = v); }),
-      ],
-      const SizedBox(height: 20),
-      OutlinedButton.icon(icon: const Icon(Icons.add_photo_alternate_outlined),
-        onPressed: busy ? null : _pick,
-        label: Text('Attach images (' + images.length.toString() + '/4)')),
-      if (images.isNotEmpty) ...[
-        const Text('Selected:'),
-        ...images.map((im) => ListTile(
-          title: Text(im.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-          trailing: IconButton(icon: const Icon(Icons.close), onPressed: () {
-            setState(() => images.remove(im));
-          }),
-        )),
-      ],
-      if (widget.post != null) const Padding(padding: EdgeInsets.all(8),
-        child: Text('Selecting new images will replace existing post images.')),
-      const SizedBox(height: 24),
-      FilledButton.icon(onPressed: busy ? null : _save,
-        icon: busy ? const SizedBox(width: 18, height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.publish),
-        label: Text(busy ? 'Saving...' : 'Save Exchange Post')),
+  @override
+  Widget build(BuildContext context) => BlinkCreateLayout(
+    title: widget.post == null ? 'Create Exchange Post' : 'Edit Exchange Post',
+    subtitle: 'Describe your offer clearly so the right people can respond.',
+    icon: Icons.swap_horiz_rounded,
+    busy: busy,
+    primaryLabel: busy ? 'Saving Exchange...' : 'Save Exchange Post',
+    onSubmit: _save,
+    content: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      BlinkFormSection(
+        heading: 'Post details',
+        helper: 'A short title and useful details help others understand the exchange.',
+        children: [
+          TextField(
+            controller: title,
+            maxLength: 140,
+            textCapitalization: TextCapitalization.sentences,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'Post title', hintText: 'What are you offering or looking for?',
+              prefixIcon: Icon(Icons.title_rounded)),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: description,
+            minLines: 4, maxLines: 8, maxLength: 5000,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Description', alignLabelWithHint: true,
+              hintText: 'Explain what you offer or need...'),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: kind, isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Exchange type'),
+            items: _exchangeKinds.map((k) =>
+              DropdownMenuItem(value: k, child: Text(k,
+                overflow: TextOverflow.ellipsis))).toList(),
+            onChanged: busy ? null : (v) {
+              if (v != null) setState(() => kind = v);
+            },
+          ),
+          if (widget.post != null) ...[
+            const SizedBox(height: 15),
+            DropdownButtonFormField<String>(
+              initialValue: status, isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Post status'),
+              items: ['OPEN', 'CLOSED'].map((k) =>
+                DropdownMenuItem(value: k, child: Text(k))).toList(),
+              onChanged: busy ? null : (v) {
+                if (v != null) setState(() => status = v);
+              },
+            ),
+          ],
+        ],
+      ),
+      const SizedBox(height: 16),
+      BlinkFormSection(
+        heading: 'Photos',
+        helper: 'Attach up to 4 images. Clear photos help people understand your post.',
+        children: [
+          SizedBox(width: double.infinity, child: OutlinedButton.icon(
+            icon: const Icon(Icons.add_photo_alternate_outlined),
+            onPressed: busy ? null : _pick,
+            label: Text('Choose photos (${images.length}/4)'),
+          )),
+          if (images.isNotEmpty) ...[
+            const SizedBox(height: 9),
+            ...images.map((im) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.image_outlined, color: BlinkColors.orange),
+              title: Text(im.name, maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+              trailing: IconButton(
+                tooltip: 'Remove photo',
+                icon: const Icon(Icons.close_rounded),
+                onPressed: busy ? null : () => setState(() => images.remove(im)),
+              ),
+            )),
+          ],
+          if (widget.post != null) const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text('Choosing new photos will replace existing images.',
+              style: TextStyle(fontSize: 12, color: BlinkColors.muted)),
+          ),
+        ],
+      ),
     ]),
   );
 }
@@ -434,19 +480,24 @@ class _FullExchangeThreadState extends State<FullExchangeThread> {
     final amount = TextEditingController(text: field(offer, 'amount'));
     String currency = field(offer, 'currency', 'BDT');
     final data = await showDialog<Map<String, String>>(context: context,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, update) => AlertDialog(
-        title: const Text('Private price offer'),
+      builder: (ctx) => StatefulBuilder(builder: (ctx, update) => BlinkFormDialog(
+        title: 'Private price offer',
+        subtitle: 'Only this conversation can see your price proposal.',
+        icon: Icons.local_offer_outlined,
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(controller: amount, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Amount')),
+            onChanged: (_) => update(() {}),
+            decoration: const InputDecoration(labelText: 'Amount',prefixIcon: Icon(Icons.payments_outlined))),
           const SizedBox(height: 12),
-          DropdownButtonFormField<String>(initialValue: currency,
+          DropdownButtonFormField<String>(initialValue: currency, isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Currency'),
             items: _exchangeCurrencies.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
             onChanged: (v) { if (v != null) update(() => currency = v); }),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx,
+          FilledButton(onPressed: double.tryParse(amount.text.trim()) == null ||
+            (double.tryParse(amount.text.trim()) ?? 0) <= 0 ? null : () => Navigator.pop(ctx,
             {'amount': amount.text.trim(), 'currency': currency}),
             child: const Text('Send offer')),
         ],

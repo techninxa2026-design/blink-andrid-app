@@ -166,31 +166,86 @@ class _EvidenceState extends State<FullTaskEvidenceEditor>{
     }catch(e){if(mounted)liveNotice(context,e.toString());}
     finally{if(mounted)setState(()=>busy=false);}
   }
-  @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const BlinkBrandedTitle('Checklist Evidence')),
-    body:ListView(padding:const EdgeInsets.all(16),children:[
-      Text(field(widget.item,'text'),style:Theme.of(context).textTheme.titleLarge),
-      Text('Potential reward: '+field(widget.item,'rewardBp')+' BP'),
-      const SizedBox(height:16),
-      TextField(controller:explanation,maxLength:6000,minLines:4,maxLines:8,
-        decoration:const InputDecoration(labelText:'Explain what you completed')),
-      OutlinedButton.icon(onPressed:busy?null:_photos,icon:const Icon(Icons.photo_library_outlined),
-        label:Text('Evidence photos ('+(oldImages.length+pictures.length).toString()+'/8)')),
-      ...oldImages.map((id)=>ListTile(title:Text('Saved image '+id),
-        trailing:IconButton(onPressed:()=>setState(()=>oldImages.remove(id)),
-          icon:const Icon(Icons.close)))),
-      ...pictures.map((picture)=>ListTile(title:Text(picture.name),
-        trailing:IconButton(onPressed:()=>setState(()=>pictures.remove(picture)),
-          icon:const Icon(Icons.close)))),
-      OutlinedButton.icon(onPressed:busy?null:_video,
-        icon:const Icon(Icons.video_library_outlined),
-        label:Text(video?.name??(field(widget.step,'videoUploadId').isEmpty
-          ?'Attach evidence video':'Replace evidence video'))),
-      if(progress>0)LinearProgressIndicator(value:progress/100,color:BlinkColors.orange),
-      const SizedBox(height:18),
-      FilledButton.icon(onPressed:busy?null:_save,icon:const Icon(Icons.save_outlined),
-        label:Text(busy?'Saving... $progress%':'Save this item response')),
-    ]));
+  @override
+  Widget build(BuildContext context) => BlinkCreateLayout(
+    title: 'Checklist Evidence',
+    subtitle: 'Show what you completed so the creator can verify your work.',
+    icon: Icons.fact_check_outlined,
+    busy: busy,
+    primaryLabel: busy ? 'Saving... $progress%' : 'Save evidence',
+    onSubmit: _save,
+    progress: progress > 0
+      ? LinearProgressIndicator(value: progress / 100, color: BlinkColors.orange)
+      : null,
+    content: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      BlinkFormSection(
+        heading: 'Your checklist step',
+        helper: 'Your submission is reviewed before rewards are granted.',
+        children: [
+          Text(field(widget.item, 'text'),
+            style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 6),
+          Text('Potential reward: ${field(widget.item,'rewardBp')} BP',
+            style: const TextStyle(
+              color: BlinkColors.orangeDark, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 18),
+          TextField(
+            controller: explanation, maxLength: 6000,
+            minLines: 4, maxLines: 8,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Explain what you completed',
+              alignLabelWithHint: true),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      BlinkFormSection(
+        heading: 'Proof & attachments',
+        helper: 'You can provide up to 8 photos and one video.',
+        children: [
+          SizedBox(width: double.infinity, child: OutlinedButton.icon(
+            onPressed: busy ? null : _photos,
+            icon: const Icon(Icons.photo_library_outlined),
+            label: Text('Evidence photos (${oldImages.length + pictures.length}/8)'),
+          )),
+          ...oldImages.map((id) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.image_outlined, color: BlinkColors.orange),
+            title: Text('Saved evidence photo', maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+            trailing: IconButton(
+              tooltip: 'Remove saved photo',
+              onPressed: busy ? null :
+                () => setState(() => oldImages.remove(id)),
+              icon: const Icon(Icons.close),
+            ),
+          )),
+          ...pictures.map((picture) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.image_outlined, color: BlinkColors.orange),
+            title: Text(picture.name, maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+            trailing: IconButton(
+              tooltip: 'Remove selected photo',
+              onPressed: busy ? null :
+                () => setState(() => pictures.remove(picture)),
+              icon: const Icon(Icons.close),
+            ),
+          )),
+          const SizedBox(height: 10),
+          SizedBox(width: double.infinity, child: OutlinedButton.icon(
+            onPressed: busy ? null : _video,
+            icon: const Icon(Icons.video_library_outlined),
+            label: Text(video?.name ??
+                (field(widget.step,'videoUploadId').isEmpty
+                  ? 'Attach evidence video' : 'Replace evidence video'),
+              overflow: TextOverflow.ellipsis, maxLines: 1),
+          )),
+        ],
+      ),
+    ]),
+  );
 }
 class TaskMediaVideo extends StatefulWidget{
   const TaskMediaVideo({super.key,required this.url});

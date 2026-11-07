@@ -257,6 +257,59 @@ class BlinkHomeApi {
     await request('POST', '/moments/${Uri.encodeComponent(id)}/react', data: {'emoji': emoji});
   }
 
+  /// Public Moment BP gifts are FREE appreciation, not wallet transfers.
+  /// The NestJS API alone credits the Moment owner atomically with the gift
+  /// receipt. Android must never decrement or require the giver's balance.
+  static const List<int> momentGiftChoices = [1, 5, 10, 25, 50, 100];
+
+  static Map<String, dynamic> freeBpGiftPayload({
+    required String momentId,
+    required String creatorId,
+    required String senderId,
+    required int amount,
+  }) {
+    if (momentId.trim().isEmpty || creatorId.trim().isEmpty ||
+        senderId.trim().isEmpty) {
+      throw const BlinkHomeError('Moment or account information is missing.');
+    }
+    if (creatorId == senderId) {
+      throw const BlinkHomeError(
+        'You cannot give BP to your own Moment.', status: 400);
+    }
+    if (!momentGiftChoices.contains(amount)) {
+      throw const BlinkHomeError('Choose a valid Blink Points amount.', status: 400);
+    }
+    // Only amount goes to NestJS, never a balance, debit, senderId or credit.
+    return {'amount': amount};
+  }
+
+  static Future<int> giftFreeBp({
+    required String momentId,
+    required String creatorId,
+    required String senderId,
+    required int amount,
+  }) async {
+    final payload = freeBpGiftPayload(
+      momentId: momentId,
+      creatorId: creatorId,
+      senderId: senderId,
+      amount: amount,
+    );
+    final result = await request('POST',
+      '/moments/${Uri.encodeComponent(momentId)}/bp',
+      data: payload,
+    );
+    // Do not report success unless the server confirms the credit and receipt.
+    if (result is! Map || result['ok'] != true ||
+        result['amount'] != amount) {
+      throw const BlinkHomeError(
+        'Blink did not confirm this BP gift. Refresh before trying again.');
+    }
+    return amount;
+  }
+
+
+
   static Future<void> comment(String id, String body, {String? parentId}) async {
     await request('POST', '/moments/${Uri.encodeComponent(id)}/comments', data: {
       'body': body.trim(),

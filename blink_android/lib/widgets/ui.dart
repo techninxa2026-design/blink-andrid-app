@@ -677,6 +677,232 @@ class BlinkPanel extends StatelessWidget {
   }
 }
 
+/// Shared visual layout for existing Blink create/edit pages.
+/// It adds no routes or screens: editors keep their existing navigation and
+/// save logic. The body stays scrollable when the keyboard is open, while the
+/// primary action is consistently reachable above the system navigation bar.
+class BlinkCreateLayout extends StatelessWidget {
+  const BlinkCreateLayout({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.content,
+    required this.primaryLabel,
+    required this.onSubmit,
+    this.busy = false,
+    this.progress,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Widget content;
+  final String primaryLabel;
+  final VoidCallback? onSubmit;
+  final bool busy;
+  final Widget? progress;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: BlinkColors.canvas,
+    resizeToAvoidBottomInset: true,
+    appBar: AppBar(title: BlinkBrandedTitle(title)),
+    body: SafeArea(
+      bottom: false,
+      child: LayoutBuilder(builder: (context, size) =>
+        SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(17),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [
+                        Color(0xFFFFF0E4), Color(0xFFFFFAF6),
+                      ]),
+                      borderRadius: BorderRadius.circular(19),
+                      border: Border.all(color: BlinkColors.line),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 48, height: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(icon, color: BlinkColors.orange, size: 25),
+                        ),
+                        const SizedBox(width: 13),
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 19, fontWeight: FontWeight.w900,
+                                color: BlinkColors.ink)),
+                            const SizedBox(height: 4),
+                            Text(subtitle, style: const TextStyle(
+                              fontSize: 12, color: BlinkColors.muted)),
+                          ],
+                        )),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  content,
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+    bottomNavigationBar: SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: BlinkColors.line)),
+        ),
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (progress != null) ...[
+                  progress!,
+                  const SizedBox(height: 9),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: FilledButton.icon(
+                    onPressed: busy ? null : onSubmit,
+                    icon: busy
+                        ? const SizedBox(width: 17, height: 17,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.check_circle_outline_rounded),
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(primaryLabel,
+                        maxLines: 1, softWrap: false,
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Consistent compact form dialog for existing in-place create actions.
+/// It is intentionally a widget, not a new route or an extra page.
+class BlinkFormDialog extends StatelessWidget {
+  const BlinkFormDialog({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.content,
+    required this.actions,
+    this.icon = Icons.edit_note_rounded,
+  });
+
+  final String title;
+  final String subtitle;
+  final Widget content;
+  final List<Widget> actions;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    scrollable: true,
+    backgroundColor: Colors.white,
+    insetPadding: const EdgeInsets.symmetric(horizontal: 13, vertical: 18),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+    titlePadding: const EdgeInsets.fromLTRB(19, 18, 19, 0),
+    contentPadding: const EdgeInsets.fromLTRB(19, 14, 19, 8),
+    actionsPadding: const EdgeInsets.fromLTRB(15, 5, 15, 14),
+    title: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 41, height: 41,
+          decoration: BoxDecoration(
+            color: BlinkColors.orangeSoft,
+            borderRadius: BorderRadius.circular(13)),
+          child: Icon(icon, color: BlinkColors.orange, size: 23),
+        ),
+        const SizedBox(width: 11),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, maxLines: 3, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 18,
+                fontWeight: FontWeight.w900)),
+            const SizedBox(height: 4),
+            Text(subtitle, style: const TextStyle(
+              fontSize: 12, color: BlinkColors.muted)),
+          ],
+        )),
+      ],
+    ),
+    content: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 510),
+      child: content,
+    ),
+    actions: actions,
+  );
+}
+
+/// White, softly bordered grouping for related inputs in Blink editors.
+class BlinkFormSection extends StatelessWidget {
+  const BlinkFormSection({
+    super.key,
+    required this.heading,
+    required this.children,
+    this.helper,
+  });
+  final String heading;
+  final String? helper;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => BlinkPanel(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(heading, style: const TextStyle(fontWeight: FontWeight.w900,
+          fontSize: 15, color: BlinkColors.ink)),
+        if (helper != null) ...[
+          const SizedBox(height: 3),
+          Text(helper!, style: const TextStyle(
+            color: BlinkColors.muted, fontSize: 12)),
+        ],
+        const SizedBox(height: 15),
+        ...children,
+      ],
+    ),
+  );
+}
+
 // ========================================
 // FORM FIELD
 // ========================================
