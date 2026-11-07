@@ -53,6 +53,41 @@ class BlinkBrandedTitle extends StatelessWidget {
   );
 }
 
+/// A segmented filter that stays usable at narrow widths and larger text
+/// scales rather than forcing the screen into a horizontal RenderFlex overflow.
+class BlinkAdaptiveSegments<T> extends StatelessWidget {
+  const BlinkAdaptiveSegments({
+    super.key,
+    required this.segments,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<ButtonSegment<T>> segments;
+  final Set<T> selected;
+  final ValueChanged<Set<T>> onChanged;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: constraints.maxWidth),
+        child: SegmentedButton<T>(
+          showSelectedIcon: false,
+          segments: segments,
+          selected: selected,
+          onSelectionChanged: onChanged,
+          style: const ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.padded,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 // ========================================
 // SHARED SCREEN LAYOUT
 // ========================================
