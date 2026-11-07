@@ -297,11 +297,26 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
 
   Future<void> _react() async {
     if (_busy) return;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Padding(padding: EdgeInsets.all(15),
+          child: Text('React to Reel', style: TextStyle(fontWeight: FontWeight.w800))),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          ...['❤️','😂','😍','😮','😢','👍','🔥'].map((emoji) => TextButton(
+            onPressed: () => Navigator.pop(ctx, emoji),
+            child: Text(emoji, style: const TextStyle(fontSize: 29)))),
+        ]),
+        if (_reaction != null && _reaction!.isNotEmpty)
+          TextButton(onPressed: () => Navigator.pop(ctx, 'remove'),
+            child: const Text('Remove reaction')),
+      ])),
+    );
+    if (choice == null || !mounted) return;
     setState(() => _busy = true);
     try {
-      final result = await BlinkHomeApi.reactReel(
-        widget.reel.id, _reaction == '❤️' ? null : '❤️',
-      );
+      final emoji = choice == 'remove' ? null : choice;
+      final result = await BlinkHomeApi.reactReel(widget.reel.id, emoji);
       if (!mounted) return;
       setState(() {
         _reaction = result['myReaction']?.toString();
@@ -424,8 +439,8 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
         )),
       ))),
       Positioned(right: 10, bottom: 95, child: Column(children: [
-        _action(_reaction == '❤️' ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-          '$_reactionCount', _react, color: _reaction == '❤️' ? BlinkColors.orange : Colors.white),
+        _action(_reaction != null && _reaction!.isNotEmpty ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          '$_reactionCount', _react, color: _reaction != null && _reaction!.isNotEmpty ? BlinkColors.orange : Colors.white),
         _action(Icons.mode_comment_outlined, '$_commentCount', _comments),
         _action(Icons.share_rounded, 'Share', _share),
         if (widget.reel.authorId == widget.myUserId)
@@ -472,6 +487,8 @@ class _LiveReelCommentsState extends State<_LiveReelComments> {
   bool _loading = true;
   bool _sending = false;
   bool _posted = false;
+  String _myId = '';
+  String? _replyId, _replyName;
 
   @override
   void initState() { super.initState(); _load(); }
@@ -482,7 +499,8 @@ class _LiveReelCommentsState extends State<_LiveReelComments> {
   Future<void> _load() async {
     try {
       final rows = await BlinkHomeApi.reelComments(widget.reelId);
-      if (mounted) setState(() { _comments = rows; _loading = false; _error = null; });
+      final viewer = await BlinkAuthApi.cachedUser();
+      if (mounted) setState(() { _comments = rows; _myId = (viewer?['id'] ?? '').toString(); _loading = false; _error = null; });
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _loading = false; });
     }
@@ -493,8 +511,9 @@ class _LiveReelCommentsState extends State<_LiveReelComments> {
     if (_sending || text.isEmpty) return;
     setState(() => _sending = true);
     try {
-      await BlinkHomeApi.commentReel(widget.reelId, text);
+      await BlinkHomeApi.commentReel(widget.reelId, text, parentId: _replyId);
       _input.clear();
+      _replyId = null; _replyName = null;
       _posted = true;
       await _load();
     } catch (e) {
@@ -504,16 +523,36 @@ class _LiveReelCommentsState extends State<_LiveReelComments> {
     }
   }
 
+  Future<void> _deleteComment(String id) async {
+    try {
+      await BlinkHomeApi.request('DELETE', '/reels/comments/' + Uri.encodeComponent(id));
+      await _load();
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    }
+  }
+
   Widget _comment(Map<String, dynamic> value, {int indent = 0}) {
     final author = value['author'];
-    final user = author is Map ? author : <String, dynamic>{};
+    final user = author is Map ? author : <String,dynamic>{};
     final replies = value['replies'];
+    final id = (value['id'] ?? '').toString();
+    final name = (user['name'] ?? 'Blink member').toString();
+    final deleted = value['deletedAt'] != null || value['body'] == '[deleted]';
+    final owner = _myId.isNotEmpty && (value['authorId'] ?? '').toString() == _myId;
     return Padding(
-      padding: EdgeInsets.only(left: indent * 20.0, top: 10, bottom: 7),
+      padding: EdgeInsets.only(left: indent * 16.0, top: 10, bottom: 7),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text((user['name'] ?? 'Blink member').toString(),
-          style: const TextStyle(fontWeight: FontWeight.w800)),
-        Text((value['body'] ?? '').toString()),
+        Text(name, style: const TextStyle(fontWeight: FontWeight.w800)),
+        Text(deleted ? 'Comment deleted' : (value['body'] ?? '').toString()),
+        if (!deleted) Wrap(spacing: 5, children: [
+          TextButton(onPressed: () => setState(() {
+            _replyId = indent > 0 ? (value['parentId'] ?? id).toString() : id;
+            _replyName = name;
+          }), child: const Text('Reply')),
+          if (owner) TextButton(onPressed: () => _deleteComment(id),
+            child: const Text('Delete',style:TextStyle(color:Colors.red))),
+        ]),
         if (replies is List && indent == 0)
           ...replies.whereType<Map<String, dynamic>>()
             .map((reply) => _comment(reply, indent: 1)),
@@ -538,6 +577,12 @@ class _LiveReelCommentsState extends State<_LiveReelComments> {
                 ? [const Center(child: Text('No comments yet.'))]
                 : _comments.map(_comment).toList(),
             ))),
+        if (_replyId != null) ListTile(
+          dense: true,
+          title: Text('Replying to '+(_replyName ?? 'comment')),
+          trailing: IconButton(icon: const Icon(Icons.close),
+            onPressed: () => setState(() { _replyId = null; _replyName = null; })),
+        ),
         Padding(padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
           child: Row(children: [
             Expanded(child: TextField(
