@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../widgets/ui.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/live_api.dart';
 import '../core/task_upload_api.dart';
@@ -24,7 +25,7 @@ class _TasksState extends State<FullTasksScreen> {
       if(mounted)setState((){tasks=rows;loading=false;});
     }catch(e){if(mounted)setState((){error=e.toString();loading=false;});}
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Blink Tasks'),
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Blink Tasks'),
     actions:[IconButton(icon:const Icon(Icons.dashboard_outlined),tooltip:'Creator Studio',
       onPressed:()=>Navigator.push<void>(context,MaterialPageRoute(
         builder:(_)=>const FullCreatorDashboard())))]),
@@ -81,7 +82,7 @@ class _CreatorState extends State<FullCreatorDashboard>{
     try{await LiveApi.call('DELETE','/creator-tasks/'+Uri.encodeComponent(id));_load();}
     catch(e){if(mounted)liveNotice(context,e.toString());}
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('Creator Studio'),
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Creator Studio'),
     actions:[IconButton(onPressed:()=>_edit(),icon:const Icon(Icons.add_circle_outline))]),
     body:loading?const Center(child:CircularProgressIndicator())
       :error.isNotEmpty?Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
