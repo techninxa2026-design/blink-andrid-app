@@ -138,10 +138,11 @@ class BlinkHomeApi {
            message.contains('not found') ||
            message.contains('not public'));
       if (isMomentUnavailable) {
-        return 'This Blink server rejected the Moment. Refresh the feed. '
-            'If the same Moment is still visible, update and restart the '
-            'NestJS Blink API: older server builds can incorrectly reject '
-            'public Moments as expired.';
+        return 'The Blink API at ${BlinkAuthApi.baseUrl} rejected this '
+            'Moment. Refresh the feed and check API connection settings '
+            'to use the same working NestJS server as Blink web. '
+            'If the error continues, update and restart the NestJS API; '
+            'older builds may incorrectly reject public Moments as expired.';
       }
     }
     return error.toString();
