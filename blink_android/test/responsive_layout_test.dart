@@ -2,6 +2,7 @@ import 'package:blink_android/core/theme.dart';
 import 'package:blink_android/screens/blink_real_capture.dart';
 import 'package:blink_android/screens/auth.dart';
 import 'package:blink_android/screens/home.dart';
+import 'package:blink_android/screens/rewards_settings.dart';
 import 'package:blink_android/widgets/blink_full_drawer.dart';
 import 'package:blink_android/widgets/home_navigation.dart';
 import 'package:blink_android/widgets/ui.dart';
@@ -122,6 +123,18 @@ void main() {
       (tester) async {
     await setViewport(tester, const Size(280, 610));
     await tester.pumpWidget(app(const ExploreScreen(), scale: 1.7));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Settings and Appearance cards fit narrow screens',
+      (tester) async {
+    await setViewport(tester, const Size(280, 568));
+    await tester.pumpWidget(app(const SettingsScreen(), scale: 1.7));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(app(const AppearanceScreen(), scale: 1.7));
     await tester.pump();
     expect(tester.takeException(), isNull);
   });
