@@ -12,6 +12,7 @@ import '../screens/live_people.dart';
 import '../screens/live_activities.dart';
 import '../screens/full_exchange.dart';
 import '../screens/full_tasks.dart';
+import '../screens/full_irl.dart';
 import '../screens/task_participation.dart';
 import '../screens/live_business.dart';
 
@@ -43,9 +44,9 @@ class BlinkRoutes {
     '/profile/edit': (_) => const LiveEditProfileScreen(),
     '/checkins': (_) => const LiveCheckinsScreen(),
     '/checkin/create': (_) => const LiveCheckinsScreen(),
-    '/irl': (_) => const LiveIrlScreen(),
-    '/irl/detail': (_) => const LiveIrlScreen(),
-    '/irl/chat': (_) => const LiveIrlScreen(),
+    '/irl': (_) => const FullIrlScreen(),
+    '/irl/detail': (_) => const FullIrlScreen(),
+    '/irl/chat': (_) => const FullIrlScreen(),
     '/inbox': (_) => const LiveInboxScreen(),
     '/chat': (context) { final args = ModalRoute.of(context)?.settings.arguments; final p = args is Map ? args : {}; final id = p['id']?.toString() ?? ''; return id.isEmpty ? const LiveInboxScreen() : LiveChatScreen(conversationId:id,title:p['title']?.toString() ?? 'Conversation'); },
     '/group-chat': (_) => const LiveCreateGroupScreen(),
