@@ -389,13 +389,20 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
   }
 
   Widget _action(IconData icon, String text, VoidCallback handler, {Color color = Colors.white}) {
+    final compact = MediaQuery.sizeOf(context).height < 650;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: InkWell(onTap: handler, child: Column(children: [
-        Icon(icon, color: color, size: 30),
-        const SizedBox(height: 4),
-        Text(text, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-      ])),
+      padding: EdgeInsets.only(bottom: compact ? 9 : 18),
+      child: InkWell(onTap: handler, child: SizedBox(
+        width: 54,
+        child: Column(children: [
+          Icon(icon, color: color, size: compact ? 25 : 30),
+          const SizedBox(height: 4),
+          Text(text, maxLines: 1, textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white,
+              fontSize: 11, fontWeight: FontWeight.w700)),
+        ]),
+      )),
     );
   }
 
@@ -438,7 +445,8 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
           colors: [Color(0x45000000), Colors.transparent, Color(0xC9000000)],
         )),
       ))),
-      Positioned(right: 10, bottom: 95, child: Column(children: [
+      Positioned(right: 10, bottom: MediaQuery.sizeOf(context).height < 650 ? 65 : 95,
+        child: Column(children: [
         _action(_reaction != null && _reaction!.isNotEmpty ? Icons.favorite_rounded : Icons.favorite_border_rounded,
           '$_reactionCount', _react, color: _reaction != null && _reaction!.isNotEmpty ? BlinkColors.orange : Colors.white),
         _action(Icons.mode_comment_outlined, '$_commentCount', _comments),
