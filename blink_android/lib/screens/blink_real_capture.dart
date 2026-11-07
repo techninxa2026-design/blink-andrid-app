@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show PlatformException;
+import 'package:flutter/rendering.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:flutter/services.dart' show PlatformException, DeviceOrientation;
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:get_video_thumbnail/get_video_thumbnail.dart' as thumb;
@@ -41,6 +45,27 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
   bool _recording = false;
   bool _uploading = false;
   bool _flash = false;
+  // Web-parity AR lenses. Detection stays on this device.
+  static const _lenses = <(String, String, String)>[
+    ('none', '◯', 'Natural'),
+    ('cat', '🐱', 'Kitty AR'),
+    ('dog', '🐶', 'Puppy AR'),
+    ('butterfly', '🦋', 'Fairy'),
+    ('heart', '💖', 'Love Glow'),
+    ('crown', '👑', 'Royal Gold'),
+    ('glasses', '😎', 'Neon Shades'),
+    ('cyber', '⚡', 'Cyber'),
+    ('blush', '🌸', 'Soft Glam'),
+    ('party', '🎉', 'Festival'),
+  ];
+  final FaceDetector _faceDetector = FaceDetector(
+    options: FaceDetectorOptions(performanceMode: FaceDetectorMode.fast),
+  );
+  final GlobalKey _mediaBoundary = GlobalKey();
+  String _lens = 'none';
+  Rect? _faceBounds; // Normalized in portrait display coordinates.
+  bool _processingFace = false;
+  DateTime _lastFaceFrame = DateTime.fromMillisecondsSinceEpoch(0);
   String? _musicTrackId;
   static const _soundtracks = <String, String>{
     'sunny-pop': '☀️ Sunny Pop',
@@ -95,6 +120,11 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
 
   Future<void> _disposeCamera(CameraController controller) async {
     try {
+      if (controller.value.isStreamingImages) await controller.stopImageStream();
+    } catch (error) {
+      debugPrint('Blink AR stream stop during cleanup: $error');
+    }
+    try {
       if (controller.value.isRecordingVideo) {
         await controller.stopVideoRecording();
       }
@@ -122,7 +152,10 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     ++_cameraGeneration;
     final old = _camera;
     _camera = null;
-    if (mounted && !_closed) setState(() => _recording = false);
+    if (mounted && !_closed) setState(() {
+      _recording = false;
+      _faceBounds = null;
+    });
     _queueCameraTask(() async {
       if (old != null) await _disposeCamera(old);
     });
@@ -158,7 +191,8 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
           _cameras[_cameraIndex],
           ResolutionPreset.high,
           enableAudio: true,
-          imageFormatGroup: ImageFormatGroup.jpeg,
+          imageFormatGroup: Platform.isAndroid
+              ? ImageFormatGroup.nv21 : ImageFormatGroup.bgra8888,
         );
         try {
           await controller.initialize();
@@ -177,6 +211,9 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
             _camera = controller;
             _cameraError = null;
           });
+          if (_lens != 'none' && !_videoMode) {
+            unawaited(_startFaceTracking(controller));
+          }
         } catch (error) {
           debugPrint('Blink camera initialization failed: $error');
           await _disposeCamera(controller);
@@ -208,6 +245,263 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
       if (_picked == null && !_uploading && !_pickerActive) _initCamera();
     }
   }
+
+  static const _orientationDegrees = <DeviceOrientation, int>{
+    DeviceOrientation.portraitUp: 0,
+    DeviceOrientation.landscapeLeft: 90,
+    DeviceOrientation.portraitDown: 180,
+    DeviceOrientation.landscapeRight: 270,
+  };
+
+  Rect _normalizedFace(Rect bounds, double width, double height,
+      {bool mirror = false}) {
+    if (width <= 0 || height <= 0) return Rect.zero;
+    double clamp(double x) => x.clamp(0.0, 1.0);
+    final left = mirror ? 1 - bounds.right / width : bounds.left / width;
+    final right = mirror ? 1 - bounds.left / width : bounds.right / width;
+    return Rect.fromLTRB(
+      clamp(left), clamp(bounds.top / height),
+      clamp(right), clamp(bounds.bottom / height),
+    );
+  }
+
+  Future<void> _startFaceTracking(CameraController camera) async {
+    if (_lens == 'none' || _videoMode || _picked != null || _closed ||
+        !_appActive || camera != _camera || !camera.value.isInitialized ||
+        camera.value.isStreamingImages || camera.value.isRecordingVideo) return;
+    try {
+      await camera.startImageStream((frame) => _detectCameraFace(camera, frame));
+    } catch (error) {
+      debugPrint('Blink on-device AR detection not available: $error');
+    }
+  }
+
+  Future<void> _stopFaceTracking(CameraController camera) async {
+    try {
+      if (camera.value.isStreamingImages) await camera.stopImageStream();
+    } catch (error) {
+      debugPrint('Blink AR stream stop: $error');
+    }
+  }
+
+  Future<void> _detectCameraFace(CameraController camera, CameraImage frame) async {
+    if (_processingFace || _lens == 'none' || _videoMode || !_appActive ||
+        _picked != null || _closed || camera != _camera) return;
+    final now = DateTime.now();
+    if (now.difference(_lastFaceFrame).inMilliseconds < 180) return;
+    _lastFaceFrame = now;
+    final format = InputImageFormatValue.fromRawValue(frame.format.raw);
+    if (frame.planes.length != 1 ||
+        (Platform.isAndroid && format != InputImageFormat.nv21) ||
+        (Platform.isIOS && format != InputImageFormat.bgra8888)) return;
+    final sensor = _cameras[_cameraIndex].sensorOrientation;
+    int rotation = sensor;
+    if (Platform.isAndroid) {
+      final adjustment = _orientationDegrees[camera.value.deviceOrientation];
+      if (adjustment == null) return;
+      rotation = _cameras[_cameraIndex].lensDirection == CameraLensDirection.front
+          ? (sensor + adjustment) % 360
+          : (sensor - adjustment + 360) % 360;
+    }
+    final orientation = InputImageRotationValue.fromRawValue(rotation);
+    if (orientation == null || format == null) return;
+    _processingFace = true;
+    try {
+      final input = InputImage.fromBytes(
+        bytes: frame.planes.first.bytes,
+        metadata: InputImageMetadata(
+          size: Size(frame.width.toDouble(), frame.height.toDouble()),
+          rotation: orientation,
+          format: format,
+          bytesPerRow: frame.planes.first.bytesPerRow,
+        ),
+      );
+      final faces = await _faceDetector.processImage(input);
+      if (!mounted || _closed || camera != _camera || _picked != null ||
+          _lens == 'none') return;
+      final swap = rotation == 90 || rotation == 270;
+      final w = swap ? frame.height.toDouble() : frame.width.toDouble();
+      final h = swap ? frame.width.toDouble() : frame.height.toDouble();
+      setState(() => _faceBounds = faces.isEmpty ? null : _normalizedFace(
+        faces.first.boundingBox, w, h,
+        mirror: _cameras[_cameraIndex].lensDirection == CameraLensDirection.front,
+      ));
+    } catch (error) {
+      debugPrint('Blink AR frame detection: $error');
+    } finally {
+      _processingFace = false;
+    }
+  }
+
+  Future<void> _detectPhotoFace(XFile file) async {
+    if (_lens == 'none' || _videoMode) return;
+    try {
+      final faces = await _faceDetector.processImage(
+        InputImage.fromFilePath(file.path));
+      final bytes = await File(file.path).readAsBytes();
+      final image = await ui.decodeImageFromList(bytes);
+      final rect = faces.isEmpty ? null : _normalizedFace(
+        faces.first.boundingBox, image.width.toDouble(), image.height.toDouble());
+      image.dispose();
+      if (mounted && !_closed && _picked?.path == file.path && _lens != 'none') {
+        setState(() => _faceBounds = rect);
+      }
+    } catch (error) {
+      debugPrint('Blink AR photo detection: $error');
+    }
+  }
+
+  void _selectLens(String lens) {
+    if (_uploading || _recording) return;
+    setState(() {
+      _lens = lens;
+      _faceBounds = null;
+    });
+    final camera = _camera;
+    if (camera != null) {
+      if (lens == 'none') {
+        unawaited(_stopFaceTracking(camera));
+      } else if (!_videoMode) {
+        unawaited(_startFaceTracking(camera));
+      }
+    }
+    if (_picked != null && !_videoMode && lens != 'none') {
+      unawaited(_detectPhotoFace(_picked!));
+    }
+  }
+
+  void _changeMode(bool video) {
+    if (_recording || _uploading || _picked != null) return;
+    setState(() {
+      _videoMode = video;
+      _faceBounds = null;
+    });
+    final camera = _camera;
+    if (camera == null) return;
+    if (video) {
+      unawaited(_stopFaceTracking(camera));
+    } else if (_lens != 'none') {
+      unawaited(_startFaceTracking(camera));
+    }
+  }
+
+  Future<File> _renderFilteredPhoto() async {
+    // Composites the exact live emoji artwork visible in the photo preview.
+    await WidgetsBinding.instance.endOfFrame;
+    final boundary = _mediaBoundary.currentContext?.findRenderObject();
+    if (boundary is! RenderRepaintBoundary) {
+      throw const BlinkHomeError('Could not prepare the AR image.');
+    }
+    final result = await boundary.toImage(pixelRatio: 2.5);
+    try {
+      final bytes = await result.toByteData(format: ui.ImageByteFormat.png);
+      if (bytes == null) throw const BlinkHomeError('Could not export the AR image.');
+      final dir = await Directory.systemTemp.createTemp('blink_ar_photo_');
+      _temporaryMediaDirectories.add(dir);
+      final output = File('${dir.path}/blink-ar.png');
+      await output.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
+      return output;
+    } finally {
+      result.dispose();
+    }
+  }
+
+  Widget _faceEffects() {
+    if (_lens == 'none' || _videoMode) return const SizedBox.shrink();
+    return LayoutBuilder(builder: (context, constraints) {
+      final face = _faceBounds;
+      if (face == null) return const SizedBox.shrink();
+      final width = constraints.maxWidth;
+      final height = constraints.maxHeight;
+      final cx = face.center.dx * width;
+      final top = face.top * height;
+      final faceWidth = face.width * width;
+      final size = (faceWidth * 0.62).clamp(42.0, 150.0);
+      Widget sticker(String symbol, double x, double y, double factor) =>
+        Positioned(
+          left: x - size * factor / 2,
+          top: y - size * factor / 2,
+          child: IgnorePointer(child: Text(symbol,
+            style: TextStyle(fontSize: size * factor, shadows: const [
+              Shadow(blurRadius: 12, color: Color(0x66000000)),
+            ]))),
+        );
+      switch (_lens) {
+        case 'cat':
+          return Stack(children: [
+            sticker('🐱', cx, top - size * .25, 1.1),
+          ]);
+        case 'dog':
+          return Stack(children: [
+            sticker('🐶', cx, top - size * .24, 1.1),
+          ]);
+        case 'butterfly':
+          return Stack(children: [
+            sticker('🦋', cx - faceWidth * .5, top + size * .35, .85),
+            sticker('🦋', cx + faceWidth * .5, top + size * .35, .85),
+          ]);
+        case 'heart':
+          return Stack(children: [
+            sticker('💖', cx, top - size * .45, .9),
+            sticker('✨', cx + faceWidth * .42, top + size * .2, .48),
+          ]);
+        case 'crown':
+          return Stack(children: [sticker('👑', cx, top - size * .3, 1.3)]);
+        case 'glasses':
+          return Stack(children: [sticker('😎', cx, top + size * .43, .95)]);
+        case 'cyber':
+          return Stack(children: [
+            sticker('⚡', cx - faceWidth * .52, top + size * .18, .85),
+            sticker('⚡', cx + faceWidth * .52, top + size * .18, .85),
+          ]);
+        case 'blush':
+          return Stack(children: [
+            sticker('🌸', cx - faceWidth * .33, top + size * .93, .5),
+            sticker('🌸', cx + faceWidth * .33, top + size * .93, .5),
+          ]);
+        case 'party':
+          return Stack(children: [
+            sticker('🎉', cx, top - size * .37, 1.1),
+            sticker('✨', cx + faceWidth * .5, top + size * .3, .55),
+          ]);
+      }
+      return const SizedBox.shrink();
+    });
+  }
+
+  Widget _lensPicker() => SizedBox(
+    height: 72,
+    child: ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      scrollDirection: Axis.horizontal,
+      itemCount: _lenses.length,
+      separatorBuilder: (_, __) => const SizedBox(width: 8),
+      itemBuilder: (context, index) {
+        final entry = _lenses[index];
+        final chosen = _lens == entry.$1;
+        return InkWell(
+          onTap: () => _selectLens(entry.$1),
+          borderRadius: BorderRadius.circular(17),
+          child: Container(
+            width: 69, alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            decoration: BoxDecoration(
+              color: chosen ? BlinkColors.orange : const Color(0xB0171719),
+              border: Border.all(color: chosen ? Colors.white : Colors.white38),
+              borderRadius: BorderRadius.circular(17),
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(entry.$2, style: const TextStyle(color: Colors.white, fontSize: 25)),
+              const SizedBox(height: 4),
+              Text(entry.$3, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white,
+                  fontSize: 9, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        );
+      },
+    ),
+  );
 
   Future<void> _switchCamera() async {
     if (_recording || _uploading || _picked != null || _cameras.length < 2) {
