@@ -10,6 +10,7 @@ import 'package:get_video_thumbnail/get_video_thumbnail.dart' as thumb;
 import 'package:get_video_thumbnail/index.dart' as thumb_format;
 
 import '../core/blink_home_api.dart';
+import '../core/blink_original_music.dart';
 import '../core/nav.dart';
 import '../core/theme.dart';
 
@@ -30,6 +31,8 @@ class BlinkRealCaptureScreen extends StatefulWidget {
 class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with WidgetsBindingObserver {
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _caption = TextEditingController();
+  final BlinkOriginalPlayer _soundtrackPlayer = BlinkOriginalPlayer();
+  bool _soundtrackPlaying = false;
   List<CameraDescription> _cameras = [];
   CameraController? _camera;
   VideoPlayerController? _preview;
@@ -379,7 +382,9 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     if (oldPreview != null) await oldPreview.dispose();
     if (!mounted || _closed) return;
     _caption.clear();
+    await _soundtrackPlayer.stop();
     setState(() {
+      _soundtrackPlaying = false;
       _musicTrackId = null;
       _picked = null;
       _error = null;
@@ -388,9 +393,23 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     if (_appActive) _initCamera();
   }
 
+  Future<void> _previewSoundtrack() async {
+    final selected = _musicTrackId;
+    if (selected == null) return;
+    try {
+      await _soundtrackPlayer.play(selected);
+      if (mounted) setState(() {
+        _soundtrackPlaying = _soundtrackPlayer.isPlaying;
+      });
+    } catch (error) {
+      _showError('Soundtrack preview failed: $error');
+    }
+  }
+
   Future<void> _publish() async {
     if (_picked == null || _uploading) return;
     setState(() { _uploading = true; _error = null; });
+    await _soundtrackPlayer.stop();
     try {
       final file = File(_picked!.path);
       if (_videoMode && _publishReel) {
@@ -434,6 +453,7 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
       if (old != null) await _disposeCamera(old);
     });
     _preview?.dispose();
+    _soundtrackPlayer.dispose();
     _caption.dispose();
     for (final dir in _temporaryMediaDirectories) {
       dir.delete(recursive: true).ignore();
@@ -555,11 +575,25 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
                       (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
                     ),
                   ],
-                  onChanged: _uploading ? null : (value) =>
-                    setState(() => _musicTrackId = value == null || value.isEmpty ? null : value),
+                  onChanged: _uploading ? null : (value) {
+                    _soundtrackPlayer.stop();
+                    setState(() {
+                      _soundtrackPlaying = false;
+                      _musicTrackId = value == null || value.isEmpty ? null : value;
+                    });
+                  },
                 ),
               ),
             ),
+            if (_musicTrackId != null && (!_videoMode || !_publishReel))
+              Padding(padding: const EdgeInsets.only(bottom: 8),
+                child: TextButton.icon(
+                  onPressed: _uploading ? null : _previewSoundtrack,
+                  icon: Icon(_soundtrackPlaying ? Icons.pause_circle_outline : Icons.play_circle_outline,
+                    color: Colors.white),
+                  label: Text(_soundtrackPlaying ? 'Stop original music preview' : 'Preview original music',
+                    style: const TextStyle(color: Colors.white)),
+                )),
             if (_videoMode) Padding(padding: const EdgeInsets.only(bottom: 10), child: Wrap(spacing: 9, children: [
               ChoiceChip(label: const Text('Reel'), selected: _publishReel,
                 onSelected: _uploading ? null : (_) => setState(() => _publishReel = true)),
