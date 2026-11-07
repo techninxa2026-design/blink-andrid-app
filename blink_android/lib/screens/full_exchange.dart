@@ -199,7 +199,7 @@ class _FullExchangeEditorState extends State<FullExchangeEditor> {
   }
 
   @override Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(widget.post == null ? 'Create Exchange Post' : 'Edit Exchange Post')),
+    appBar: AppBar(title: BlinkBrandedTitle(widget.post == null ? 'Create Exchange Post' : 'Edit Exchange Post')),
     body: ListView(padding: const EdgeInsets.all(16), children: [
       TextField(controller: title, maxLength: 140,
         decoration: const InputDecoration(labelText: 'Post title')),
@@ -465,7 +465,7 @@ class _FullExchangeThreadState extends State<FullExchangeThread> {
     } catch (e) { if (mounted) liveNotice(context, e.toString()); }
   }
   @override Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(widget.title, maxLines: 1)),
+    appBar: AppBar(title: BlinkBrandedTitle(widget.title)),
     body: Column(children: [
       if (offer.isNotEmpty) Card(margin: const EdgeInsets.all(10), child: Padding(
         padding: const EdgeInsets.all(12), child: Column(children: [
