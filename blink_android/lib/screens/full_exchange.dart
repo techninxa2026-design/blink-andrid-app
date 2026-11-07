@@ -332,7 +332,7 @@ class _FullExchangeDetailState extends State<FullExchangeDetail> {
                     Uri.encodeComponent(field(m, 'id')),
                     width: 170, height: 150, fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => const SizedBox(width: 170,
-                      child: Icon(Icons.broken_image_outlined))))),
+                      child: Icon(Icons.broken_image_outlined)))))) ,
             ])),
           ],
           const SizedBox(height: 18),
