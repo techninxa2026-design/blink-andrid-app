@@ -25,7 +25,8 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
   bool _soundtrackPlaying = false;
   bool _saved = false;
   bool _busy = false;
-  String? _error;
+  // Activity and media failures are independent: valid Moments stay visible.
+  String? _videoError;
 
   @override
   void initState() {
@@ -43,7 +44,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
       await video.setLooping(true);
       if (mounted) setState(() {});
     } catch (_) {
-      if (mounted) setState(() => _error = 'Unable to load video.');
+      if (mounted) setState(() => _videoError = 'Could not play this video.');
     }
   }
 
@@ -52,7 +53,9 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
       final activity = await BlinkHomeApi.activity(widget.moment.id);
       if (mounted) setState(() => _activity = activity);
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      // Activity is optional metadata. A temporary 404/timeout must never
+      // label a valid public Moment as expired or unavailable.
+      debugPrint('Blink Moment activity ${widget.moment.id}: $error');
     }
   }
 
@@ -285,7 +288,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
           body: Center(child: InteractiveViewer(child: Image.network(
             BlinkHomeApi.mediaUrl(widget.moment.mediaUrl),
             errorBuilder: (_, __, ___) => const Text(
-              'Image unavailable', style: TextStyle(color: BlinkColors.ink)),
+              'Could not display this image', style: TextStyle(color: BlinkColors.muted)),
           ))),
         ),
       ));
@@ -366,8 +369,8 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
                   ),
                 ),
               if (video == null || !video.value.isInitialized)
-                Center(child: _error != null
-                    ? Text(_error!, style: const TextStyle(color: BlinkColors.ink))
+                Center(child: _videoError != null
+                    ? const Icon(Icons.videocam_off_outlined, color: Colors.white70, size: 38)
                     : const CircularProgressIndicator(color: BlinkColors.orange)),
               if (video != null && video.value.isInitialized)
                 Positioned.fill(child: InkWell(
@@ -415,7 +418,8 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
               width: double.infinity,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => const SizedBox(
-                height: 295, child: Center(child: Text('Media unavailable'))),
+                height: 295, child: Center(child: Icon(Icons.broken_image_outlined,
+                  size: 36, color: BlinkColors.muted))),
             ),
           ),
         Row(children: [
@@ -447,8 +451,6 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
         if ((widget.moment.caption ?? '').isNotEmpty)
           Padding(padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
             child: Text(widget.moment.caption!, style: const TextStyle(fontSize: 12.5))),
-        if (_error != null)
-          Padding(padding: const EdgeInsets.all(8), child: Text('Activity unavailable: $_error', style: const TextStyle(fontSize: 10, color: Colors.red))),
       ]),
     );
   }
