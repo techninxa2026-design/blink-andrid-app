@@ -641,8 +641,10 @@ class _HeartsState extends State<LiveHeartsScreen>{
   Future<void> _send()async{
     final search=TextEditingController();final message=TextEditingController();
     List<dynamic> found=[];String? selectedId;
-    final data=await showDialog<Map<String,String>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-      title:const Text('Send an anonymous Heart'),
+    final data=await showDialog<Map<String,String>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>BlinkFormDialog(
+      title:'Send an anonymous Heart',
+      subtitle:'Choose a Blink member and write a private note.',
+      icon:Icons.favorite_border_rounded,
       content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
         TextField(controller:search,decoration:InputDecoration(labelText:'Find member',
           suffixIcon:IconButton(icon:const Icon(Icons.search),onPressed:()async{
@@ -650,12 +652,16 @@ class _HeartsState extends State<LiveHeartsScreen>{
               if(ctx.mounted)update(()=>found=r);
             }catch(e){if(ctx.mounted)liveNotice(ctx,e.toString());}
           }))),
+        const SizedBox(height:12),
         ...found.map((u)=>RadioListTile<String>(title:Text(field(u,'name')),value:field(u,'id'),
           groupValue:selectedId,onChanged:(v)=>update(()=>selectedId=v))),
-        TextField(controller:message,maxLines:4,decoration:const InputDecoration(labelText:'Your private Heart message')),
+        TextField(controller:message,maxLines:4,maxLength:2000,
+          textCapitalization:TextCapitalization.sentences,
+          onChanged:(_)=>update((){}),
+          decoration:const InputDecoration(labelText:'Your private Heart message',alignLabelWithHint:true)),
       ])),
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancel')),
-        FilledButton(onPressed:selectedId==null?null:()=>Navigator.pop(ctx,{'receiverId':selectedId!,'text':message.text}),
+        FilledButton(onPressed:selectedId==null||message.text.trim().isEmpty?null:()=>Navigator.pop(ctx,{'receiverId':selectedId!,'text':message.text.trim()}),
           child:const Text('Send Heart'))],
     )));
     search.dispose();message.dispose();
