@@ -502,22 +502,27 @@ class _SecretsState extends State<LiveSecretsScreen>{
     bool anonymous=field(existing,'visibility','ANONYMOUS')!='NAMED';
     int hours=24;
     final data=await showDialog<Map<String,dynamic>>(context:context,
-      builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>AlertDialog(
-        title:Text(edit?'Edit Blink Secret':'Create Blink Secret'),
+      builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>BlinkFormDialog(
+        title:edit?'Edit Blink Secret':'Create Blink Secret',
+        subtitle:'Ask a question with a timed answer reveal.',
+        icon:Icons.help_outline_rounded,
         content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
           TextField(controller:prompt,maxLength:500,maxLines:3,
-            decoration:const InputDecoration(labelText:'Your question')),
+            textCapitalization:TextCapitalization.sentences,
+            decoration:const InputDecoration(labelText:'Your question',alignLabelWithHint:true)),
+          const SizedBox(height:12),
           TextField(controller:options,maxLines:5,
-            decoration:const InputDecoration(labelText:'Answer options (2–5, one per line)')),
-          DropdownButtonFormField<int>(initialValue:correct,
+            decoration:const InputDecoration(labelText:'Answer options (2–5, one per line)',alignLabelWithHint:true)),
+          const SizedBox(height:12),
+          DropdownButtonFormField<int>(initialValue:correct,isExpanded:true,
             decoration:const InputDecoration(labelText:'Correct answer position'),
             items:List.generate(5,(i)=>DropdownMenuItem(value:i,
               child:Text('Option '+(i+1).toString()))),
             onChanged:(v){if(v!=null)update(()=>correct=v);}),
-          SwitchListTile(title:const Text('Anonymous Secret'),value:anonymous,
+          SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Anonymous Secret'),value:anonymous,
             activeTrackColor:BlinkColors.orange,
             onChanged:(v)=>update(()=>anonymous=v)),
-          if(!edit)DropdownButtonFormField<int>(initialValue:hours,
+          if(!edit)DropdownButtonFormField<int>(initialValue:hours,isExpanded:true,
             decoration:const InputDecoration(labelText:'Reveal answers after'),
             items:const [
               DropdownMenuItem(value:1,child:Text('1 hour')),
