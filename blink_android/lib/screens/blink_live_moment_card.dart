@@ -146,7 +146,19 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
 
   void _notify(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    final serverMismatch = message.contains('check API connection settings');
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      duration: Duration(seconds: serverMismatch ? 12 : 4),
+      content: Text(message),
+      action: serverMismatch
+          ? SnackBarAction(
+              label: 'API Settings',
+              onPressed: () {
+                if (mounted) Navigator.of(context).pushNamed('/server-settings');
+              },
+            )
+          : null,
+    ));
   }
 
   Future<void> _comments() async {
@@ -294,11 +306,24 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
                     );
                   },
                 ),
-                if (error != null) Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(error!, textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red)),
-                ),
+                if (error != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(error!, textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red)),
+                  ),
+                  if (error!.contains('check API connection settings'))
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(sheetContext).pop();
+                        if (mounted) {
+                          Navigator.of(context).pushNamed('/server-settings');
+                        }
+                      },
+                      icon: const Icon(Icons.dns_outlined),
+                      label: const Text('Check API connection'),
+                    ),
+                ],
                 const Padding(
                   padding: EdgeInsets.only(top: 11),
                   child: Text(
