@@ -340,10 +340,13 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
       final faces = await _faceDetector.processImage(
         InputImage.fromFilePath(file.path));
       final bytes = await File(file.path).readAsBytes();
-      final image = await ui.decodeImageFromList(bytes);
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
       final rect = faces.isEmpty ? null : _normalizedFace(
         faces.first.boundingBox, image.width.toDouble(), image.height.toDouble());
       image.dispose();
+      codec.dispose();
       if (mounted && !_closed && _picked?.path == file.path && _lens != 'none') {
         setState(() => _faceBounds = rect);
       }
