@@ -677,6 +677,199 @@ class BlinkPanel extends StatelessWidget {
   }
 }
 
+// ========================================
+// PREMIUM CARD DESIGN SYSTEM
+// ========================================
+
+/// Shared elevated surface used across the real, API-backed Blink modules.
+/// The glass-warm gradient, subtle border and orange shadow are consistent
+/// with the existing Blink Orange design system. Nested actions still work.
+class BlinkProCard extends StatelessWidget {
+  const BlinkProCard({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.padding = const EdgeInsets.all(17),
+    this.margin = const EdgeInsets.only(bottom: 12),
+  });
+
+  final Widget child;
+  final VoidCallback? onTap;
+  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: margin,
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Colors.white, Color(0xFFFFFAF6), Color(0xFFFFF3EC)],
+        stops: [0.0, 0.70, 1.0],
+      ),
+      borderRadius: BorderRadius.circular(23),
+      border: Border.all(color: const Color(0xFFFFDAC6), width: 1),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x12A85618),
+          blurRadius: 21,
+          offset: Offset(0, 9),
+        ),
+        BoxShadow(
+          color: Color(0x09000000),
+          blurRadius: 5,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(padding: padding, child: child),
+      ),
+    ),
+  );
+}
+
+/// Compact premium metadata label. Wrap multiple chips rather than putting
+/// them inside an overflowing fixed-width Row.
+class BlinkInfoPill extends StatelessWidget {
+  const BlinkInfoPill(this.label, {
+    super.key,
+    this.icon,
+    this.highlight = false,
+  });
+
+  final String label;
+  final IconData? icon;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    decoration: BoxDecoration(
+      color: highlight ? BlinkColors.orangeSoft : Colors.white,
+      border: Border.all(
+        color: highlight
+          ? const Color(0xFFFFC7A7) : const Color(0xFFF0E3DB)),
+      borderRadius: BorderRadius.circular(30),
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      if (icon != null) ...[
+        Icon(icon, size: 14, color: BlinkColors.orangeDark),
+        const SizedBox(width: 5),
+      ],
+      Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          color: BlinkColors.ink,
+        ),
+      ),
+    ]),
+  );
+}
+
+/// Styled title, avatar/icon and subtitle plus optional tags, action rows.
+/// It makes ordinary ListTiles a polished product card without changing
+/// their existing onTap, menus, edit actions or backend interactions.
+class BlinkProListCard extends StatelessWidget {
+  const BlinkProListCard({
+    super.key,
+    required this.title,
+    required this.icon,
+    this.subtitle,
+    this.eyebrow,
+    this.trailing,
+    this.badges = const [],
+    this.footer,
+    this.onTap,
+    this.leading,
+    this.margin = const EdgeInsets.only(bottom: 12),
+  });
+
+  final String title;
+  final String? subtitle;
+  final String? eyebrow;
+  final IconData icon;
+  final Widget? trailing;
+  final List<Widget> badges;
+  final Widget? footer;
+  final VoidCallback? onTap;
+  final Widget? leading;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) => BlinkProCard(
+    onTap: onTap,
+    margin: margin,
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+          width: 52, height: 52,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [
+              Color(0xFFFFE2D0), Color(0xFFFFF5EE),
+            ]),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFFFD0B7)),
+          ),
+          child: Center(child: leading ?? Icon(icon,
+            color: BlinkColors.orangeDark, size: 25)),
+        ),
+        const SizedBox(width: 13),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (eyebrow != null && eyebrow!.isNotEmpty) ...[
+              Text(eyebrow!.toUpperCase(), maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 10, letterSpacing: 0.9,
+                  fontWeight: FontWeight.w800,
+                  color: BlinkColors.orangeDark)),
+              const SizedBox(height: 5),
+            ],
+            Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w900,
+                fontSize: 16, height: 1.23, color: BlinkColors.ink)),
+            if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(subtitle!.trim(), maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: BlinkColors.muted,
+                  height: 1.4, fontSize: 12.5)),
+            ],
+          ],
+        )),
+        if (trailing != null) ...[
+          const SizedBox(width: 4),
+          trailing!,
+        ] else if (onTap != null) ...[
+          const SizedBox(width: 4),
+          const Icon(Icons.arrow_outward_rounded,
+            color: BlinkColors.orangeDark, size: 20),
+        ],
+      ]),
+      if (badges.isNotEmpty) ...[
+        const SizedBox(height: 15),
+        Wrap(spacing: 7, runSpacing: 7, children: badges),
+      ],
+      if (footer != null) ...[
+        const SizedBox(height: 13),
+        const Divider(height: 1),
+        const SizedBox(height: 10),
+        footer!,
+      ],
+    ]),
+  );
+}
+
 /// Shared visual layout for existing Blink create/edit pages.
 /// It adds no routes or screens: editors keep their existing navigation and
 /// save logic. The body stays scrollable when the keyboard is open, while the
