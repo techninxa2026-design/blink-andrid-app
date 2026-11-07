@@ -66,6 +66,7 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
   String _lens = 'none';
   Rect? _faceBounds; // Normalized in portrait display coordinates.
   bool _processingFace = false;
+  Future<void>? _pendingPhotoDetection;
   DateTime _lastFaceFrame = DateTime.fromMillisecondsSinceEpoch(0);
   String? _musicTrackId;
   static const _soundtracks = <String, String>{
@@ -370,7 +371,7 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
       }
     }
     if (_picked != null && !_videoMode && lens != 'none') {
-      unawaited(_detectPhotoFace(_picked!));
+      _pendingPhotoDetection = _detectPhotoFace(_picked!);
     }
   }
 
@@ -391,6 +392,7 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
 
   Future<File> _renderFilteredPhoto() async {
     // Composites the exact live emoji artwork visible in the photo preview.
+    await _pendingPhotoDetection;
     await WidgetsBinding.instance.endOfFrame;
     final boundary = _mediaBoundary.currentContext?.findRenderObject();
     if (boundary is! RenderRepaintBoundary) {
@@ -649,7 +651,7 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     // Hide CameraPreview before releasing the native camera surface.
     _suspendCamera();
     if (!video && _lens != 'none') {
-      unawaited(_detectPhotoFace(file));
+      _pendingPhotoDetection = _detectPhotoFace(file);
     }
 
     final previousPreview = _preview;
@@ -693,6 +695,7 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
       _picked = null;
       _error = null;
       _faceBounds = null;
+      _pendingPhotoDetection = null;
       _recording = false;
     });
     if (_appActive) _initCamera();
