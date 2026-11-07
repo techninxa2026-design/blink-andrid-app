@@ -127,20 +127,32 @@ class _FullExchangeScreenState extends State<FullExchangeScreen> {
               child: Center(child: Text('No Exchange posts found.'))),
             ...posts.map((raw) {
               final p = obj(raw), own = field(p, 'authorId') == userId;
-              return Card(child: ListTile(
-                leading: CircleAvatar(backgroundColor: BlinkColors.orangeSoft,
-                  child: Icon(own ? Icons.workspace_premium_outlined : Icons.handshake_outlined,
-                    color: BlinkColors.orange)),
-                title: Text(field(p, 'title'), style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text(field(p, 'kind') + ' · ' + field(p, 'status') +
-                  '\n' + field(p['author'], 'name') + '\n' + field(p, 'description'),
-                  maxLines: 4, overflow: TextOverflow.ellipsis),
-                isThreeLine: true,
-                onTap: () => Navigator.push(context, MaterialPageRoute<void>(
-                  builder: (_) => FullExchangeDetail(id: field(p, 'id')))).then((_) => _load()),
-                trailing: own ? IconButton(tooltip: 'Edit my post', icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => _openEditor(p)) : null,
-              ));
+              return BlinkProListCard(
+                icon:own ? Icons.workspace_premium_rounded : Icons.handshake_rounded,
+                eyebrow:own ? 'YOUR EXCHANGE POST' : 'BLINK EXCHANGE',
+                title:field(p,'title'),
+                subtitle:field(p,'description'),
+                badges:[
+                  BlinkInfoPill(field(p,'kind','OFFER'),icon:Icons.swap_horiz_rounded,
+                    highlight:true),
+                  BlinkInfoPill(field(p,'status','OPEN'),
+                    icon:Icons.circle_outlined),
+                  if(field(p['author'],'name').isNotEmpty)
+                    BlinkInfoPill(field(p['author'],'name'),
+                      icon:Icons.account_circle_outlined),
+                ],
+                trailing:own ? IconButton(
+                  tooltip:'Edit my post',icon:const Icon(Icons.edit_outlined,
+                    color:BlinkColors.orangeDark),onPressed:()=>_openEditor(p)) : null,
+                footer:const Row(mainAxisAlignment:MainAxisAlignment.end,children:[
+                  Text('Open negotiation',style:TextStyle(
+                    color:BlinkColors.orangeDark,fontWeight:FontWeight.w800)),
+                  SizedBox(width:6),Icon(Icons.arrow_forward_rounded,
+                    color:BlinkColors.orangeDark,size:18),
+                ]),
+                onTap:()=>Navigator.push(context,MaterialPageRoute<void>(
+                  builder:(_)=>FullExchangeDetail(id:field(p,'id')))).then((_){_load();}),
+              );
             }),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               IconButton(onPressed: page > 1 ? () => _load(next: page - 1) : null,
