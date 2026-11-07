@@ -877,7 +877,7 @@ class ExploreScreen extends StatelessWidget {
                 crossAxisCount: 2,
                 // Fixed aspect ratios truncate cards at large accessibility
                 // sizes. Give subtitles enough room instead of overflow.
-                mainAxisExtent: 112 +
+                mainAxisExtent: 136 +
                   34 * MediaQuery.textScalerOf(context).scale(1.0),
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
