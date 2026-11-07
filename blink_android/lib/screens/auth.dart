@@ -358,8 +358,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               child: Row(
                 children: [
-                  const BlinkLogo(fontSize: 34),
-                  const Spacer(),
+                  const Expanded(child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: BlinkLogo(fontSize: 34, maxWidth: 160),
+                  )),
                   if (_page != 2)
                     TextButton(
                       onPressed: () => go(
