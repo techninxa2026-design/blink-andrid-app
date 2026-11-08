@@ -39,6 +39,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
   bool _soundtrackPlaying = false;
   bool _saved = false;
   bool _busy = false;
+  bool _taughtLove = false;
   // Activity and media failures are independent: valid Moments stay visible.
   String? _videoError;
 
@@ -128,6 +129,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
   /// The normal heart button intentionally retains the web's toggle behavior.
   Future<void> _doubleTapLove() async {
     if (!widget.active) return;
+    if (!_taughtLove && mounted) setState(() => _taughtLove = true);
     _loveController.forward(from: 0);
     if (_busy || _activity?['myReaction'] == '❤️') return;
 
@@ -572,26 +574,65 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     required VoidCallback onPressed,
     String? tooltip,
     Key? tileKey,
+    Color accent = Colors.white,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 7),
+    padding: const EdgeInsets.only(bottom: 8),
     child: Tooltip(
       message: tooltip ?? label,
       child: Material(
         key: tileKey,
-        color: const Color(0xDF24242D),
-        borderRadius: BorderRadius.circular(13),
+        color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(24),
+          splashColor: BlinkColors.orange.withValues(alpha: .18),
           child: SizedBox(
-            width: 56, height: 57,
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              symbol,
-              const SizedBox(height: 3),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(label, maxLines: 1, style: const TextStyle(
-                  color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+            width: 64,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: 52, height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xD9252733),
+                      Color.lerp(const Color(0xC9212230),
+                        accent, .16) ?? const Color(0xC9212230),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(19),
+                  border: Border.all(
+                    color: accent == Colors.white
+                      ? const Color(0x4CFFFFFF)
+                      : accent.withValues(alpha: .65),
+                    width: 1.1),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x70000000),
+                      blurRadius: 15, offset: Offset(0, 5)),
+                  ],
+                ),
+                child: symbol,
+              ),
+              const SizedBox(height: 4),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xC4171922),
+                  borderRadius: BorderRadius.circular(9)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 58),
+                    child: Text(label, maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white, fontSize: 10,
+                        fontWeight: FontWeight.w800)),
+                  ),
+                ),
               ),
             ]),
           ),
@@ -657,6 +698,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
         onTap: widget.moment.mediaType == 'video' ? _togglePlayback : null,
         onDoubleTapDown: (details) => _loveTapPoint = details.localPosition,
         onDoubleTap: _doubleTapLove,
+        onLongPress: _reaction,
       )),
       _loveBurst(),
       SafeArea(
@@ -725,10 +767,12 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                   _actionTile(
                     symbol: Icon(myReaction == '❤️'
                       ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
-                      color: myReaction == '❤️' ? BlinkColors.orange : Colors.white,
-                      size: 25),
+                      color: myReaction == '❤️'
+                        ? const Color(0xFFFF2851) : Colors.white,
+                      size: 27),
                     label: reactions, tooltip: 'Like Moment',
                     tileKey: _likeActionKey,
+                    accent: const Color(0xFFFF2851),
                     onPressed: _busy ? () {} : _like,
                   ),
                   _actionTile(
@@ -736,11 +780,13 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                       ? myReaction : '😊',
                       style: const TextStyle(fontSize: 24)),
                     label: 'React', onPressed: _reaction,
+                    accent: const Color(0xFFFFB547),
                   ),
                   _actionTile(
                     symbol: const Icon(Icons.mode_comment_outlined,
                       color: Colors.white, size: 25),
                     label: comments, tooltip: 'Comments',
+                    accent: const Color(0xFF8EBDFF),
                     onPressed: _comments,
                   ),
                   _actionTile(
@@ -748,13 +794,15 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                         : Icons.card_giftcard_rounded,
                       color: const Color(0xFFFFB27F), size: 25),
                     label: mine ? 'Viewers' : 'BP',
+                    accent: const Color(0xFFFFBF52),
                     tooltip: mine ? 'Moment viewers' : 'Give Blink Points',
                     onPressed: mine ? _viewers : _giftBp,
                   ),
                   _actionTile(
                     symbol: const Icon(Icons.send_outlined,
                       color: Colors.white, size: 25),
-                    label: 'Share', onPressed: _shareOptions,
+                    label: 'Share', accent: const Color(0xFF9BE9D0),
+                    onPressed: _shareOptions,
                   ),
                 ]),
               ),
