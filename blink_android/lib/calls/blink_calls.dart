@@ -604,11 +604,19 @@ class BlinkCalls extends ChangeNotifier {
       unawaited(peer.close());
     }
     final local = _local;
+    final wasCapturingAudio = local?.getAudioTracks().isNotEmpty ?? false;
     _local = null;
     _remote = null;
     if (local != null) {
       for (final track in local.getTracks()) {track.stop();}
       unawaited(local.dispose());
+    }
+    if (!kIsWeb && wasCapturingAudio) {
+      // Release WebRTC's communication-device selection when the call ends;
+      // ordinary app playback should not stay on the call earpiece.
+      unawaited(Helper.clearAndroidCommunicationDevice().catchError(
+        (Object error) => debugPrint('Blink audio route cleanup: $error'),
+      ));
     }
     if (_renderersInitialized) {
       localRenderer.srcObject = null;
