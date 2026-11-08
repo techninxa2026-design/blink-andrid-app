@@ -754,6 +754,92 @@ class BlinkProCard extends StatelessWidget {
   );
 }
 
+/// An editorial feature identity, not another generic shadow card.
+/// Distinct accents let Inbox, People, Exchange and Tasks feel like
+/// different Blink destinations while keeping the official brand language.
+class BlinkFeatureHero extends StatelessWidget {
+  const BlinkFeatureHero({
+    super.key,
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    this.accent = BlinkColors.orange,
+    this.secondary = const Color(0xFFFFAD6A),
+    this.action,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color accent;
+  final Color secondary;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+    constraints: const BoxConstraints(minHeight: 125),
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [accent, Color.lerp(accent, secondary, .52)!, secondary]),
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(30),
+        topRight: Radius.circular(11),
+        bottomLeft: Radius.circular(11),
+        bottomRight: Radius.circular(30)),
+    ),
+    child: Stack(children: [
+      Positioned(
+        right: -43, top: -57,
+        child: IgnorePointer(child: Container(
+          width: 180, height: 180,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0x33FFFFFF), width: 31)),
+        )),
+      ),
+      Positioned(
+        right: 34, bottom: -35,
+        child: IgnorePointer(child: Icon(icon, size: 130,
+          color: const Color(0x20FFFFFF))),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(19, 18, 18, 19),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(eyebrow.toUpperCase(),
+                style: const TextStyle(fontSize: 10, letterSpacing: 1.5,
+                  fontWeight: FontWeight.w900, color: Color(0xDDFFFFFF))),
+              const SizedBox(height: 7),
+              Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 23, height: 1.04,
+                  fontWeight: FontWeight.w900, letterSpacing: -.7,
+                  color: Colors.white)),
+              const SizedBox(height: 7),
+              Text(subtitle, maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11.5, height: 1.35,
+                  color: Color(0xEEFFFFFF))),
+            ],
+          )),
+          if (action != null) ...[
+            const SizedBox(width: 9),
+            action!,
+          ],
+        ]),
+      ),
+    ]),
+  );
+}
+
 /// Compact premium metadata label. Wrap multiple chips rather than putting
 /// them inside an overflowing fixed-width Row.
 class BlinkInfoPill extends StatelessWidget {
