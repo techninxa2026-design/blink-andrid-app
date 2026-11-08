@@ -218,12 +218,46 @@ class LiveFriendsScreen extends StatefulWidget{
   const LiveFriendsScreen({super.key});
   @override State<LiveFriendsScreen> createState()=>_FriendsState();
 }
-class _FriendsState extends State<LiveFriendsScreen>{
+class _FriendsState extends State<LiveFriendsScreen>
+    with WidgetsBindingObserver {
   List<dynamic> friends=[];String? error;bool loading=true;
-  @override void initState(){super.initState();_load();}
+  Timer? _refreshTimer;
+  bool _foreground = true;
+  bool _refreshing = false;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _load();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (_foreground) _load();
+    });
+  }
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (_foreground) _load();
+  }
   Future<void> _load()async{
-    try{final rows=arr(await LiveApi.call('GET','/friends'));if(mounted)setState((){friends=rows;loading=false;error=null;});}
-    catch(e){if(mounted)setState((){error=e.toString();loading=false;});}
+    if (_refreshing) return;
+    _refreshing = true;
+    try{
+      final rows=arr(await LiveApi.call('GET','/friends'));
+      if(mounted)setState((){friends=rows;loading=false;error=null;});
+    } catch(e) {
+      if(mounted)setState((){
+        if(friends.isEmpty)error=e.toString();
+        loading=false;
+      });
+    } finally {
+      _refreshing = false;
+    }
   }
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('My Friends')),
     body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
@@ -279,15 +313,51 @@ class LiveRequestsScreen extends StatefulWidget{
   const LiveRequestsScreen({super.key});
   @override State<LiveRequestsScreen> createState()=>_RequestsState();
 }
-class _RequestsState extends State<LiveRequestsScreen>{
+class _RequestsState extends State<LiveRequestsScreen>
+    with WidgetsBindingObserver {
   List<dynamic> incoming=[],outgoing=[];String? error;bool loading=true;
-  @override void initState(){super.initState();_load();}
+  Timer? _refreshTimer;
+  bool _foreground = true;
+  bool _refreshing = false;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _load();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 7), (_) {
+      if (_foreground) _load();
+    });
+  }
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (_foreground) _load();
+  }
   Future<void> _load()async{
-    try{final rows=await Future.wait([
-      LiveApi.call('GET','/friends/requests/incoming'),
-      LiveApi.call('GET','/friends/requests/outgoing'),
-    ]);if(mounted)setState((){incoming=arr(rows[0]);outgoing=arr(rows[1]);error=null;loading=false;});}
-    catch(e){if(mounted)setState((){error=e.toString();loading=false;});}
+    if (_refreshing) return;
+    _refreshing = true;
+    try {
+      final rows=await Future.wait([
+        LiveApi.call('GET','/friends/requests/incoming'),
+        LiveApi.call('GET','/friends/requests/outgoing'),
+      ]);
+      if(mounted)setState((){
+        incoming=arr(rows[0]);outgoing=arr(rows[1]);error=null;loading=false;
+      });
+    } catch(e) {
+      if(mounted)setState((){
+        if(incoming.isEmpty && outgoing.isEmpty)error=e.toString();
+        loading=false;
+      });
+    } finally {
+      _refreshing = false;
+    }
   }
   Future<void> _respond(dynamic request,String answer)async{
     try {
