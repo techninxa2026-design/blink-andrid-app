@@ -44,19 +44,40 @@ class _WalletState extends State<WalletScreen> {
         children: [
           const SectionHeading('Your Blink Points', subtitle: 'Rewards earned through real Blink activity'),
           Container(
-            padding: const EdgeInsets.all(24),
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFFFF833F), BlinkColors.orange]),
-              borderRadius: BorderRadius.circular(22),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,end: Alignment.bottomRight,
+                colors:[Color(0xFF2D2018),Color(0xFF8F521A),Color(0xFFEFAB42)]),
+              borderRadius: BorderRadius.circular(27),
+              boxShadow: const [BoxShadow(color: Color(0x55D98738),
+                blurRadius: 28,offset: Offset(0, 12))],
             ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Available balance', style: TextStyle(color: Colors.white, fontSize: 13)),
-              const SizedBox(height: 12),
-              Text(loading ? 'Loading...' : balance == null ? 'Unavailable' : '$balance BP',
-                style: const TextStyle(color: Colors.white,
-                  fontSize: 32, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 8),
-              const Icon(Icons.stars_rounded, color: Colors.white, size: 28),
+            child: Stack(children: [
+              Positioned(right:-55,top:-69,
+                child:Container(width:185,height:185,
+                  decoration:BoxDecoration(shape:BoxShape.circle,
+                    border:Border.all(color:Color(0x40FFFFFF),width:33)))),
+              Positioned(right:17,bottom:15,
+                child:Icon(Icons.stars_rounded,color:Color(0x70FFFFFF),size:82)),
+              Padding(padding:const EdgeInsets.all(23),
+                child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  const Text('✦  YOUR BLINK REWARDS',style:TextStyle(
+                    fontSize:10,color:Color(0xFFFFE0AC),
+                    letterSpacing:1.4,fontWeight:FontWeight.w900)),
+                  const SizedBox(height:24),
+                  const Text('Available balance',style:TextStyle(
+                    color:Colors.white70,fontSize:13)),
+                  const SizedBox(height:7),
+                  Text(loading?'Loading...'
+                    :balance==null?'Unavailable':'$balance BP',
+                    style:const TextStyle(color:Colors.white,
+                      fontSize:38,fontWeight:FontWeight.w900,letterSpacing:-1.0)),
+                  const SizedBox(height:25),
+                  const Text('Earned through your real Blink activity',
+                    style:TextStyle(color:Colors.white70,fontSize:11)),
+                ]),
+              ),
             ]),
           ),
           if (error != null) liveError(error, _load),
@@ -92,16 +113,21 @@ class SettingsScreen extends StatelessWidget {
     child: ScreenList(
       children: [
         const SizedBox(height: 9),
-        ListTile(
-          leading: const CircleAvatar(
-            backgroundColor: BlinkColors.orangeSoft,
-            child: Icon(Icons.person_outline, color: BlinkColors.orange)),
-          title: const Text('My Blink account'),
-          subtitle: const Text('View your own profile'),
-          trailing: const Icon(Icons.chevron_right_rounded),
-          onTap: () => go(context, '/profile'),
+        const BlinkFeatureHero(
+          eyebrow:'YOUR ACCOUNT. YOUR SPACE.',
+          title:'Make Blink your own.',
+          subtitle:'Your identity, preferences, and the tools that matter to you.',
+          icon:Icons.tune_rounded,mood:BlinkMood.studio,
+          margin:EdgeInsets.fromLTRB(0,0,0,18),
         ),
-        const Divider(),
+        BlinkProListCard(
+          icon:Icons.account_circle_rounded,
+          eyebrow:'YOUR PROFILE',
+          title:'My Blink account',
+          subtitle:'Edit who you are and how you show up on Blink.',
+          onTap:()=>go(context,'/profile'),
+        ),
+        const SizedBox(height:7),
         const SizedBox(height: 10),
         BlinkPanel(
           child: Column(
@@ -213,6 +239,14 @@ class _NotificationsState extends State<NotificationsScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(14),
         children: [
+          const BlinkFeatureHero(
+            eyebrow:'YOUR BLINK PULSE',
+            title:'Stay in the loop.',
+            subtitle:'New conversations, connection requests and what needs your attention.',
+            icon:Icons.notifications_active_outlined,
+            mood:BlinkMood.community,
+            margin:EdgeInsets.fromLTRB(0,0,0,12),
+          ),
           const SectionHeading('Your updates', subtitle: 'New messages and friend requests'),
           if (incoming.isEmpty && conversations.isEmpty)
             const ListTile(leading: Icon(Icons.notifications_none, color: BlinkColors.orange),
@@ -261,27 +295,21 @@ class AppearanceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const BlinkBrandedTitle('Appearance')),
-    body: ListView(padding: const EdgeInsets.all(20), children: [
-      Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(color: BlinkColors.orangeSoft,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFFFC9AD))),
-        child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(Icons.palette_rounded, color: BlinkColors.orange, size: 42),
-          SizedBox(height: 14),
-          Text('Blink Orange', style: TextStyle(color: BlinkColors.ink, fontSize: 25, fontWeight: FontWeight.w900)),
-          SizedBox(height: 8),
-          Text('Warm white backgrounds, deep-orange navigation and buttons, clear readable text. Dark mode is disabled for now.',
-            style: TextStyle(color: BlinkColors.ink, height: 1.5)),
-        ]),
+    body: ListView(padding: const EdgeInsets.all(16), children: const [
+      BlinkFeatureHero(
+        eyebrow:'THE COLOR OF BLINK',
+        title:'Bold. Warm. Yours.',
+        subtitle:'A signature orange experience, built to keep every moment recognizable.',
+        icon:Icons.palette_rounded,mood:BlinkMood.studio,
+        margin:EdgeInsets.fromLTRB(0,0,0,18),
       ),
-      const SizedBox(height: 20),
-      const ListTile(
-        leading: Icon(Icons.light_mode_rounded, color: BlinkColors.orange),
-        title: Text('Light orange theme'),
-        subtitle: Text('Active across Blink'),
-        trailing: Icon(Icons.check_circle_rounded, color: BlinkColors.orange)),
+      BlinkProListCard(
+        icon:Icons.light_mode_rounded,
+        eyebrow:'CURRENT APPEARANCE',
+        title:'Blink Orange · Light',
+        subtitle:'Active across Blink. Dark-mode switching is not yet available.',
+        badges:[BlinkInfoPill('ACTIVE',icon:Icons.check_circle_outline,highlight:true)],
+      ),
     ]),
   );
 }
