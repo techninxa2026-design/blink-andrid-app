@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show FontFeature;
 import 'package:flutter/material.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:http/http.dart' as http;
@@ -44,35 +46,115 @@ class _RecorderState extends State<BlinkVoiceRecordScreen>{
     }catch(e){if(mounted)setState(()=>error=e.toString());}
     finally{if(mounted)setState(()=>busy=false);}
   }
-  @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:const BlinkBrandedTitle('Blink Voice Message')),
-    body:Center(child:Padding(padding:const EdgeInsets.all(24),
-      child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
-        CircleAvatar(radius:52,backgroundColor:BlinkColors.orangeSoft,
-          child:Icon(recording?Icons.mic:Icons.mic_none,color:BlinkColors.orange,size:52)),
-        const SizedBox(height:16),
-        Text(recording?'Recording...':'Voice Message',
-          style:Theme.of(context).textTheme.titleLarge),
-        Text('Duration: '+(seconds~/60).toString()+':'+
-          (seconds%60).toString().padLeft(2,'0')),
-        const Text('Maximum 2 minutes'),
-        if(error.isNotEmpty)Padding(padding:const EdgeInsets.all(12),
-          child:Text(error,style:const TextStyle(color:Colors.red))),
-        const SizedBox(height:16),
-        if(!recording&&file==null)FilledButton.icon(onPressed:busy?null:_start,
-          icon:const Icon(Icons.fiber_manual_record),label:const Text('Start recording')),
-        if(recording)FilledButton.icon(onPressed:busy?null:_stop,
-          icon:const Icon(Icons.stop_circle),label:const Text('Stop')),
-        if(file!=null)...[
-          FilledButton.icon(onPressed:()=>Navigator.pop(context,file),
-            icon:const Icon(Icons.send),label:const Text('Send voice message')),
-          OutlinedButton(onPressed:()async{
-            final old=file;setState(()=>file=null);
-            if(old!=null)await old.delete().catchError((_){return old;});
-          },child:const Text('Discard and re-record')),
-        ],
-      ]),
-    )),
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const BlinkBrandedTitle('Blink Voice Message')),
+    body: SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const BlinkFeatureHero(
+              eyebrow: 'SAY IT YOUR WAY',
+              title: 'Your voice matters.',
+              subtitle: 'Record and send a warm, personal message.',
+              icon: Icons.graphic_eq_rounded,
+              mood: BlinkMood.community,
+              margin: EdgeInsets.fromLTRB(0, 0, 0, 24)),
+            Center(child: AnimatedScale(
+              scale: recording && !BlinkMotion.reduced(context) ? 1.085 : 1,
+              duration: BlinkMotion.duration(context, ms: 240),
+              curve: Curves.easeOutBack,
+              child: AnimatedContainer(
+                duration: BlinkMotion.duration(context, ms: 270),
+                width: 132, height: 132,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: recording
+                    ? [const Color(0xFFE52D65), const Color(0xFFFF9171)]
+                    : [const Color(0xFFFFE7D9), const Color(0xFFFFD2BA)]),
+                  borderRadius: BorderRadius.circular(45),
+                  border: Border.all(
+                    color: recording
+                      ? const Color(0xFFFFB5C8)
+                      : const Color(0xFFFFC4A0), width: 2)),
+                child: Icon(recording
+                  ? Icons.graphic_eq_rounded : Icons.mic_none_rounded,
+                  color: recording ? Colors.white : BlinkColors.orangeDark,
+                  size: 57),
+              ),
+            )),
+            const SizedBox(height: 24),
+            AnimatedSwitcher(
+              duration: BlinkMotion.duration(context, ms: 220),
+              child: Text(recording ? 'Recording your voice'
+                  : file != null ? 'Ready to share' : 'Start recording',
+                key: ValueKey(recording.toString() + (file != null).toString()),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 22,
+                  color: BlinkColors.ink, fontWeight: FontWeight.w900)),
+            ),
+            const SizedBox(height: 10),
+            Center(child: Text(
+              (seconds ~/ 60).toString().padLeft(2, '0') + ':' +
+                (seconds % 60).toString().padLeft(2, '0'),
+              style: const TextStyle(color: BlinkColors.orangeDark,
+                fontSize: 39, fontWeight: FontWeight.w900,
+                fontFeatures: [FontFeature.tabularFigures()]))),
+            const SizedBox(height: 15),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: (seconds / 120).clamp(0, 1)),
+              duration: BlinkMotion.duration(context, ms: 270),
+              builder: (_, value, __) => ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: value,
+                  color: recording
+                    ? const Color(0xFFE52D65) : BlinkColors.orange,
+                  backgroundColor: BlinkColors.orangeSoft,
+                  minHeight: 8)),
+            ),
+            const SizedBox(height: 9),
+            const Center(child: Text('Up to 2 minutes · Private audio message',
+              style: TextStyle(color: BlinkColors.muted, fontSize: 11.5))),
+            if (error.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(error, textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFFCB3359))),
+            ],
+            const SizedBox(height: 23),
+            if (!recording && file == null)
+              FilledButton.icon(
+                onPressed: busy ? null : _start,
+                icon: const Icon(Icons.fiber_manual_record_rounded),
+                label: const Text('Start recording')),
+            if (recording)
+              FilledButton.icon(
+                onPressed: busy ? null : _stop,
+                icon: const Icon(Icons.stop_circle_rounded),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFD52D5F)),
+                label: const Text('Finish recording')),
+            if (file != null) ...[
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context, file),
+                icon: const Icon(Icons.send_rounded),
+                label: const Text('Send voice message')),
+              const SizedBox(height: 9),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final old = file;
+                  setState(() { file = null; seconds = 0; });
+                  if (old != null) {
+                    await old.delete().catchError((_) => old);
+                  }
+                },
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Record again')),
+            ],
+          ],
+        ),
+      ),
+    ),
   );
 }
 
