@@ -289,13 +289,68 @@ class _BusinessChatState extends State<LiveBusinessChat>{
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:BlinkBrandedTitle(widget.name)),
     body:Column(children:[
       if(error!=null)liveError(error,_load),
-      Expanded(child:ListView(children:items.map((m)=>ListTile(
-        title:Text(field(m,'text',field(m,'body'))),
-        subtitle:Text(field(m,'createdAt')))).toList())),
-      SafeArea(top:false,child:Row(children:[
-        Expanded(child:TextField(controller:message,decoration:const InputDecoration(hintText:'Business message...'))),
-        IconButton(onPressed:busy?null:_send,icon:const Icon(Icons.send,color:BlinkColors.orange)),
-      ])),
+      Expanded(child:ListView(
+        padding: const EdgeInsets.fromLTRB(13, 14, 13, 20),
+        children: [
+          BlinkSectionBand(
+            eyebrow: 'PRIVATE PROFESSIONAL CHAT',
+            title: 'Your conversation',
+            subtitle: widget.name,
+            mood: BlinkMood.business,
+            icon: Icons.forum_outlined,
+            padding: const EdgeInsets.fromLTRB(0, 0, 0, 12)),
+          if(items.isEmpty)
+            const BlinkExperienceState(
+              title: 'Start the conversation',
+              subtitle: 'Introduce yourself and discover what you can build together.',
+              icon: Icons.handshake_outlined,
+              mood: BlinkMood.business),
+          ...items.map((m) => BlinkReveal(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 11),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6F6),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(5),
+                  topRight: Radius.circular(19),
+                  bottomLeft: Radius.circular(19),
+                  bottomRight: Radius.circular(19)),
+                border: Border.all(color: const Color(0xFFCEE5E5))),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(field(m,'text',field(m,'body')),
+                    style: const TextStyle(fontSize: 13.5,
+                      color: BlinkColors.ink, height: 1.45)),
+                  const SizedBox(height: 6),
+                  Text(field(m,'createdAt'),
+                    style: const TextStyle(fontSize: 10,
+                      color: BlinkColors.muted)),
+                ],
+              ),
+            ),
+          )),
+        ],
+      )),
+      SafeArea(top:false,child:Padding(
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
+        child: Row(children: [
+          Expanded(child:TextField(
+            controller: message, minLines: 1, maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: 'Write your message…',
+              prefixIcon: Icon(Icons.edit_note_rounded)))),
+          const SizedBox(width: 8),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: message,
+            builder: (context, value, _) => IconButton.filled(
+              tooltip: 'Send business message',
+              onPressed: busy || value.text.trim().isEmpty ? null : _send,
+              icon: const Icon(Icons.arrow_upward_rounded)),
+          ),
+        ]),
+      )),
     ]));
 }
 
@@ -391,8 +446,31 @@ class _MeetingsState extends State<LiveBusinessMeetings>{
       IconButton(tooltip:'Schedule meeting',onPressed:_create,
         icon:const Icon(Icons.add_circle_outline))]),
     body:error!=null?liveError(error,_load):RefreshIndicator(onRefresh:_load,
-      child:ListView(children:[
-        if(meetings.isEmpty)const ListTile(title:Text('No meetings scheduled')),
+      child:ListView(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+        children:[
+        const BlinkFeatureHero(
+          eyebrow: 'GROW YOUR NETWORK',
+          title: 'Business meetings',
+          subtitle: 'Turn introductions into conversations that move forward.',
+          icon: Icons.event_available_rounded,
+          mood: BlinkMood.business,
+          margin: EdgeInsets.fromLTRB(0, 0, 0, 12)),
+        BlinkSectionBand(
+          eyebrow: 'YOUR CALENDAR',
+          title: 'Upcoming & requested',
+          subtitle: meetings.length.toString() + ' meetings',
+          mood: BlinkMood.business,
+          icon: Icons.calendar_month_outlined,
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 14)),
+        if(meetings.isEmpty)
+          BlinkExperienceState(
+            title: 'No meetings scheduled',
+            subtitle: 'Invite a professional connection to get things started.',
+            icon: Icons.event_available_outlined,
+            mood: BlinkMood.business,
+            action: _create,
+            actionLabel: 'Schedule a meeting'),
         ...meetings.map((m)=>BlinkProListCard(
           title:field(m,'title','Meeting'),
           subtitle:field(m,'agenda'),
