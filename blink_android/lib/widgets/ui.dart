@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'blink_full_drawer.dart';
 
 import '../core/theme.dart';
+export '../core/theme.dart' show BlinkMood, BlinkMoodColors;
+import 'blink_motion.dart';
 import '../core/nav.dart';
 import '../core/data.dart';
 
@@ -708,55 +710,6 @@ class BlinkPanel extends StatelessWidget {
 // BLINK EDITORIAL SYSTEM — VISUAL IDENTITIES BY FEATURE
 // ========================================
 
-enum BlinkMood { studio, community, business, exchange, adventure, rewards }
-
-class BlinkMoodColors {
-  static Color primary(BlinkMood mood) {
-    switch (mood) {
-      case BlinkMood.community: return const Color(0xFFEE3264);
-      case BlinkMood.business: return const Color(0xFF1A5564);
-      case BlinkMood.exchange: return const Color(0xFF4C61B8);
-      case BlinkMood.adventure: return const Color(0xFF007E9C);
-      case BlinkMood.rewards: return const Color(0xFFAF6913);
-      case BlinkMood.studio: return BlinkColors.orangeDark;
-    }
-  }
-
-  static List<Color> gradient(BlinkMood mood) {
-    switch (mood) {
-      case BlinkMood.community:
-        return const [Color(0xFF391831), Color(0xFF872B57), Color(0xFFE85C5B)];
-      case BlinkMood.business:
-        return const [Color(0xFF102B38), Color(0xFF164B58), Color(0xFF2B6E69)];
-      case BlinkMood.exchange:
-        return const [Color(0xFF222243), Color(0xFF4C4280), Color(0xFFDC754B)];
-      case BlinkMood.adventure:
-        return const [Color(0xFF083E4E), Color(0xFF126E81), Color(0xFFEE8B5B)];
-      case BlinkMood.rewards:
-        return const [Color(0xFF382413), Color(0xFF975415), Color(0xFFE2A342)];
-      case BlinkMood.studio:
-        return const [Color(0xFF271D22), Color(0xFFA83B24), BlinkColors.orange];
-    }
-  }
-
-  static BlinkMood infer(String? eyebrow) {
-    final label = (eyebrow ?? '').toUpperCase();
-    if (label.contains('BUSINESS') || label.contains('PROFESSION') ||
-        label.contains('NETWORK') || label.contains('MEETING')) {
-      return BlinkMood.business;
-    }
-    if (label.contains('EXCHANGE') || label.contains('NEGOTIAT') ||
-        label.contains('OFFER')) return BlinkMood.exchange;
-    if (label.contains('IRL') || label.contains('PLAN') ||
-        label.contains('MEETUP')) return BlinkMood.adventure;
-    if (label.contains('BP') || label.contains('REWARD') ||
-        label.contains('WALLET')) return BlinkMood.rewards;
-    if (label.contains('HEART') || label.contains('CONNECTION') ||
-        label.contains('FRIEND') || label.contains('CHECK') ||
-        label.contains('PEOPLE')) return BlinkMood.community;
-    return BlinkMood.studio;
-  }
-}
 
 /// An editorial masthead with typographic hierarchy, non-rectangular
 /// ornamental forms and feature-specific hues. It is intentionally different
