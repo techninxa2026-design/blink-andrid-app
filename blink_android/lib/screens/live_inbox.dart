@@ -66,6 +66,11 @@ class _LiveInboxState extends State<LiveInboxScreen> {
         ),
       ]),
       body: Column(children:[
+        const BlinkFeatureHero(eyebrow: 'YOUR PRIVATE SPACE',
+          title: 'Conversations', subtitle: 'Real connections. Better conversations.',
+          icon: Icons.mark_chat_unread_rounded,
+          accent: Color(0xFF342660), secondary: Color(0xFF8863BD)),
+
         Padding(padding:const EdgeInsets.all(14),child:TextField(
           decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search conversations'),
           onChanged:(v)=>setState(()=>query=v),
