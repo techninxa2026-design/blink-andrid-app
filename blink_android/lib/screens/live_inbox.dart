@@ -13,6 +13,7 @@ import '../widgets/blink_motion.dart';
 import '../widgets/blink_full_drawer.dart';
 import 'voice_message.dart';
 import '../calls/blink_calls.dart';
+import '../calls/blink_call_history.dart';
 
 class LiveInboxScreen extends StatefulWidget {
   const LiveInboxScreen({super.key});
@@ -34,6 +35,7 @@ class _LiveInboxState extends State<LiveInboxScreen>
   Timer? _conversationRefresh;
   bool _foreground = true;
   bool _listLoading = false;
+  String _viewerId = '';
 
   @override
   void initState() {
@@ -116,6 +118,8 @@ class _LiveInboxState extends State<LiveInboxScreen>
   }
 
   Future<void> _refreshAll() async {
+    final viewer = await BlinkAuthApi.cachedUser();
+    if (mounted) setState(() => _viewerId = field(viewer, 'id'));
     await Future.wait([_load(), _loadFriends(), _refreshPresence()]);
   }
 
@@ -171,7 +175,7 @@ class _LiveInboxState extends State<LiveInboxScreen>
               fontWeight: FontWeight.w900, color: BlinkColors.ink))),
           if (presenceAvailable)
             Text('${visible.where((f) => online[field(f, 'id')] == true).length} active',
-              style: const TextStyle(color: Color(0xFF24855B),
+              style: const TextStyle(color: Color(0xFFE95F1D),
                 fontWeight: FontWeight.w800, fontSize: 11))
           else
             const Text('Friends', style: TextStyle(
@@ -219,7 +223,7 @@ class _LiveInboxState extends State<LiveInboxScreen>
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: online[field(friend, 'id')] == true
-                                ? const Color(0xFF22B573) : const Color(0xFFFFD6C1),
+                                ? const Color(0xFFF36B21) : const Color(0xFFFFD6C1),
                               width: 2)),
                           child: liveAvatar(friend, radius: 27),
                         ),
@@ -229,7 +233,7 @@ class _LiveInboxState extends State<LiveInboxScreen>
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: online[field(friend, 'id')] == true
-                                ? const Color(0xFF27C77C)
+                                ? const Color(0xFFF36B21)
                                 : const Color(0xFFB4B9BC),
                               border: Border.all(color: Colors.white, width: 2)),
                           )),
@@ -358,8 +362,11 @@ class _LiveInboxState extends State<LiveInboxScreen>
                     : field(other, 'name', 'Friend');
                   final last = obj(c['lastMessage']);
                   final body = field(last, 'body');
+                  final call = BlinkCallHistory.parse(last);
                   final preview = last['unsentAt'] != null
                     ? 'Message removed'
+                    : call != null ? call.label(
+                        isCaller: field(last, 'senderId') == _viewerId)
                     : body.startsWith('🎬 Reel by') ? '🎬 Shared a Reel'
                     : body.isNotEmpty ? body
                     : last['mediaKey'] != null ? 'Media attachment'
@@ -390,7 +397,7 @@ class _LiveInboxState extends State<LiveInboxScreen>
                               child: Container(width: 15, height: 15,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: const Color(0xFF20C774),
+                                  color: const Color(0xFFF36B21),
                                   border: Border.all(color: Colors.white, width: 2)))),
                           ])),
                           const SizedBox(width: 12),
@@ -902,7 +909,82 @@ class _LiveChatState extends State<LiveChatScreen>
     if(!body.startsWith('🎬 Reel by '))return null;
     return RegExp(r'/reels/([A-Za-z0-9_-]+)').firstMatch(body)?.group(1);
   }
+  Widget _callEvent(Map<String, dynamic> message, BlinkCallHistory call) {
+    final other = obj(conversation['otherUser']);
+    final otherId = field(other, 'id');
+    final isCaller = field(message, 'senderId') == myId;
+    final date = DateTime.tryParse(field(message, 'createdAt'))?.toLocal();
+    final timeLabel = date == null ? '' :
+      '${MaterialLocalizations.of(context).formatMediumDate(date)} · '
+      '${TimeOfDay.fromDateTime(date).format(context)}';
+    final missed = call.outcome == 'missed' ||
+        (call.outcome == 'cancelled' && !isCaller);
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        constraints: const BoxConstraints(maxWidth: 405),
+        padding: const EdgeInsets.fromLTRB(13, 13, 10, 13),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFFF0E5), Color(0xFFFFFAF6)]),
+          borderRadius: BorderRadius.circular(21),
+          border: Border.all(color: const Color(0xFFFFCEB1)),
+          boxShadow: const [BoxShadow(color: Color(0x0A8E421B),
+            blurRadius: 16, offset: Offset(0, 5))],
+        ),
+        child: Row(children: [
+          Container(
+            width: 43, height: 43,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFF9C54), Color(0xFFE9531E)]),
+              borderRadius: BorderRadius.circular(15)),
+            child: Icon(
+              call.isVideo ? Icons.videocam_rounded : Icons.call_rounded,
+              color: Colors.white, size: 22),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(call.label(isCaller: isCaller),
+                maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: missed ? const Color(0xFFD75522) : BlinkColors.ink,
+                  fontWeight: FontWeight.w900, fontSize: 12.5)),
+              if (timeLabel.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(timeLabel, style: const TextStyle(
+                  fontSize: 10, color: BlinkColors.muted)),
+              ],
+            ],
+          )),
+          if (otherId.isNotEmpty &&
+              conversation['blockedByMe'] != true &&
+              conversation['blockedByOther'] != true) ...[
+            const SizedBox(width: 5),
+            TextButton(
+              onPressed: () => unawaited(
+                BlinkCalls.instance.placeCall(
+                  otherId, field(other, 'name', widget.title),
+                  video: call.isVideo)),
+              style: TextButton.styleFrom(
+                foregroundColor: BlinkColors.orangeDark,
+                padding: const EdgeInsets.symmetric(horizontal: 9),
+                minimumSize: const Size(54, 40)),
+              child: const Text('Call again',
+                style: TextStyle(fontSize: 10.5,
+                  fontWeight: FontWeight.w900)),
+            ),
+          ],
+        ]),
+      ),
+    );
+  }
+
   Widget _message(Map<String,dynamic> m){
+    final history = BlinkCallHistory.parse(m);
+    if (history != null) return _callEvent(m, history);
     final own=field(m,'senderId')==myId;
     final reel=_reelId(field(m,'body'));
     final removed=m['unsentAt']!=null;
