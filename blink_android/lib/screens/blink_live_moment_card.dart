@@ -1036,25 +1036,78 @@ class _BlinkMomentCommentsState extends State<_BlinkMomentComments> {
     final deleted = entry['deletedAt'] != null;
     final mine = author['id']?.toString() == widget.myUserId;
     final replies = entry['replies'];
+    final name = (author['name'] ?? 'Blink member').toString();
     return Padding(
-      padding: EdgeInsets.only(left: nested ? 30 : 0, bottom: 9),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(child: Text((author['name'] ?? 'Blink member').toString(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800))),
-          if (mine && !deleted) IconButton(
-            icon: const Icon(Icons.delete_outline, size: 18),
-            onPressed: () async {
-              try { await BlinkHomeApi.deleteComment(id); await _reload(); }
-              catch (e) { if (mounted) setState(() => _error = e.toString()); }
-            },
-          ),
-        ]),
-        Text((entry['body'] ?? '').toString()),
-        if (!nested && !deleted) TextButton(
-          onPressed: () => setState(() => _replyTo = id), child: const Text('Reply'),
+      padding: EdgeInsets.only(left: nested ? 25 : 0, bottom: 11),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        CircleAvatar(
+          radius: nested ? 14 : 17,
+          backgroundColor: BlinkColors.orangeSoft,
+          child: Text(name.isEmpty ? '?' : name[0].toUpperCase(),
+            style: const TextStyle(color: BlinkColors.orangeDark,
+              fontWeight: FontWeight.w900, fontSize: 12)),
         ),
-        if (!nested && replies is List)
-          ...replies.whereType<Map<String, dynamic>>().map((r) => _commentTile(r, nested: true)),
+        const SizedBox(width: 9),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(13, 11, 12, 12),
+              decoration: BoxDecoration(
+                color: nested ? const Color(0xFFFFF3EC) : Colors.white,
+                border: Border.all(color: const Color(0xFFFFE4D7)),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(5),
+                  topRight: Radius.circular(17),
+                  bottomLeft: Radius.circular(17),
+                  bottomRight: Radius.circular(17))),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Expanded(child: Text(name,
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                        color: BlinkColors.ink))),
+                    if (mine && !deleted)
+                      SizedBox(width: 30, height: 30, child: IconButton(
+                        padding: EdgeInsets.zero,
+                        tooltip: 'Delete comment',
+                        icon: const Icon(Icons.delete_outline_rounded,
+                          size: 17, color: BlinkColors.muted),
+                        onPressed: () async {
+                          try {
+                            await BlinkHomeApi.deleteComment(id);
+                            await _reload();
+                          } catch (e) {
+                            if (mounted) setState(() => _error = e.toString());
+                          }
+                        },
+                      )),
+                  ]),
+                  const SizedBox(height: 5),
+                  Text((entry['body'] ?? '').toString(),
+                    style: const TextStyle(fontSize: 13,
+                      height: 1.42, color: BlinkColors.ink)),
+                ],
+              ),
+            ),
+            if (!nested && !deleted)
+              TextButton.icon(
+                onPressed: () => setState(() => _replyTo = id),
+                icon: const Icon(Icons.reply_rounded, size: 16),
+                label: const Text('Reply'),
+                style: TextButton.styleFrom(
+                  foregroundColor: BlinkColors.orangeDark,
+                  visualDensity: VisualDensity.compact),
+              ),
+            if (!nested && replies is List)
+              ...replies.whereType<Map<String, dynamic>>()
+                  .map((reply) => _commentTile(reply, nested: true)),
+          ],
+        )),
       ]),
     );
   }
@@ -1068,32 +1121,132 @@ class _BlinkMomentCommentsState extends State<_BlinkMomentComments> {
   @override
   Widget build(BuildContext context) {
     final comments = _activity?['comments'];
+    final count = _activity?['commentCount'] ?? 0;
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * .72,
+        height: MediaQuery.sizeOf(context).height * .78,
         child: Column(children: [
-          const SizedBox(height: 15),
-          const Text('Moment comments', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-          if (_error != null) Padding(padding: const EdgeInsets.all(12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+          const SizedBox(height: 9),
+          Center(child: Container(
+            width: 45, height: 5,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFCEB1),
+              borderRadius: BorderRadius.circular(8)))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 19, 16, 13),
+            child: Row(children: [
+              Container(
+                width: 43, height: 43,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [
+                    Color(0xFFFF5900), Color(0xFFFF9C62)]),
+                  borderRadius: BorderRadius.circular(15)),
+                child: const Icon(Icons.forum_rounded,
+                  color: Colors.white, size: 22)),
+              const SizedBox(width: 12),
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('The conversation',
+                    style: TextStyle(fontSize: 19,
+                      fontWeight: FontWeight.w900)),
+                  Text('$count comments · Join the Moment',
+                    style: const TextStyle(fontSize: 11.5,
+                      color: BlinkColors.muted)),
+                ],
+              )),
+              IconButton(
+                tooltip: 'Close comments',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close_rounded)),
+            ]),
+          ),
+          const Divider(height: 1),
+          if (_error != null)
+            Padding(padding: const EdgeInsets.all(12),
+              child: Text(_error!,
+                style: const TextStyle(color: Colors.red))),
           Expanded(child: _activity == null && _error == null
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(onRefresh: _reload, child: ListView(
-                padding: const EdgeInsets.all(18),
-                children: comments is List && comments.isNotEmpty
-                  ? comments.whereType<Map<String, dynamic>>().map(_commentTile).toList()
-                  : [const Text('No comments yet. Be the first to comment.')],
-              ))),
-          if (_replyTo != null) Row(children: [
-            const SizedBox(width: 14),
-            const Expanded(child: Text('Replying to comment')),
-            IconButton(onPressed: () => setState(() => _replyTo = null), icon: const Icon(Icons.close)),
-          ]),
-          Padding(padding: const EdgeInsets.fromLTRB(12, 4, 12, 12), child: Row(children: [
-            Expanded(child: TextField(controller: _text, maxLength: 500, minLines: 1, maxLines: 3,
-              decoration: const InputDecoration(hintText: 'Write a comment...'))),
-            IconButton(onPressed: _sending ? null : _send, icon: const Icon(Icons.send, color: BlinkColors.orange)),
-          ])),
+            ? const Center(child: CircularProgressIndicator(
+                color: BlinkColors.orange))
+            : RefreshIndicator(
+                onRefresh: _reload,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(15, 17, 15, 8),
+                  children: comments is List && comments.isNotEmpty
+                    ? comments.whereType<Map<String, dynamic>>()
+                        .map(_commentTile).toList()
+                    : [
+                        const SizedBox(height: 85),
+                        const Icon(Icons.chat_bubble_outline_rounded,
+                          color: BlinkColors.orange, size: 43),
+                        const SizedBox(height: 12),
+                        const Text('Start something meaningful',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 16,
+                            fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 5),
+                        const Text('Be the first to leave a comment.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: BlinkColors.muted)),
+                      ],
+                ),
+              )),
+          if (_replyTo != null)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: BlinkColors.orangeSoft,
+                borderRadius: BorderRadius.circular(13)),
+              child: Row(children: [
+                const Icon(Icons.reply_rounded,
+                  color: BlinkColors.orangeDark, size: 18),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('Replying to a comment',
+                  style: TextStyle(fontSize: 12,
+                    fontWeight: FontWeight.w800))),
+                IconButton(
+                  tooltip: 'Cancel reply',
+                  onPressed: () => setState(() => _replyTo = null),
+                  icon: const Icon(Icons.close, size: 18)),
+              ]),
+            ),
+          SafeArea(top: false, child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            child: Row(children: [
+              Expanded(child: TextField(
+                controller: _text,
+                maxLength: 500,
+                minLines: 1,
+                maxLines: 3,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  hintText: _replyTo == null
+                    ? 'Add your voice…' : 'Write a reply…',
+                  counterText: '',
+                  prefixIcon: const Icon(Icons.edit_note_rounded,
+                    color: BlinkColors.orangeDark),
+                  filled: true,
+                  fillColor: const Color(0xFFFFF3EC)),
+              )),
+              const SizedBox(width: 9),
+              Material(
+                color: _sending
+                  ? BlinkColors.muted : BlinkColors.orange,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  onTap: _sending ? null : _send,
+                  borderRadius: BorderRadius.circular(16),
+                  child: const SizedBox(
+                    width: 49, height: 49,
+                    child: Icon(Icons.arrow_upward_rounded,
+                      color: Colors.white)),
+                ),
+              ),
+            ]),
+          )),
         ]),
       ),
     );
