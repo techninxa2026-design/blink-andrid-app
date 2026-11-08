@@ -718,7 +718,7 @@ class _HeartsState extends State<LiveHeartsScreen>{
       const BlinkSectionBand(
         eyebrow: 'FROM YOUR HEART', title: 'Sent Hearts',
         subtitle: 'Thoughtful messages you have shared',
-        mood: BlinkMood.community, icon: Icons.outgoing_mail_rounded,
+        mood: BlinkMood.community, icon: Icons.send_rounded,
         padding: EdgeInsets.fromLTRB(4, 8, 4, 10)),
       ...sent.map((x)=>_heartTile(x)),
       if(incoming.isEmpty&&sent.isEmpty)
