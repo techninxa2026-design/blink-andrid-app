@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/live_api.dart';
 import '../core/blink_home_api.dart';
@@ -80,7 +81,16 @@ class _FriendsState extends State<LiveFriendsScreen>{
         icon:Icons.diversity_3_rounded,
         mood:BlinkMood.community,
       ),
-      if(friends.isEmpty)const ListTile(title:Text('No friends yet'),subtitle:Text('Discover people and send a friend request.')),
+      if(friends.isEmpty)
+        BlinkExperienceState(
+          title: 'Your circle starts here',
+          subtitle: 'Find people you connect with and grow your community.',
+          icon: Icons.people_outline_rounded,
+          mood: BlinkMood.community,
+          action: () => Navigator.push(context,
+            MaterialPageRoute<void>(
+              builder: (_) => const LiveDiscoverPeopleScreen())),
+          actionLabel: 'Discover people'),
       ...friends.map((row){final user=obj(obj(row)['user']);return Padding(
         padding:const EdgeInsets.symmetric(horizontal:12),
         child:BlinkProListCard(
@@ -130,8 +140,17 @@ class _RequestsState extends State<LiveRequestsScreen>{
         icon:Icons.person_add_alt_1_rounded,
         mood:BlinkMood.community,
       ),
-      const ListTile(title:Text('Incoming requests',style:TextStyle(fontWeight:FontWeight.bold))),
-      if(incoming.isEmpty)const ListTile(title:Text('No incoming requests')),
+      const BlinkSectionBand(
+        eyebrow: 'PEOPLE REACHING OUT',
+        title: 'Incoming requests',
+        mood: BlinkMood.community,
+        icon: Icons.mark_email_unread_outlined),
+      if(incoming.isEmpty)
+        const BlinkExperienceState(
+          title: 'You are all caught up',
+          subtitle: 'New friend requests will appear here.',
+          icon: Icons.people_alt_outlined,
+          mood: BlinkMood.community),
       ...incoming.map((r)=>Padding(
         padding:const EdgeInsets.symmetric(horizontal:12),
         child:BlinkProListCard(
@@ -148,7 +167,11 @@ class _RequestsState extends State<LiveRequestsScreen>{
           ]),
         ),
       )),
-      const Divider(),const ListTile(title:Text('Sent requests',style:TextStyle(fontWeight:FontWeight.bold))),
+      const BlinkSectionBand(
+        eyebrow: 'WAITING FOR A REPLY',
+        title: 'Sent requests',
+        mood: BlinkMood.community,
+        icon: Icons.schedule_send_rounded),
       ...outgoing.map((r)=>Padding(
         padding:const EdgeInsets.symmetric(horizontal:12),
         child:BlinkProListCard(
