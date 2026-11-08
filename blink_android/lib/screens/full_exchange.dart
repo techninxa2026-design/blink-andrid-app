@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -131,8 +132,20 @@ class _FullExchangeScreenState extends State<FullExchangeScreen> {
               mood:BlinkMood.exchange,
               margin:EdgeInsets.fromLTRB(0,0,0,18),
             ),
-            if (posts.isEmpty) const Padding(padding: EdgeInsets.all(28),
-              child: Center(child: Text('No Exchange posts found.'))),
+            BlinkSectionBand(
+              eyebrow: 'LIVE EXCHANGE BOARD',
+              title: mine ? 'Your posts' : 'Explore opportunities',
+              subtitle: posts.length.toString() + ' posts in this view',
+              mood: BlinkMood.exchange,
+              icon: Icons.swap_horiz_rounded,
+              padding: const EdgeInsets.fromLTRB(3, 0, 3, 13)),
+            if (posts.isEmpty) BlinkExperienceState(
+              title: 'No opportunities found',
+              subtitle: 'Try another filter, or publish an offer of your own.',
+              icon: Icons.handshake_outlined,
+              mood: BlinkMood.exchange,
+              action: () => _openEditor(),
+              actionLabel: 'Create Exchange post'),
             ...posts.map((raw) {
               final p = obj(raw), own = field(p, 'authorId') == userId;
               return BlinkProListCard(
