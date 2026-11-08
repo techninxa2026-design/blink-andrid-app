@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/blink_auth_api.dart';
 import '../core/live_api.dart';
@@ -240,12 +241,26 @@ const BlinkFeatureHero(eyebrow:'GO OFFLINE · STAY CLOSE',title:'Plans worth sho
               own,
             ]);
           }),
-          if(visible.isEmpty)const ListTile(title:Text('No IRL plans in this category.')),
+          BlinkSectionBand(
+            eyebrow: 'MAKE REAL MEMORIES',
+            title: mine ? 'Your plans' : 'Meetups to explore',
+            subtitle: visible.length.toString() + ' plans in this category',
+            mood: BlinkMood.adventure,
+            icon: Icons.people_outline_rounded,
+            padding: const EdgeInsets.fromLTRB(1, 6, 1, 14)),
+          if(visible.isEmpty)
+            BlinkExperienceState(
+              title: 'No plans in this category',
+              subtitle: 'Change your filters or bring people together.',
+              icon: Icons.explore_rounded,
+              mood: BlinkMood.adventure,
+              action: _create,
+              actionLabel: 'Create IRL plan'),
           ...visible.map((raw){
             final plan=obj(raw),id=field(plan,'id');
             final owner=field(plan,'creatorId')==myId;
             final interested=arr(plan['interests']).any((i)=>field(i,'userId')==myId);
-            return BlinkProCard(child:Column(
+            return BlinkProCard(mood:BlinkMood.adventure,child:Column(
               crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Row(children:[
                   Container(width:49,height:49,decoration:BoxDecoration(
