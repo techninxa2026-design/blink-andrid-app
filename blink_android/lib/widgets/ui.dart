@@ -862,47 +862,77 @@ class BlinkProCard extends StatelessWidget {
     this.onTap,
     this.padding = const EdgeInsets.all(17),
     this.margin = const EdgeInsets.only(bottom: 12),
+    this.mood = BlinkMood.studio,
   });
 
   final Widget child;
   final VoidCallback? onTap;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry margin;
+  final BlinkMood mood;
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: margin,
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Colors.white, Color(0xFFFFFAF6), Color(0xFFFFF3EC)],
-        stops: [0.0, 0.70, 1.0],
+  Widget build(BuildContext context) {
+    final accent = BlinkMoodColors.primary(mood);
+    return Container(
+      margin: margin,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: accent.withValues(alpha: .20), width: 1.05),
+        boxShadow: [
+          BoxShadow(color: accent.withValues(alpha: .085),
+            blurRadius: 23, offset: const Offset(0, 10)),
+          const BoxShadow(color: Color(0x08000000),
+            blurRadius: 7, offset: Offset(0, 3)),
+        ],
       ),
-      borderRadius: BorderRadius.circular(23),
-      border: Border.all(color: const Color(0xFFFFDAC6), width: 1),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x12A85618),
-          blurRadius: 21,
-          offset: Offset(0, 9),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(children: [
+        Positioned.fill(child: IgnorePointer(
+          child: DecoratedBox(decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                Color.lerp(Colors.white, accent, .035)!,
+                Color.lerp(Colors.white, accent, .075)!,
+              ],
+              stops: const [0, .62, 1],
+            ),
+          )),
+        )),
+        Positioned(
+          right: -30, top: -42,
+          child: IgnorePointer(child: Container(
+            width: 94, height: 94,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: accent.withValues(alpha: .085), width: 19)),
+          )),
         ),
-        BoxShadow(
-          color: Color(0x09000000),
-          blurRadius: 5,
-          offset: Offset(0, 2),
+        Positioned(left: 0, top: 0, bottom: 0,
+          child: Container(
+            width: 3.5,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                colors: [accent, accent.withValues(alpha: .10)]),
+            ),
+          ),
         ),
-      ],
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(padding: padding, child: child),
-      ),
-    ),
-  );
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(padding: padding, child: child),
+          ),
+        ),
+      ]),
+    );
+  }
 }
 
 /// Compact premium metadata label. Wrap multiple chips rather than putting
@@ -968,6 +998,7 @@ class BlinkProListCard extends StatelessWidget {
     this.onTap,
     this.leading,
     this.margin = const EdgeInsets.only(bottom: 12),
+    this.mood,
   });
 
   final String title;
@@ -980,9 +1011,14 @@ class BlinkProListCard extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? leading;
   final EdgeInsetsGeometry margin;
+  final BlinkMood? mood;
 
   @override
-  Widget build(BuildContext context) => BlinkProCard(
+  Widget build(BuildContext context) {
+    final tone = mood ?? BlinkMoodColors.infer(eyebrow);
+    final accent = BlinkMoodColors.primary(tone);
+    return BlinkProCard(
+    mood: tone,
     onTap: onTap,
     margin: margin,
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -990,14 +1026,19 @@ class BlinkProListCard extends StatelessWidget {
         Container(
           width: 52, height: 52,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [
-              Color(0xFFFFE2D0), Color(0xFFFFF5EE),
+            gradient: LinearGradient(colors: [
+              accent.withValues(alpha: .20),
+              accent.withValues(alpha: .055),
             ]),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFFFD0B7)),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(9),
+              topRight: Radius.circular(19),
+              bottomLeft: Radius.circular(19),
+              bottomRight: Radius.circular(9)),
+            border: Border.all(color: accent.withValues(alpha: .23)),
           ),
           child: Center(child: leading ?? Icon(icon,
-            color: BlinkColors.orangeDark, size: 25)),
+            color: accent, size: 25)),
         ),
         const SizedBox(width: 13),
         Expanded(child: Column(
@@ -1008,7 +1049,7 @@ class BlinkProListCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 10, letterSpacing: 0.9,
                   fontWeight: FontWeight.w800,
-                  color: BlinkColors.orangeDark)),
+                  color: accent)),
               const SizedBox(height: 5),
             ],
             Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
@@ -1028,8 +1069,8 @@ class BlinkProListCard extends StatelessWidget {
           trailing!,
         ] else if (onTap != null) ...[
           const SizedBox(width: 4),
-          const Icon(Icons.arrow_outward_rounded,
-            color: BlinkColors.orangeDark, size: 20),
+          Icon(Icons.arrow_outward_rounded,
+            color: accent, size: 20),
         ],
       ]),
       if (badges.isNotEmpty) ...[
@@ -1044,6 +1085,7 @@ class BlinkProListCard extends StatelessWidget {
       ],
     ]),
   );
+  }
 }
 
 /// Shared visual layout for existing Blink create/edit pages.
