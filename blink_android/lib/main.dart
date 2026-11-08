@@ -100,6 +100,9 @@ class _BlinkAppState extends State<BlinkApp> with WidgetsBindingObserver {
       onGenerateRoute: (settings) {
         final route = settings.name ?? '/';
         final builder = BlinkRoutes.pages[route];
+        final publicScreen = BlinkApp.publicRoutes.contains(route);
+        final reducedMotion =
+            MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
         if (builder == null) {
           return null;
@@ -110,10 +113,16 @@ class _BlinkAppState extends State<BlinkApp> with WidgetsBindingObserver {
 
         return PageRouteBuilder<void>(
           settings: settings,
-          transitionDuration:
-          const Duration(milliseconds: 350),
-          reverseTransitionDuration:
-          const Duration(milliseconds: 280),
+          transitionDuration: publicScreen
+            ? const Duration(milliseconds: 350)
+            : (reducedMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 320)),
+          reverseTransitionDuration: publicScreen
+            ? const Duration(milliseconds: 280)
+            : (reducedMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 245)),
 
           pageBuilder: (
               context,
@@ -166,7 +175,9 @@ class _BlinkAppState extends State<BlinkApp> with WidgetsBindingObserver {
 
             final slide = Tween<Offset>(
               begin: Offset(
-                fromLeft ? -0.18 : 0.18,
+                fromLeft
+                  ? (publicScreen ? -0.18 : -0.085)
+                  : (publicScreen ? 0.18 : 0.085),
                 0,
               ),
               end: Offset.zero,
@@ -176,7 +187,10 @@ class _BlinkAppState extends State<BlinkApp> with WidgetsBindingObserver {
               opacity: curved,
               child: SlideTransition(
                 position: slide,
-                child: child,
+                child: publicScreen ? child : ScaleTransition(
+                  scale: Tween<double>(begin: .988, end: 1).animate(curved),
+                  child: child,
+                ),
               ),
             );
           },
