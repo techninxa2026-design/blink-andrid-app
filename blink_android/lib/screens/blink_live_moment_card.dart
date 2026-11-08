@@ -895,7 +895,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                         ? myReaction : '😊',
                         style: const TextStyle(fontSize: 22)),
                       label: 'React · hold',
-                      tooltip: 'Tap to react, or hold and slide',
+                      tooltip: 'React',
                       onPressed: null,
                       accent: const Color(0xFFFFB547),
                     ),
