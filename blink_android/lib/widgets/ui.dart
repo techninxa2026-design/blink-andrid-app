@@ -1177,7 +1177,10 @@ class BlinkCreateLayout extends StatelessWidget {
                     mood: BlinkMood.studio,
                   ),
                   const SizedBox(height: 16),
-                  content,
+                  BlinkReveal(
+                    delay: const Duration(milliseconds: 90),
+                    child: content,
+                  ),
                   const SizedBox(height: 8),
                 ],
               ),
@@ -1210,11 +1213,18 @@ class BlinkCreateLayout extends StatelessWidget {
                   height: 50,
                   child: FilledButton.icon(
                     onPressed: busy ? null : onSubmit,
-                    icon: busy
-                        ? const SizedBox(width: 17, height: 17,
+                    icon: AnimatedSwitcher(
+                      duration: BlinkMotion.duration(context, ms: 180),
+                      child: busy
+                        ? const SizedBox(
+                            key: ValueKey('saving'),
+                            width: 17, height: 17,
                             child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.check_circle_outline_rounded),
+                        : const Icon(
+                            Icons.check_circle_outline_rounded,
+                            key: ValueKey('ready')),
+                    ),
                     label: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(primaryLabel,
