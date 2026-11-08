@@ -686,6 +686,169 @@ class BlinkPanel extends StatelessWidget {
 }
 
 // ========================================
+// BLINK EDITORIAL SYSTEM — VISUAL IDENTITIES BY FEATURE
+// ========================================
+
+enum BlinkMood { studio, community, business, exchange, adventure, rewards }
+
+class BlinkMoodColors {
+  static Color primary(BlinkMood mood) {
+    switch (mood) {
+      case BlinkMood.community: return const Color(0xFFEE3264);
+      case BlinkMood.business: return const Color(0xFF1A5564);
+      case BlinkMood.exchange: return const Color(0xFF4C61B8);
+      case BlinkMood.adventure: return const Color(0xFF007E9C);
+      case BlinkMood.rewards: return const Color(0xFFAF6913);
+      case BlinkMood.studio: return BlinkColors.orangeDark;
+    }
+  }
+
+  static List<Color> gradient(BlinkMood mood) {
+    switch (mood) {
+      case BlinkMood.community:
+        return const [Color(0xFF391831), Color(0xFF872B57), Color(0xFFE85C5B)];
+      case BlinkMood.business:
+        return const [Color(0xFF102B38), Color(0xFF164B58), Color(0xFF2B6E69)];
+      case BlinkMood.exchange:
+        return const [Color(0xFF222243), Color(0xFF4C4280), Color(0xFFDC754B)];
+      case BlinkMood.adventure:
+        return const [Color(0xFF083E4E), Color(0xFF126E81), Color(0xFFEE8B5B)];
+      case BlinkMood.rewards:
+        return const [Color(0xFF382413), Color(0xFF975415), Color(0xFFE2A342)];
+      case BlinkMood.studio:
+        return const [Color(0xFF271D22), Color(0xFFA83B24), BlinkColors.orange];
+    }
+  }
+
+  static BlinkMood infer(String? eyebrow) {
+    final label = (eyebrow ?? '').toUpperCase();
+    if (label.contains('BUSINESS') || label.contains('PROFESSION') ||
+        label.contains('NETWORK') || label.contains('MEETING')) {
+      return BlinkMood.business;
+    }
+    if (label.contains('EXCHANGE') || label.contains('NEGOTIAT') ||
+        label.contains('OFFER')) return BlinkMood.exchange;
+    if (label.contains('IRL') || label.contains('PLAN') ||
+        label.contains('MEETUP')) return BlinkMood.adventure;
+    if (label.contains('BP') || label.contains('REWARD') ||
+        label.contains('WALLET')) return BlinkMood.rewards;
+    if (label.contains('HEART') || label.contains('CONNECTION') ||
+        label.contains('FRIEND') || label.contains('CHECK') ||
+        label.contains('PEOPLE')) return BlinkMood.community;
+    return BlinkMood.studio;
+  }
+}
+
+/// An editorial masthead with typographic hierarchy, non-rectangular
+/// ornamental forms and feature-specific hues. It is intentionally different
+/// from a generic Card with a shadow. All icons/actions remain accessible.
+class BlinkFeatureHero extends StatelessWidget {
+  const BlinkFeatureHero({
+    super.key,
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    this.mood = BlinkMood.studio,
+    this.action,
+    this.margin = const EdgeInsets.fromLTRB(14, 13, 14, 18),
+  });
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final BlinkMood mood;
+  final Widget? action;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = BlinkMoodColors.gradient(mood);
+    return Container(
+      margin: margin,
+      constraints: const BoxConstraints(minHeight: 158),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(27),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: palette),
+        boxShadow: [
+          BoxShadow(color: palette[1].withValues(alpha: .22),
+            blurRadius: 28, offset: const Offset(0, 12)),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(children: [
+        Positioned(right: -48, top: -84,
+          child: Container(width: 201, height: 201,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white.withValues(alpha: .17),
+                width: 29),
+              shape: BoxShape.circle))),
+        Positioned(right: -12, bottom: -70,
+          child: Transform.rotate(
+            angle: -.28,
+            child: Container(width: 158, height: 140,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .055),
+                borderRadius: BorderRadius.circular(40))))),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 19, 18, 20),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: .15),
+                        borderRadius: BorderRadius.circular(30)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                        child: Text(eyebrow.toUpperCase(),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 9.5, letterSpacing: 1.3,
+                            color: Colors.white, fontWeight: FontWeight.w900)),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white,
+                        fontSize: 24, height: 1.09, letterSpacing: -.65,
+                        fontWeight: FontWeight.w900)),
+                  ],
+                )),
+                const SizedBox(width: 10),
+                Container(
+                  width: 52, height: 52,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .30)),
+                    borderRadius: BorderRadius.circular(18)),
+                  child: Icon(icon, size: 28, color: Colors.white)),
+              ]),
+              const SizedBox(height: 10),
+              Text(subtitle,
+                maxLines: 3, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFFFAF0EC), fontSize: 12,
+                  height: 1.45)),
+              if (action != null) ...[
+                const SizedBox(height: 14),
+                action!,
+              ],
+            ]),
+        ),
+      ]),
+    );
+  }
+}
+
+// ========================================
 // PREMIUM CARD DESIGN SYSTEM
 // ========================================
 
