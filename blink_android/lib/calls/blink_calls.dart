@@ -192,6 +192,11 @@ class BlinkCalls extends ChangeNotifier {
       });
       final id = result['callId']?.toString() ?? '';
       if (id.isEmpty) throw StateError('Call identifier missing.');
+      // The caller may have tapped End while waiting for the ACK.
+      if (status != 'starting') {
+        _socket?.emit('call-ended', {'callId': id});
+        return;
+      }
       callId = id;
       status = 'ringing';
       notifyListeners();
