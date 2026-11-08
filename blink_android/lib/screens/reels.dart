@@ -169,55 +169,62 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
                 active: _appActive && index == _currentIndex,
               ),
             ),
+          // Navigation stays legible but no longer blankets the footage.
           Positioned(
-            top: 12, left: 11, right: 11,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xF1272028), Color(0xDE562E2D)]),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: const Color(0x77FFFFFF)),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x44000000),
-                    blurRadius: 18, offset: Offset(0, 7)),
-                ]),
-              child: Row(children: [
-                Builder(builder: (scaffoldContext) => IconButton(
+            top: 8, left: 8, right: 9,
+            child: Row(children: [
+              Builder(builder: (scaffoldContext) => Material(
+                color: const Color(0xA21A1620),
+                shape: const CircleBorder(),
+                child: IconButton(
                   tooltip: 'Open Blink navigation',
                   onPressed: () => Scaffold.of(scaffoldContext).openDrawer(),
-                  icon: const Icon(Icons.menu_rounded, color: Colors.white),
-                )),
-                const Expanded(child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('REELS · BLINK',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Color(0xFFFFB78E),
-                        fontSize: 9, fontWeight: FontWeight.w900,
-                        letterSpacing: 1)),
-                    Text('Watch your world',
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: Colors.white,
-                        fontSize: 16, fontWeight: FontWeight.w900)),
-                  ],
-                )),
-                IconButton(
+                  icon: const Icon(Icons.menu_rounded,
+                    color: Colors.white, size: 22)),
+              )),
+              const SizedBox(width: 9),
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('REELS',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.white,
+                      letterSpacing: 1.4, fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      shadows: [Shadow(
+                        color: Colors.black87, blurRadius: 7)])),
+                  Text(_reels.isEmpty ? 'Discover something new'
+                    : (_currentIndex + 1).toString() +
+                      ' / ' + _reels.length.toString() +
+                      '  ·  Swipe to explore',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xEEFFFFFF), fontSize: 10.5,
+                      shadows: [Shadow(
+                        color: Colors.black87, blurRadius: 7)])),
+                ],
+              )),
+              Material(
+                color: const Color(0xA21A1620),
+                shape: const CircleBorder(),
+                child: IconButton(
                   tooltip: 'Refresh public Reels',
                   onPressed: _refresh,
                   icon: const Icon(Icons.refresh_rounded,
-                    color: Colors.white),
-                ),
-                IconButton(
+                    color: Colors.white, size: 22)),
+              ),
+              const SizedBox(width: 4),
+              Material(
+                color: const Color(0xDAFF5900),
+                shape: const CircleBorder(),
+                child: IconButton(
                   tooltip: 'Publish a Reel',
                   onPressed: () => go(context, '/reel/upload'),
-                  icon: const Icon(Icons.add_circle_outline,
-                    color: Color(0xFFFFB78E)),
-                ),
-              ]),
-            ),
+                  icon: const Icon(Icons.add_rounded,
+                    color: Colors.white, size: 24)),
+              ),
+            ]),
           ),
           if (_loadingNext)
             const Positioned(bottom: 10, right: 14,
