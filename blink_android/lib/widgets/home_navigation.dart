@@ -34,15 +34,23 @@ class BlinkHomeBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: BlinkColors.orangeDark,
-      elevation: 8,
-      shadowColor: const Color(0x44000000),
+      color: const Color(0xFF512B29),
+      elevation: 11,
+      shadowColor: const Color(0x55000000),
       borderRadius: const BorderRadius.only(
         topLeft: Radius.circular(28),
         topRight: Radius.circular(28),
       ),
       clipBehavior: Clip.antiAlias,
-      child: SafeArea(
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Color(0xFF2B2228), Color(0xFF663029),
+              BlinkColors.orangeDark]),
+        ),
+        child: SafeArea(
         top: false,
         child: SizedBox(
           height: MediaQuery.textScalerOf(context).scale(9) > 9
@@ -80,6 +88,7 @@ class BlinkHomeBottomBar extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -132,9 +141,12 @@ class _HomeNavItem extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: selected
-                      ? const Color(0x33FFFFFF)
-                      : Colors.transparent,
+                  color: selected ? null : Colors.transparent,
+                  gradient: selected ? const LinearGradient(
+                    colors: [Color(0x55FFFFFF), Color(0x18FFFFFF)])
+                    : null,
+                  border: selected ? Border.all(
+                    color: const Color(0x55FFFFFF)) : null,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
