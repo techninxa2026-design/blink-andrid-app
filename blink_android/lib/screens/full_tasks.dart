@@ -30,6 +30,12 @@ class _TasksState extends State<FullTasksScreen> {
       onPressed:()=>Navigator.push<void>(context,MaterialPageRoute(
         builder:(_)=>const FullCreatorDashboard())))]),
     body:Column(children:[
+      const BlinkFeatureHero(eyebrow: 'CREATE · PARTICIPATE · EARN',
+        title: 'Creator challenges',
+        subtitle: 'Turn your creativity into meaningful rewards.',
+        icon: Icons.workspace_premium_rounded,
+        accent: Color(0xFF174B48), secondary: Color(0xFF36A78B)),
+
       Padding(padding:const EdgeInsets.all(12),child:TextField(controller:query,
         onSubmitted:(_){page=1;_load();},
         decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:'Search Creator Tasks',
