@@ -28,6 +28,11 @@ class _DiscoverState extends State<LiveDiscoverPeopleScreen>{
     IconButton(icon:const Icon(Icons.people),tooltip:'My friends',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveFriendsScreen()))),
     IconButton(icon:const Icon(Icons.person_add_alt),tooltip:'Requests',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveRequestsScreen()))),
   ]),body:Column(children:[
+    const BlinkFeatureHero(eyebrow: 'YOUR BLINK CIRCLE',
+      title: 'Find your people', subtitle: 'A community built around your energy.',
+      icon: Icons.diversity_3_rounded,
+      accent: Color(0xFFEF571B), secondary: Color(0xFFF99A4E)),
+
     Padding(padding:const EdgeInsets.all(14),child:TextField(decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search Blink members'),onChanged:(v)=>query=v,onSubmitted:(_)=>_load())),
     Expanded(child:loading?const Center(child:CircularProgressIndicator()):
       error!=null?liveError(error,_load):
