@@ -484,9 +484,22 @@ class _LiveChatState extends State<LiveChatScreen>{
     return Align(alignment:own?Alignment.centerRight:Alignment.centerLeft,
       child:Container(margin:const EdgeInsets.symmetric(vertical:5,horizontal:12),
         constraints:BoxConstraints(maxWidth:MediaQuery.sizeOf(context).width*.82),
-        decoration:BoxDecoration(color:own?const Color(0xFFFFE6D5):Colors.grey.shade100,
-          borderRadius:BorderRadius.circular(17)),
-        padding:const EdgeInsets.all(12),
+        decoration:BoxDecoration(
+          gradient:LinearGradient(
+            begin:Alignment.topLeft,end:Alignment.bottomRight,
+            colors:own
+              ?[const Color(0xFFFFE6D3),const Color(0xFFFFCFAE)]
+              :[Colors.white,const Color(0xFFF8F6F7)]),
+          borderRadius:BorderRadius.only(
+            topLeft:const Radius.circular(21),
+            topRight:const Radius.circular(21),
+            bottomLeft:Radius.circular(own?21:5),
+            bottomRight:Radius.circular(own?5:21)),
+          border:Border.all(color:own
+            ?const Color(0xFFFFBA94):const Color(0xFFEAE5E5)),
+          boxShadow:const [BoxShadow(
+            color:Color(0x0D333333),blurRadius:14,offset:Offset(0,5))]),
+        padding:const EdgeInsets.fromLTRB(13,11,13,8),
         child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           if(removed)const Text('Message removed',style:TextStyle(fontStyle:FontStyle.italic))
           else if(reel!=null)InkWell(
@@ -504,7 +517,7 @@ class _LiveChatState extends State<LiveChatScreen>{
             _attachment(m)
           else Text(field(m,'body')),
           const SizedBox(height:5),
-          Row(mainAxisSize:MainAxisSize.min,children:[
+          Wrap(spacing:1,runSpacing:0,crossAxisAlignment:WrapCrossAlignment.center,children:[
             if(!removed)PopupMenuButton<String>(tooltip:'Message actions',
               icon:const Icon(Icons.more_horiz,size:18),
               onSelected:(action)=>_messageAction(action,m),
@@ -560,14 +573,37 @@ class _LiveChatState extends State<LiveChatScreen>{
       Expanded(child:loading?const Center(child:CircularProgressIndicator()):
         RefreshIndicator(onRefresh:_load,child:ListView.builder(
           itemCount:messages.length,itemBuilder:(_,i)=>_message(obj(messages[i]))))),
-      SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(8,8,8,10),
+      SafeArea(top:false,child:Container(
+        margin:const EdgeInsets.fromLTRB(9,7,9,10),
+        padding:const EdgeInsets.fromLTRB(4,5,5,5),
+        decoration:BoxDecoration(
+          color:Colors.white,
+          borderRadius:BorderRadius.circular(23),
+          border:Border.all(color:const Color(0xFFFFD0B6)),
+          boxShadow:const [BoxShadow(
+            color:Color(0x1ADD6A30),blurRadius:17,offset:Offset(0,-4))]),
         child:Row(children:[
-          IconButton(tooltip:'Attach',onPressed:busy?null:_upload,icon:const Icon(Icons.add_circle_outline,color:BlinkColors.orange)),
+          IconButton(tooltip:'Attach',onPressed:busy?null:_upload,
+            icon:const Icon(Icons.add_circle_outline,color:BlinkColors.orange)),
           IconButton(tooltip:'Voice message',onPressed:busy?null:_voice,
             icon:const Icon(Icons.mic_none_outlined,color:BlinkColors.orange)),
-          Expanded(child:TextField(controller:input,minLines:1,maxLines:4,decoration:const InputDecoration(hintText:'Message...'))),
-          IconButton(tooltip:'Send',onPressed:busy?null:_send,icon:const Icon(Icons.send,color:BlinkColors.orange)),
-        ]))),
+          Expanded(child:TextField(controller:input,minLines:1,maxLines:4,
+            decoration:const InputDecoration(
+              hintText:'Message your friend...',
+              isDense:true,
+              contentPadding:EdgeInsets.symmetric(horizontal:10,vertical:12),
+              filled:false,
+              border:InputBorder.none,
+              enabledBorder:InputBorder.none,
+              focusedBorder:InputBorder.none))),
+          Container(
+            decoration:const BoxDecoration(
+              color:BlinkColors.orange,shape:BoxShape.circle),
+            child:IconButton(tooltip:'Send',onPressed:busy?null:_send,
+              icon:const Icon(Icons.arrow_upward_rounded,color:Colors.white)),
+          ),
+        ]),
+      )),
     ]),
   );
 }
