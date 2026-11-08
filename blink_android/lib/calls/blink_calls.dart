@@ -25,6 +25,13 @@ class BlinkCalls extends ChangeNotifier {
   MediaStream? _remote;
   final List<RTCIceCandidate> _pendingIce = [];
   Timer? _mediaTimeout;
+  Timer? _disconnectTimer;
+  bool _turnConfigured = false;
+  bool _isCaller = false;
+  bool _restartAttempted = false;
+  int _candidateRelayFailures = 0;
+  int _sentCandidates = 0;
+  int _receivedCandidates = 0;
 
   String _token = '';
   String status = 'idle';
@@ -98,6 +105,7 @@ class BlinkCalls extends ChangeNotifier {
         socket.emit('call-rejected', {'callId': id});
         return;
       }
+      _isCaller = false;
       callId = id;
       peerId = event['callerId'] as String;
       peerName = event['callerName']?.toString() ?? 'Blink friend';
@@ -130,6 +138,12 @@ class BlinkCalls extends ChangeNotifier {
       final event = _map(raw);
       if (event['callId'] == callId && event['candidate'] is Map) {
         unawaited(_onCandidate(_map(event['candidate'])).catchError(_fail));
+      }
+    });
+    socket.on('call-ice-restart-request', (raw) {
+      if (_map(raw)['callId'] == callId && _isCaller &&
+          !_restartAttempted && status != 'idle') {
+        unawaited(_recoverIce().catchError(_fail));
       }
     });
     socket.on('call-ended', (raw) {
@@ -180,6 +194,7 @@ class BlinkCalls extends ChangeNotifier {
       await _awaitConnected();
       // An incoming invitation might have appeared during connection setup.
       if (status != 'idle') return;
+      _isCaller = true;
       peerId = userId;
       peerName = name;
       kind = video ? 'video' : 'audio';
@@ -263,6 +278,13 @@ class BlinkCalls extends ChangeNotifier {
     }
     final result = _map(await LiveApi.call('GET', '/calls/ice'));
     final servers = arr(result['iceServers']);
+    _turnConfigured = result['turnConfigured'] == true || servers.any((raw) {
+      final entry = _map(raw);
+      final urls = entry['urls'] is List
+          ? (entry['urls'] as List).map((v) => v.toString()).toList()
+          : <String>[entry['urls']?.toString() ?? ''];
+      return urls.any((url) => url.startsWith('turn:') || url.startsWith('turns:'));
+    });
     final config = <String, dynamic>{'iceServers': servers};
     final local = await navigator.mediaDevices.getUserMedia({
       'audio': {
@@ -306,14 +328,44 @@ class BlinkCalls extends ChangeNotifier {
       }
     };
     peer.onIceCandidate = (candidate) {
-      if (id == callId && candidate.candidate != null) {
-        _socket?.emit('ice-candidate', {
-          'callId': id,
-          'candidate': {
-            'candidate': candidate.candidate,
-            'sdpMid': candidate.sdpMid,
-            'sdpMLineIndex': candidate.sdpMLineIndex,
-          },
+      if (id != callId || candidate.candidate == null) return;
+      _sentCandidates++;
+      unawaited(_ack('ice-candidate', {
+        'callId': id,
+        'candidate': {
+          'candidate': candidate.candidate,
+          'sdpMid': candidate.sdpMid,
+          'sdpMLineIndex': candidate.sdpMLineIndex,
+        },
+      }).catchError((Object _) {
+        if (id == callId) {
+          _candidateRelayFailures++;
+          if (_candidateRelayFailures >= 3) {
+            _fail(StateError(
+              'Blink call signaling cannot relay ICE candidates. '
+              'Check WebSocket connection and server logs.',
+            ));
+          }
+        }
+        return <String, dynamic>{'ok': false};
+      }));
+    };
+    peer.onIceConnectionState = (state) {
+      if (id != callId) return;
+      if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
+          state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
+        _disconnectTimer?.cancel();
+        _disconnectTimer = null;
+      } else if (state == RTCIceConnectionState.RTCIceConnectionStateFailed) {
+        unawaited(_recoverIce().catchError(_fail));
+      } else if (state ==
+          RTCIceConnectionState.RTCIceConnectionStateDisconnected &&
+          _disconnectTimer == null) {
+        _disconnectTimer = Timer(const Duration(seconds: 5), () {
+          _disconnectTimer = null;
+          if (id == callId) {
+            unawaited(_recoverIce().catchError(_fail));
+          }
         });
       }
     };
@@ -321,20 +373,74 @@ class BlinkCalls extends ChangeNotifier {
       if (id != callId) return;
       if (state ==
           RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
-        _mediaTimeout?.cancel();
-        _mediaTimeout = null;
+        _clearMediaTimers();
         status = 'connected';
         notifyListeners();
       } else if (state ==
           RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
-        _fail(StateError('Media connection failed. Try again.'));
+        unawaited(_recoverIce().catchError(_fail));
       }
     };
+    _armMediaTimeout(id, const Duration(seconds: 30));
+  }
+
+  void _clearMediaTimers() {
     _mediaTimeout?.cancel();
-    _mediaTimeout = Timer(const Duration(seconds: 30), () {
-      if (id == callId && status != 'connected') {
-        _fail(StateError('Media connection timed out. TURN may be required.'));
+    _disconnectTimer?.cancel();
+    _mediaTimeout = null;
+    _disconnectTimer = null;
+  }
+
+  StateError _mediaFailure() {
+    if (_candidateRelayFailures >= 3) {
+      return StateError('ICE signaling failed. Check the Blink server WebSocket.');
+    }
+    if (!_turnConfigured) {
+      return StateError(
+        'No network path found. Blink has no TURN relay configured. '
+        'The API administrator must set CALL_TURN_URLS and '
+        'CALL_TURN_SHARED_SECRET.',
+      );
+    }
+    return StateError(
+      'No working media path. Check TURN server credentials, '
+      'UDP/TCP connectivity and relay firewall ports.',
+    );
+  }
+
+  void _armMediaTimeout(String id, Duration duration) {
+    _mediaTimeout?.cancel();
+    _mediaTimeout = Timer(duration, () {
+      if (id != callId || status == 'connected') return;
+      if (!_restartAttempted) {
+        unawaited(_recoverIce().catchError(_fail));
+      } else {
+        _fail(_mediaFailure());
       }
+    });
+  }
+
+  Future<void> _recoverIce() async {
+    final id = callId;
+    final peer = _peer;
+    if (id.isEmpty || peer == null || status == 'idle' ||
+        _restartAttempted) return;
+    _restartAttempted = true;
+    status = 'connecting';
+    notifyListeners();
+    _armMediaTimeout(id, const Duration(seconds: 20));
+    if (!_isCaller) {
+      await _ack('call-ice-restart-request', {'callId': id});
+      return;
+    }
+    // The original caller is the sole offerer for restart negotiation.
+    await peer.restartIce();
+    final offer = await peer.createOffer();
+    if (id != callId) return;
+    await peer.setLocalDescription(offer);
+    await _ack('call-offer', {
+      'callId': id,
+      'sdp': {'type': offer.type, 'sdp': offer.sdp},
     });
   }
 
@@ -392,14 +498,25 @@ class BlinkCalls extends ChangeNotifier {
       _pendingIce.add(candidate);
       return;
     }
-    await _peer!.addCandidate(candidate);
+    try {
+      await _peer!.addCandidate(candidate);
+      _receivedCandidates++;
+    } catch (_) {
+      // Trickle candidates from the previous ICE generation can be stale.
+      // The connection timeout still detects a genuine routing failure.
+    }
   }
 
   Future<void> _flushIce() async {
     final pending = List<RTCIceCandidate>.of(_pendingIce);
     _pendingIce.clear();
     for (final candidate in pending) {
-      await _peer?.addCandidate(candidate);
+      try {
+        await _peer?.addCandidate(candidate);
+        _receivedCandidates++;
+      } catch (_) {
+        // A candidate raced against an ICE restart; use the next generation.
+      }
     }
   }
 
@@ -411,8 +528,7 @@ class BlinkCalls extends ChangeNotifier {
   }
 
   void _reset([String message = '']) {
-    _mediaTimeout?.cancel();
-    _mediaTimeout = null;
+    _clearMediaTimers();
     final peer = _peer;
     _peer = null;
     _prepared = false;
@@ -444,6 +560,12 @@ class BlinkCalls extends ChangeNotifier {
     peerName = '';
     muted = false;
     cameraOff = false;
+    _turnConfigured = false;
+    _isCaller = false;
+    _restartAttempted = false;
+    _candidateRelayFailures = 0;
+    _sentCandidates = 0;
+    _receivedCandidates = 0;
     error = message;
     notifyListeners();
   }
