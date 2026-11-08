@@ -123,7 +123,7 @@ class _FullExchangeScreenState extends State<FullExchangeScreen> {
         : RefreshIndicator(onRefresh: _load, child: ListView(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
           children: [
-            if (posts.isEmpty) const Padding(padding: EdgeInsets.all(28),
+             const Padding(padding: EdgeInsets.all(28),
               child: Center(child: Text('No Exchange posts found.'))),
             ...posts.map((raw) {
               final p = obj(raw), own = field(p, 'authorId') == userId;
