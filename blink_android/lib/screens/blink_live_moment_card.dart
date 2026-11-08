@@ -202,42 +202,78 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     }
   }
 
-  /// A large white heart pops exactly where the user double-tapped,
-  /// fades away, and never absorbs swipes or action-rail taps.
+  /// Red heart constellation: the center heart pops at the tap, while
+  /// smaller hearts arc toward the right-hand reaction rail.
+  /// All overlays ignore pointer events, preserving vertical story swipes.
   Widget _loveBurst() => Positioned.fill(
     child: IgnorePointer(
       child: LayoutBuilder(builder: (context, space) {
-        const dimension = 124.0;
-        final point = _loveTapPoint ?? Offset(
-          space.maxWidth / 2, space.maxHeight / 2);
-        final maxX = space.maxWidth > dimension
-          ? space.maxWidth - dimension : 0.0;
-        final maxY = space.maxHeight > dimension
-          ? space.maxHeight - dimension : 0.0;
-        return Stack(children: [
-          Positioned(
-            left: (point.dx - dimension / 2).clamp(0.0, maxX).toDouble(),
-            top: (point.dy - dimension / 2).clamp(0.0, maxY).toDouble(),
-            child: ScaleTransition(
-              scale: _loveScale,
-              child: FadeTransition(
-                opacity: _loveOpacity,
-                child: const Icon(
-                  Icons.favorite_rounded,
-                  key: ValueKey('blink-moment-double-tap-heart'),
-                  size: dimension,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(color: Color(0xCCFF5900),
-                      blurRadius: 24, offset: Offset(0, 8)),
-                    Shadow(color: Color(0x88000000),
-                      blurRadius: 9, offset: Offset(0, 4)),
-                  ],
+        const dimension = 112.0;
+        final point = _loveTapPoint ??
+            Offset(space.maxWidth / 2, space.maxHeight / 2);
+        final origin = Offset(
+          point.dx.clamp(36.0, space.maxWidth - 36.0).toDouble(),
+          point.dy.clamp(80.0, space.maxHeight - 90.0).toDouble(),
+        );
+        final destination = Offset(
+          space.maxWidth - 38,
+          space.maxHeight * .37,
+        );
+        const spread = <Offset>[
+          Offset(-64, -52), Offset(46, -80), Offset(-82, 22),
+          Offset(72, 45), Offset(-35, 83), Offset(15, -108),
+          Offset(90, -16), Offset(-98, -35), Offset(42, 100),
+        ];
+        return AnimatedBuilder(
+          animation: _loveController,
+          builder: (context, child) {
+            final progress = _loveController.value;
+            final fly = Curves.easeInOutCubic.transform(
+              ((progress - .19) / .81).clamp(0.0, 1.0).toDouble());
+            return Stack(children: [
+              Positioned(
+                left: (origin.dx - dimension / 2)
+                    .clamp(0.0, space.maxWidth - dimension).toDouble(),
+                top: (origin.dy - dimension / 2)
+                    .clamp(0.0, space.maxHeight - dimension).toDouble(),
+                child: Transform.scale(
+                  scale: _loveScale.value,
+                  child: Opacity(
+                    opacity: _loveOpacity.value,
+                    child: const Icon(Icons.favorite_rounded,
+                      key: ValueKey('blink-moment-double-tap-heart'),
+                      color: Color(0xFFFF234F), size: dimension,
+                      shadows: [
+                        Shadow(color: Color(0xAAFF244D), blurRadius: 30),
+                        Shadow(color: Color(0x77000000), blurRadius: 12,
+                          offset: Offset(0, 5)),
+                      ]),
+                  ),
                 ),
               ),
-            ),
-          ),
-        ]);
+              for (var i = 0; i < spread.length; i++)
+                Positioned(
+                  left: origin.dx + spread[i].dx * (1 - fly) +
+                      (destination.dx - origin.dx) * fly - 12,
+                  top: origin.dy + spread[i].dy * (1 - fly) +
+                      (destination.dy - origin.dy) * fly -
+                      25 * (1 - fly) - 12,
+                  child: Opacity(
+                    opacity: (progress < .07 ? progress / .07 :
+                        (1 - fly)).clamp(0.0, 1.0).toDouble(),
+                    child: Transform.rotate(
+                      angle: (i.isEven ? 1 : -1) * fly * .65,
+                      child: Icon(Icons.favorite_rounded,
+                        size: 13.0 + (i % 3) * 5,
+                        color: i.isEven
+                          ? const Color(0xFFFF1847)
+                          : const Color(0xFFFF5576)),
+                    ),
+                  ),
+                ),
+            ]);
+          },
+        );
       }),
     ),
   );
@@ -614,30 +650,28 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     required VoidCallback onPressed,
     String? tooltip,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 7),
+    padding: const EdgeInsets.only(bottom: 13),
     child: Tooltip(
       message: tooltip ?? label,
-      child: Material(
-        color: const Color(0xDF24242D),
-        borderRadius: BorderRadius.circular(13),
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(13),
-          child: SizedBox(
-            width: 56, height: 57,
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              symbol,
-              const SizedBox(height: 3),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(label, maxLines: 1, style: const TextStyle(
-                  color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
-              ),
-            ]),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Material(
+          color: const Color(0xAA19191F),
+          shape: CircleBorder(
+            side: BorderSide(color: Colors.white.withValues(alpha: .26))),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onPressed,
+            child: SizedBox(width: 54, height: 54,
+              child: Center(child: symbol)),
           ),
         ),
-      ),
-    ),
+        const SizedBox(height: 4),
+        Text(label, maxLines: 1,
+          style: const TextStyle(color: Colors.white,
+            fontSize: 11, fontWeight: FontWeight.w800,
+            shadows: [Shadow(color: Colors.black, blurRadius: 8)])),
+      ]),
+    ]),
   );
 
   Widget _buildImmersive() {
@@ -701,7 +735,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
       _loveBurst(),
       SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(15, 56, 15, 28),
+          padding: const EdgeInsets.fromLTRB(17, 72, 78, 36),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Spacer(),
             Row(children: [
@@ -756,16 +790,16 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
         child: Align(
           alignment: Alignment.centerRight,
           child: Padding(
-            padding: const EdgeInsets.only(right: 10, top: 30, bottom: 46),
+            padding: const EdgeInsets.only(right: 14, top: 65, bottom: 65),
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(context).height * .70),
+                maxHeight: MediaQuery.sizeOf(context).height * .67),
               child: SingleChildScrollView(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   _actionTile(
                     symbol: Icon(myReaction == '❤️'
                       ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
-                      color: myReaction == '❤️' ? BlinkColors.orange : Colors.white,
+                      color: myReaction == '❤️' ? const Color(0xFFFF3158) : Colors.white,
                       size: 25),
                     label: reactions, tooltip: 'Like Moment',
                     onPressed: _busy ? () {} : _like,
