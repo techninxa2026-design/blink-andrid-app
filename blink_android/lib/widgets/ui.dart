@@ -782,7 +782,7 @@ class BlinkProfileMasthead extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = BlinkMoodColors.primary(mood);
     final palette = BlinkMoodColors.gradient(mood);
-    return Container(
+    return BlinkReveal(child: Container(
       margin: const EdgeInsets.only(bottom: 18),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -866,7 +866,7 @@ class BlinkProfileMasthead extends StatelessWidget {
           ),
         ),
       ]),
-    );
+    ));
   }
 }
 
