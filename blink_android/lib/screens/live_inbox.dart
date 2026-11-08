@@ -66,6 +66,15 @@ class _LiveInboxState extends State<LiveInboxScreen> {
         ),
       ]),
       body: Column(children:[
+        if(MediaQuery.viewInsetsOf(context).bottom == 0)
+          const BlinkFeatureHero(
+            eyebrow:'PRIVATE BY DESIGN',
+            title:'Conversations, closer.',
+            subtitle:'Your people, groups and every shared moment in one place.',
+            icon:Icons.forum_rounded,
+            mood:BlinkMood.community,
+            margin:EdgeInsets.fromLTRB(13,11,13,0),
+          ),
         Padding(padding:const EdgeInsets.all(14),child:TextField(
           decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search conversations'),
           onChanged:(v)=>setState(()=>query=v),
