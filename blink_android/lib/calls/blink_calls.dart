@@ -335,6 +335,20 @@ class BlinkCalls extends ChangeNotifier {
   }
 
   Future<void> _prepare(String id) async {
+    // Await ringtone shutdown before taking communication audio focus.
+    await _ringPlayer.stop();
+    if (id != callId) return;
+    if (!kIsWeb) {
+      // Renderer initialization also initializes the native factory. Configure
+      // its audio device first: later route changes cannot rebuild that device.
+      await WebRTC.initialize(options: <String, dynamic>{
+        'bypassVoiceProcessing': false,
+        'androidUseHardwareAudioProcessing': false,
+        'androidAudioConfiguration':
+            AndroidAudioConfiguration.communication.toMap(),
+      });
+    }
+    if (id != callId) return;
     if (!_renderersInitialized) {
       await localRenderer.initialize();
       await remoteRenderer.initialize();
@@ -364,7 +378,7 @@ class BlinkCalls extends ChangeNotifier {
       }
     }
     final local = await navigator.mediaDevices.getUserMedia(
-      BlinkCallAudioPolicy.captureConstraints(video: videoCall),
+      BlinkCallAudioPolicy.captureConstraints(video: videoCall, native: !kIsWeb),
     );
     if (id != callId) {
       for (final track in local.getTracks()) {track.stop();}
