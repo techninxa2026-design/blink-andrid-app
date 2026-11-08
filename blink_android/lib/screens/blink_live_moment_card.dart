@@ -9,6 +9,8 @@ import '../core/blink_original_music.dart';
 import '../core/live_api.dart';
 import '../core/theme.dart';
 import '../widgets/blink_heart_flight.dart';
+import '../widgets/blink_reaction_dock.dart';
+import 'dart:ui' show ImageFilter;
 
 class BlinkLiveMomentCard extends StatefulWidget {
   const BlinkLiveMomentCard({
@@ -235,6 +237,11 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
       ),
     );
     if (selected == null || !mounted) return;
+    await _applyReaction(selected);
+  }
+
+  Future<void> _applyReaction(String selected) async {
+    if (_busy || !mounted) return;
     setState(() => _busy = true);
     try {
       await BlinkHomeApi.react(widget.moment.id, selected);
@@ -584,12 +591,12 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
   Widget _actionTile({
     required Widget symbol,
     required String label,
-    required VoidCallback onPressed,
+    VoidCallback? onPressed,
     String? tooltip,
     Key? tileKey,
     Color accent = Colors.white,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.only(bottom: 6),
     child: Tooltip(
       message: tooltip ?? label,
       child: Material(
@@ -597,13 +604,13 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           splashColor: BlinkColors.orange.withValues(alpha: .18),
           child: SizedBox(
-            width: 64,
+            width: 50,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Container(
-                width: 52, height: 52,
+                width: 43, height: 43,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -615,7 +622,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                         accent, .16) ?? const Color(0xC9212230),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(19),
+                  borderRadius: BorderRadius.circular(15),
                   border: Border.all(
                     color: accent == Colors.white
                       ? const Color(0x4CFFFFFF)
@@ -637,12 +644,12 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8, vertical: 3),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 58),
+                    constraints: const BoxConstraints(maxWidth: 47),
                     child: Text(label, maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        color: Colors.white, fontSize: 10,
+                        color: Colors.white, fontSize: 9.5,
                         fontWeight: FontWeight.w800)),
                   ),
                 ),
@@ -662,7 +669,14 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     final comments = (_activity?['commentCount'] ?? 0).toString();
 
     return Stack(fit: StackFit.expand, children: [
-      const ColoredBox(color: Colors.black),
+      // Warm cinematic canvas: letterboxed photos and videos no longer
+      // sit inside a plain black void. Only the lower typography veil
+      // remains dark for accessibility, not the entire Moment.
+      const DecoratedBox(decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFFFFD8BE), Color(0xFFF7F0EF),
+            Color(0xFFB6A6C5)]))),
       if (widget.moment.mediaType == 'video') ...[
         if (video != null && video.value.isInitialized)
           FittedBox(
@@ -686,21 +700,34 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                 color: Colors.white, size: 72),
             )),
           )),
-      ] else
+      ] else ...[
+        // Use the same cached image to create a softly colored extension
+        // behind photos of every aspect ratio without cropping the Moment.
+        Positioned.fill(child: ImageFiltered(
+          imageFilter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
+          child: Image.network(
+            BlinkHomeApi.mediaUrl(widget.moment.mediaUrl),
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) =>
+              const ColoredBox(color: Color(0xFFF6D7C7))),
+        )),
+        Positioned.fill(child: ColoredBox(
+          color: const Color(0x35FFF5E9))),
         Image.network(
           BlinkHomeApi.mediaUrl(widget.moment.mediaUrl),
           fit: BoxFit.contain,
           errorBuilder: (_, __, ___) =>
             const Center(child: Icon(Icons.broken_image_outlined,
-              color: Colors.white54, size: 50)),
+              color: BlinkColors.orangeDark, size: 50)),
         ),
+      ],
       const IgnorePointer(child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xB9000000), Colors.transparent, Color(0xBE000000)],
-            stops: [0, .33, 1],
+            colors: [Color(0x701D1722), Colors.transparent, Color(0xA8171522)],
+            stops: [0, .25, 1],
           )),
       )),
       // Handle one-tap video play/pause and double-tap love in the SAME
@@ -718,7 +745,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
       // The 78px right gutter keeps it clear of the floating action orbs.
       SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(13, 56, 77, 19),
+          padding: const EdgeInsets.fromLTRB(15, 56, 65, 19),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -726,7 +753,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
               if (!_taughtLove) ...[
                 const DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Color(0xBC15151C),
+                    color: Color(0xA5292233),
                     borderRadius: BorderRadius.all(Radius.circular(22)),
                     border: Border.fromBorderSide(
                       BorderSide(color: Color(0x62FFFFFF), width: .7)),
@@ -842,7 +869,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
         child: Align(
           alignment: Alignment.centerRight,
           child: Padding(
-            padding: const EdgeInsets.only(right: 10, top: 30, bottom: 46),
+            padding: const EdgeInsets.only(right: 7, top: 30, bottom: 46),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.sizeOf(context).height * .70),
