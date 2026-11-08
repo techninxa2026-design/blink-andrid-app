@@ -405,7 +405,7 @@ class BlinkButton extends StatelessWidget {
           ),
           foregroundColor: BlinkColors.orange,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(18),
           ),
         ),
         onPressed: onPressed,
@@ -692,14 +692,11 @@ class BlinkPanel extends StatelessWidget {
         gradient: standard ? const LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
           colors: [Colors.white, Color(0xFFFFFAF7)]) : null,
-        borderRadius: BorderRadius.circular(21),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: standard ? const Color(0xFFFFDAC6) : BlinkColors.line,
+          color: standard ? const Color(0xFFFFDDC8) : BlinkColors.line,
+          width: 1.15,
         ),
-        boxShadow: standard ? const [
-          BoxShadow(color: Color(0x105A2A10),
-            blurRadius: 17, offset: Offset(0, 7)),
-        ] : null,
       ),
       padding: padding,
       child: child,
@@ -1590,7 +1587,7 @@ class BlinkOptionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(13),
+      borderRadius: BorderRadius.circular(18),
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(

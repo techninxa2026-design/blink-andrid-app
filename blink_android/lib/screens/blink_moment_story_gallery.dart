@@ -90,7 +90,7 @@ class _MomentStoryThumbnailState extends State<_MomentStoryThumbnail> {
   @override
   Widget build(BuildContext context) => Material(
     color: const Color(0xFF252526),
-    borderRadius: BorderRadius.circular(15),
+    borderRadius: BorderRadius.circular(18),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
       onTap: widget.onTap,
@@ -118,7 +118,7 @@ class _MomentStoryThumbnailState extends State<_MomentStoryThumbnail> {
         const IgnorePointer(child: DecoratedBox(
           decoration: BoxDecoration(gradient: LinearGradient(
             begin: Alignment.topCenter, end: Alignment.bottomCenter,
-            colors: [Color(0x30000000), Colors.transparent, Color(0xC8000000)],
+            colors: [Color(0x55000000), Colors.transparent, Color(0xE6000000)],
             stops: [0, .43, 1],
           )),
         )),
@@ -135,6 +135,13 @@ class _MomentStoryThumbnailState extends State<_MomentStoryThumbnail> {
                 color: Colors.white, size: 18),
             ),
           ),
+        ),
+        Positioned(
+          left: 8, top: 8,
+          child: Container(width: 5, height: 24,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFFFF5900), Color(0xFFFFB06C)]),
+              borderRadius: BorderRadius.circular(5))),
         ),
         Positioned(
           left: 9, right: 9, bottom: 10,
@@ -255,11 +262,33 @@ class _BlinkMomentViewerState extends State<BlinkMomentViewer> {
                   style: TextStyle(color: Colors.white70, fontSize: 11)),
               ],
             )),
-            Text('${_index + 1} / ${widget.moments.length}',
-              style: const TextStyle(color: Colors.white70,
-                fontWeight: FontWeight.w700)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(color: const Color(0x991D1D25),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0x55FFFFFF))),
+              child: Text('${_index + 1} / ${widget.moments.length}',
+                style: const TextStyle(color: Colors.white,
+                  fontSize: 12, fontWeight: FontWeight.w800))),
           ]),
         )),
+        Positioned(
+          left: 0, right: 0, bottom: 0,
+          child: SafeArea(top: false, child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 90, 10),
+            child: Row(children: [
+              const Icon(Icons.swipe_vertical_rounded,
+                color: Colors.white54, size: 17),
+              const SizedBox(width: 7),
+              const Text('SWIPE TO EXPLORE', style: TextStyle(
+                color: Colors.white60, fontSize: 9,
+                fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+              const Spacer(),
+              Text('${((_index + 1) / widget.moments.length * 100).round()}%',
+                style: const TextStyle(color: Colors.white70, fontSize: 10)),
+            ]),
+          )),
+        ),
       ]),
     );
   }
