@@ -212,6 +212,7 @@ class _IrlState extends State<FullIrlScreen>{
       body:loading?const Center(child:CircularProgressIndicator(color:BlinkColors.orange))
         :error.isNotEmpty?liveError(error,_load)
         :RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
+const BlinkFeatureHero(eyebrow:'GO OFFLINE · STAY CLOSE',title:'Plans worth showing up for.',subtitle:'Turn online connections into real memories. Discover a plan or create your own.',icon:Icons.explore_rounded,mood:BlinkMood.adventure,margin:EdgeInsets.fromLTRB(0,0,0,18)),
           LayoutBuilder(builder:(context,constraints) {
             final category = DropdownButtonFormField<String>(
               key: ValueKey(filter),
