@@ -282,9 +282,8 @@ class _BlinkMomentViewerState extends State<BlinkMomentViewer> {
               const SizedBox(width: 7),
               const Expanded(child: Text('SWIPE TO EXPLORE',
                 maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white60, fontSize: 9,
-                  fontWeight: FontWeight.w900, letterSpacing: 1.2))),
+                style: TextStyle(color: Colors.white60, fontSize: 9,
+                  fontWeight: FontWeight.w900, letterSpacing: .8))),
               const SizedBox(width: 6),
               Text('${((_index + 1) / widget.moments.length * 100).round()}%',
                 style: const TextStyle(color: Colors.white70, fontSize: 10)),
