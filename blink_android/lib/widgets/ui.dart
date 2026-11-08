@@ -634,14 +634,15 @@ class SectionHeading extends StatelessWidget {
       Expanded(child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(mainAxisSize: MainAxisSize.min, children: [
+          const Row(children: [
             Icon(Icons.auto_awesome_rounded, color: BlinkColors.orange,
               size: 11),
             SizedBox(width: 5),
-            Text('YOUR BLINK SPACE',
+            Expanded(child: Text('YOUR BLINK SPACE',
+              maxLines: 1, overflow: TextOverflow.ellipsis,
               style: TextStyle(color: BlinkColors.orangeDark,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 1.3, fontSize: 9)),
+                letterSpacing: 1.3, fontSize: 9))),
           ]),
           const SizedBox(height: 4),
           Text(title,
