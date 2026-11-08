@@ -827,7 +827,10 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
+  final TextEditingController _search = TextEditingController();
   String _query = '';
+  @override
+  void dispose() { _search.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) {
     const items = <_ExploreItem>[
@@ -939,6 +942,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(15, 1, 15, 13),
             child: TextField(
+              controller: _search,
               textInputAction: TextInputAction.search,
               onChanged: (text) => setState(() => _query = text.trim()),
               decoration: InputDecoration(
@@ -948,12 +952,23 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   ? const Icon(Icons.tune_rounded, size: 19)
                   : IconButton(
                     tooltip: 'Clear search',
-                    onPressed: () => setState(() => _query = ''),
+                    onPressed: () {
+                      _search.clear();
+                      setState(() => _query = '');
+                    },
                     icon: const Icon(Icons.close_rounded)),
               ),
             ),
           ),
 
+          if (visible.isEmpty)
+            BlinkExperienceState(
+              title: 'Nothing in this space yet',
+              subtitle: 'Try searching for people, tasks, chats or places.',
+              icon: Icons.travel_explore_rounded,
+              action: () { _search.clear(); setState(() => _query = ''); },
+              actionLabel: 'See all features',
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(15, 7, 15, 18),
             child: LayoutBuilder(builder: (context, constraints) => GridView.builder(
