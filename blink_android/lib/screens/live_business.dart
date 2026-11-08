@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 import '../core/live_api.dart';
 import '../core/theme.dart';
 
@@ -159,7 +160,16 @@ class _BusinessState extends State<LiveBusinessScreen>{
     body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
       RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
 const BlinkFeatureHero(eyebrow:'YOUR PROFESSIONAL WORLD',title:'People. Purpose. Possibility.',subtitle:'Build a credible presence, find collaborators and make real business connections.',icon:Icons.business_center_rounded,mood:BlinkMood.business,margin:EdgeInsets.fromLTRB(0,0,0,18)),
-        BlinkProCard(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        BlinkSectionBand(
+          eyebrow: 'YOUR PROFESSIONAL CIRCLE',
+          title: connections.length.toString() + ' connections',
+          subtitle: requests.length.toString() + ' pending requests · ' +
+            matches.length.toString() + ' discovered profiles',
+          mood: BlinkMood.business,
+          icon: Icons.auto_graph_rounded,
+          padding: const EdgeInsets.fromLTRB(1, 0, 1, 13)),
+        BlinkProCard(mood:BlinkMood.business,
+          child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Text('YOUR PROFESSIONAL IDENTITY',style:TextStyle(
             letterSpacing:1.1,fontWeight:FontWeight.w900,fontSize:10,
             color:BlinkColors.orangeDark)),
@@ -185,7 +195,7 @@ const BlinkFeatureHero(eyebrow:'YOUR PROFESSIONAL WORLD',title:'People. Purpose.
               DropdownMenuItem(value:'PROFESSIONAL',child:Text('Professionals')),
               DropdownMenuItem(value:'COMPANY',child:Text('Companies'))],
             onChanged:(v){type=v??'';page=1;_load();}),
-          const ListTile(title:Text('Discover professionals',style:TextStyle(fontWeight:FontWeight.bold))),
+          const BlinkSectionBand(eyebrow:'DISCOVERY',title:'Discover professionals',mood:BlinkMood.business,icon:Icons.travel_explore_rounded),
           ...matches.map((m)=>BlinkProListCard(
             icon:field(m,'type')=='COMPANY'
               ?Icons.business_center_rounded:Icons.person_search_rounded,
@@ -216,7 +226,7 @@ const BlinkFeatureHero(eyebrow:'YOUR PROFESSIONAL WORLD',title:'People. Purpose.
             Text('Page $page'),
             TextButton(onPressed:matches.length==20?(){page++;_load();}:null,child:const Text('Next')),
           ]),
-          const ListTile(title:Text('Requests',style:TextStyle(fontWeight:FontWeight.bold))),
+          const BlinkSectionBand(eyebrow:'YOUR NEXT CONNECTION',title:'Requests',mood:BlinkMood.business,icon:Icons.person_add_alt_rounded),
           ...requests.map((r)=>BlinkProListCard(
             title:field(obj(r)['profile'],'name','Professional'),
             subtitle:field(r,'direction')=='incoming'
@@ -238,7 +248,7 @@ const BlinkFeatureHero(eyebrow:'YOUR PROFESSIONAL WORLD',title:'People. Purpose.
                 }),
             ]),
           )),
-          const ListTile(title:Text('Business Connections',style:TextStyle(fontWeight:FontWeight.bold))),
+          const BlinkSectionBand(eyebrow:'YOUR NETWORK',title:'Business Connections',mood:BlinkMood.business,icon:Icons.handshake_outlined),
           ...connections.map((m)=>BlinkProListCard(
             title:field(obj(m)['profile'],'name','Connection'),
             subtitle:field(obj(m)['profile'],'headline'),
