@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 import 'package:image_picker/image_picker.dart';
 import '../core/live_api.dart';
 import '../core/task_upload_api.dart';
@@ -39,7 +40,18 @@ class _TasksState extends State<FullTasksScreen> {
         :error.isNotEmpty?liveError(error,_load)
         :RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
 const BlinkFeatureHero(eyebrow:'CREATE · EARN · INSPIRE',title:'Creator Challenges',subtitle:'Join real tasks, build proof of your skills and collect Blink Points.',icon:Icons.workspace_premium_rounded,mood:BlinkMood.studio,margin:EdgeInsets.fromLTRB(0,0,0,18)),
-          if(tasks.isEmpty)const ListTile(title:Text('No published tasks found.')),
+          BlinkSectionBand(
+            eyebrow: 'OPEN CHALLENGES',
+            title: 'Your next challenge',
+            subtitle: tasks.length.toString() + ' tasks on this page',
+            mood: BlinkMood.rewards,
+            icon: Icons.workspace_premium_outlined,
+            padding: const EdgeInsets.fromLTRB(0, 1, 0, 13)),
+          if(tasks.isEmpty)const BlinkExperienceState(
+            title: 'No challenges found',
+            subtitle: 'Refresh or try searching for a different skill.',
+            icon: Icons.task_alt_rounded,
+            mood: BlinkMood.rewards),
           ...tasks.map((raw){
             final t=obj(raw);
             return BlinkProListCard(
@@ -110,7 +122,14 @@ class _CreatorState extends State<FullCreatorDashboard>{
       ])):RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
 const BlinkFeatureHero(eyebrow:'YOUR CREATIVE STUDIO',title:'Make something happen.',subtitle:'Design challenges, review evidence and reward your community.',icon:Icons.auto_awesome_motion_rounded,mood:BlinkMood.rewards,margin:EdgeInsets.fromLTRB(0,0,0,18)),
         const ListTile(title:Text('My Creator Tasks'),subtitle:Text('Publish and verify BP rewards.')),
-        if(tasks.isEmpty)const ListTile(title:Text('No tasks yet.')),
+        if(tasks.isEmpty)
+          BlinkExperienceState(
+            title: 'Publish your first challenge',
+            subtitle: 'Create a real task and reward your community.',
+            icon: Icons.add_task_rounded,
+            mood: BlinkMood.rewards,
+            action: () => _edit(),
+            actionLabel: 'Create task'),
         ...tasks.map((raw){final t=obj(raw),id=field(t,'id');
           return BlinkProListCard(
             title:field(t,'title'),
