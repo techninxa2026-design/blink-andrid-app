@@ -174,6 +174,15 @@ class _BlinkCallHostState extends State<BlinkCallHost>
                       control(calls.muted ? 'Unmute' : 'Mute',
                         calls.muted ? Icons.mic_off_rounded
                           : Icons.mic_rounded, calls.toggleMute),
+                    if (calls.status == 'connecting' ||
+                        calls.status == 'connected')
+                      control(
+                        calls.speakerOn ? 'Speaker on' : 'Earpiece',
+                        calls.speakerOn
+                          ? Icons.volume_up_rounded
+                          : Icons.hearing_rounded,
+                        () => unawaited(calls.toggleSpeaker()),
+                      ),
                     if (calls.isVideo && calls.hasLocalVideo)
                       control(calls.cameraOff ? 'Camera on' : 'Camera off',
                         calls.cameraOff ? Icons.videocam_off_rounded
