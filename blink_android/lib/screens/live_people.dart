@@ -28,6 +28,14 @@ class _DiscoverState extends State<LiveDiscoverPeopleScreen>{
     IconButton(icon:const Icon(Icons.people),tooltip:'My friends',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveFriendsScreen()))),
     IconButton(icon:const Icon(Icons.person_add_alt),tooltip:'Requests',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveRequestsScreen()))),
   ]),body:Column(children:[
+    const BlinkFeatureHero(
+      eyebrow:'FIND YOUR PEOPLE',
+      title:'Good people. Great connections.',
+      subtitle:'Discover your community and make the next meaningful introduction.',
+      icon:Icons.people_alt_rounded,
+      mood:BlinkMood.community,
+      margin:EdgeInsets.fromLTRB(13,11,13,0),
+    ),
     Padding(padding:const EdgeInsets.all(14),child:TextField(decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search Blink members'),onChanged:(v)=>query=v,onSubmitted:(_)=>_load())),
     Expanded(child:loading?const Center(child:CircularProgressIndicator()):
       error!=null?liveError(error,_load):
@@ -65,6 +73,13 @@ class _FriendsState extends State<LiveFriendsScreen>{
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('My Friends')),
     body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
     RefreshIndicator(onRefresh:_load,child:ListView(children:[
+      const BlinkFeatureHero(
+        eyebrow:'YOUR CIRCLE',
+        title:'People you know.',
+        subtitle:'Stay in touch with the friends who make Blink feel like yours.',
+        icon:Icons.diversity_3_rounded,
+        mood:BlinkMood.community,
+      ),
       if(friends.isEmpty)const ListTile(title:Text('No friends yet'),subtitle:Text('Discover people and send a friend request.')),
       ...friends.map((row){final user=obj(obj(row)['user']);return Padding(
         padding:const EdgeInsets.symmetric(horizontal:12),
@@ -108,6 +123,13 @@ class _RequestsState extends State<LiveRequestsScreen>{
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Friend Requests')),body:
     loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
     RefreshIndicator(onRefresh:_load,child:ListView(children:[
+      const BlinkFeatureHero(
+        eyebrow:'GROW YOUR COMMUNITY',
+        title:'Make a new connection.',
+        subtitle:'Review requests and meet the people reaching out to you.',
+        icon:Icons.person_add_alt_1_rounded,
+        mood:BlinkMood.community,
+      ),
       const ListTile(title:Text('Incoming requests',style:TextStyle(fontWeight:FontWeight.bold))),
       if(incoming.isEmpty)const ListTile(title:Text('No incoming requests')),
       ...incoming.map((r)=>Padding(
