@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../core/nav.dart';
-import '../core/theme.dart';
 import '../widgets/ui.dart';
 
 /// A developer-only screen index for visually reviewing every mockup route.
