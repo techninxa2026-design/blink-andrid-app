@@ -163,7 +163,7 @@ class BlinkCalls extends ChangeNotifier {
   }
 
   Future<void> placeCall(
-    String userId, String name, {bool video = false},
+    String userId, String name, {bool video = false}
   ) async {
     if (status != 'idle' || userId.isEmpty) return;
     peerId = userId;
