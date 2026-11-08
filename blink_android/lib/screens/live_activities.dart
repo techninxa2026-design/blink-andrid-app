@@ -4,6 +4,7 @@ import '../core/blink_auth_api.dart';
 import '../core/live_api.dart';
 import '../core/theme.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 
 /// Native Check-Ins: the same API contract, emoji choices and privacy as Blink web.
 class LiveCheckinsScreen extends StatefulWidget {
@@ -275,16 +276,19 @@ class _CheckinsState extends State<LiveCheckinsScreen> {
             else SizedBox(width: double.infinity, child: FilledButton.icon(
               onPressed: _compose, icon: const Icon(Icons.add_circle_outline),
               label: const Text('Create Check-In'))),
-            const SizedBox(height: 22),
-            Row(children: [
-              Expanded(child: Text("Friends' updates", style: Theme.of(context).textTheme.titleLarge)),
-              TextButton.icon(onPressed: () => _load(), icon: const Icon(Icons.refresh, size: 17),
-                label: const Text('Refresh')),
-            ]),
-            const SizedBox(height: 5),
-            const Text('Only you and your friends can see your Check-Ins.',
-              style: TextStyle(color: BlinkColors.muted, fontSize: 12)),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
+            BlinkSectionBand(
+              eyebrow: 'LIVE FROM YOUR CIRCLE',
+              title: "Friends' updates",
+              subtitle: 'Only you and your friends can see these.',
+              icon: Icons.auto_awesome_outlined,
+              mood: BlinkMood.community,
+              trailing: IconButton(
+                onPressed: () => _load(),
+                tooltip: 'Refresh friends updates',
+                icon: const Icon(Icons.refresh_rounded)),
+              padding: const EdgeInsets.fromLTRB(0, 10, 0, 12),
+            ),
             BlinkAdaptiveSegments<String>(
               segments: const [
                 ButtonSegment(value: 'all', label: Text('All')),
@@ -295,22 +299,17 @@ class _CheckinsState extends State<LiveCheckinsScreen> {
               onChanged: (value) => setState(() => tab = value.first),
             ),
             const SizedBox(height: 14),
-            if (visible.isEmpty) Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 40),
-              decoration: BoxDecoration(color: Colors.white,
-                borderRadius: BorderRadius.circular(18)),
-              child: Column(children: [
-                const Icon(Icons.favorite_border_rounded, color: BlinkColors.orange, size: 32),
-                const SizedBox(height: 10),
-                const Text('No active Check-Ins here yet.',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 6),
-                Text(tab == 'friends' ? 'Your friends can share what they are doing.'
+            if (visible.isEmpty)
+              BlinkExperienceState(
+                title: 'No active Check-Ins here',
+                subtitle: tab == 'friends'
+                  ? 'Your friends can share what they are doing.'
                   : 'Start the conversation with a fresh Check-In.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: BlinkColors.muted, fontSize: 12)),
-              ]),
-            ),
+                icon: Icons.waving_hand_rounded,
+                mood: BlinkMood.community,
+                action: _compose,
+                actionLabel: 'Create Check-In',
+              ),
             ...visible.map((item) => _tile(item, own: field(item, 'userId') == myUserId)),
           ]),
         ),
@@ -582,7 +581,21 @@ class _SecretsState extends State<LiveSecretsScreen>{
           ],selected:{filter},onChanged:(values)=>
             setState(()=>filter=values.first)),
           const SizedBox(height:12),
-          if(visible.isEmpty)const ListTile(title:Text('No Secrets found for this tab.')),
+          const BlinkSectionBand(
+            title: 'Stories worth guessing',
+            eyebrow: 'ANONYMOUS STORIES',
+            subtitle: 'Explore prompts, guess and uncover answers.',
+            icon: Icons.auto_awesome_rounded,
+            mood: BlinkMood.studio,
+            padding: EdgeInsets.fromLTRB(3, 3, 3, 13),
+          ),
+          if(visible.isEmpty)BlinkExperienceState(
+            title: 'No secrets to show',
+            subtitle: 'Create a question or explore another category.',
+            icon: Icons.lock_open_rounded,
+            action: () => _create(),
+            actionLabel: 'Create a Secret',
+          ),
           ...visible.map((raw){
             final item=obj(raw),id=field(item,'id'),selected=item['myGuess'];
             final choices=arr(item['options']),reveal=item['revealed']==true;
@@ -695,12 +708,27 @@ class _HeartsState extends State<LiveHeartsScreen>{
         mood:BlinkMood.community,
         margin:EdgeInsets.fromLTRB(0,0,0,18),
       ),
-      const SectionHeading('Received Hearts',subtitle:'Thoughtful notes just for you'),
+      const BlinkSectionBand(
+        eyebrow: 'JUST FOR YOU', title: 'Received Hearts',
+        subtitle: 'Personal notes and meaningful connections',
+        mood: BlinkMood.community, icon: Icons.mark_email_unread_outlined,
+        padding: EdgeInsets.fromLTRB(4, 12, 4, 10)),
       ...incoming.map((x)=>_heartTile(x)),
       const SizedBox(height:14),
-      const SectionHeading('Sent Hearts',subtitle:'The notes you have shared'),
+      const BlinkSectionBand(
+        eyebrow: 'FROM YOUR HEART', title: 'Sent Hearts',
+        subtitle: 'Thoughtful messages you have shared',
+        mood: BlinkMood.community, icon: Icons.outgoing_mail_rounded,
+        padding: EdgeInsets.fromLTRB(4, 8, 4, 10)),
       ...sent.map((x)=>_heartTile(x)),
-      if(incoming.isEmpty&&sent.isEmpty)const ListTile(title:Text('No Hearts yet')),
+      if(incoming.isEmpty&&sent.isEmpty)
+        BlinkExperienceState(
+          title: 'Your Heart space is ready',
+          subtitle: 'Send your first Heart to someone who matters.',
+          icon: Icons.favorite_border_rounded,
+          mood: BlinkMood.community,
+          action: _send,
+          actionLabel: 'Send a Heart'),
     ])),
   );
   Widget _heartTile(dynamic value){final heart=obj(value);final id=field(heart,'id');
