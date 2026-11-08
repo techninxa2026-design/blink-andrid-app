@@ -103,6 +103,7 @@ class _DiscoverState extends State<LiveDiscoverPeopleScreen>{
       if (mounted) {
         setState(() => _outgoing.add(id));
         liveNotice(context,'Friend request sent');
+        await _load();
       }
     } catch(e) {
       if (mounted) liveNotice(context,e.toString());
@@ -224,6 +225,7 @@ class _FriendsState extends State<LiveFriendsScreen>
   Timer? _refreshTimer;
   bool _foreground = true;
   bool _refreshing = false;
+  bool _refreshQueued = false;
   @override
   void initState() {
     super.initState();
@@ -245,7 +247,10 @@ class _FriendsState extends State<LiveFriendsScreen>
     if (_foreground) _load();
   }
   Future<void> _load()async{
-    if (_refreshing) return;
+    if (_refreshing) {
+      _refreshQueued = true;
+      return;
+    }
     _refreshing = true;
     try{
       final rows=arr(await LiveApi.call('GET','/friends'));
@@ -257,6 +262,10 @@ class _FriendsState extends State<LiveFriendsScreen>
       });
     } finally {
       _refreshing = false;
+      if (_refreshQueued && mounted) {
+        _refreshQueued = false;
+        await _load();
+      }
     }
   }
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('My Friends')),
@@ -319,6 +328,7 @@ class _RequestsState extends State<LiveRequestsScreen>
   Timer? _refreshTimer;
   bool _foreground = true;
   bool _refreshing = false;
+  bool _refreshQueued = false;
   @override
   void initState() {
     super.initState();
@@ -340,7 +350,10 @@ class _RequestsState extends State<LiveRequestsScreen>
     if (_foreground) _load();
   }
   Future<void> _load()async{
-    if (_refreshing) return;
+    if (_refreshing) {
+      _refreshQueued = true;
+      return;
+    }
     _refreshing = true;
     try {
       final rows=await Future.wait([
@@ -357,6 +370,10 @@ class _RequestsState extends State<LiveRequestsScreen>
       });
     } finally {
       _refreshing = false;
+      if (_refreshQueued && mounted) {
+        _refreshQueued = false;
+        await _load();
+      }
     }
   }
   Future<void> _respond(dynamic request,String answer)async{
