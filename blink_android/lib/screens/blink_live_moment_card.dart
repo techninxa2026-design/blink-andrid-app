@@ -701,57 +701,128 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
         onLongPress: _reaction,
       )),
       _loveBurst(),
+      // A compact editorial identity card, not a wall of controls over media.
+      // The 78px right gutter keeps it clear of the floating action orbs.
       SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(15, 56, 15, 28),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Spacer(),
-            Row(children: [
-              CircleAvatar(
-                radius: 19, backgroundColor: BlinkColors.orange,
-                backgroundImage: widget.moment.avatarKey == null
-                  ? null : NetworkImage(
-                      BlinkHomeApi.mediaUrl(widget.moment.avatarKey!)),
-                child: widget.moment.avatarKey == null
-                  ? const Icon(Icons.person_rounded, color: Colors.white)
-                  : null,
-              ),
-              const SizedBox(width: 9),
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.moment.author,
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white,
-                      fontSize: 14, fontWeight: FontWeight.w900)),
-                  Text(_ago(widget.moment.createdAt),
-                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                ],
-              )),
-              IconButton(
-                tooltip: 'Share Moment',
-                onPressed: _shareOptions,
-                icon: const Icon(Icons.send_outlined, color: Colors.white)),
-            ]),
-            if ((widget.moment.caption ?? '').isNotEmpty) ...[
-              const SizedBox(height: 9),
-              Padding(
-                padding: const EdgeInsets.only(right: 64),
-                child: Text(widget.moment.caption!,
-                  maxLines: 3, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 13)),
+          padding: const EdgeInsets.fromLTRB(13, 56, 77, 19),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Spacer(),
+              if (!_taughtLove) ...[
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Color(0xBC15151C),
+                    borderRadius: BorderRadius.all(Radius.circular(22)),
+                    border: Border.fromBorderSide(
+                      BorderSide(color: Color(0x62FFFFFF), width: .7)),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Text('❤️  Double-tap to love  ·  Hold to react',
+                      maxLines: 2, textAlign: TextAlign.left,
+                      style: TextStyle(color: Colors.white,
+                        fontSize: 10.5, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+              Container(
+                constraints: const BoxConstraints(maxHeight: 230),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    colors: [Color(0xEA16161F), Color(0xCB24242D)]),
+                  borderRadius: BorderRadius.circular(23),
+                  border: Border.all(color: const Color(0x55FFFFFF)),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x77000000),
+                      blurRadius: 22, offset: Offset(0, 8)),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('✦  BLINK MOMENT',
+                        style: TextStyle(
+                          color: Color(0xFFFFB78E),
+                          letterSpacing: 1.3, fontSize: 9,
+                          fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        Container(
+                          width: 41, height: 41,
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(colors: [
+                              Color(0xFFFF5F18), Color(0xFFFF315F),
+                            ])),
+                          child: CircleAvatar(
+                            backgroundColor: BlinkColors.orangeDark,
+                            backgroundImage: widget.moment.avatarKey == null
+                              ? null : NetworkImage(
+                                BlinkHomeApi.mediaUrl(widget.moment.avatarKey!)),
+                            child: widget.moment.avatarKey == null
+                              ? const Icon(Icons.person_rounded,
+                                color: Colors.white, size: 23)
+                              : null,
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(widget.moment.author,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white,
+                                fontSize: 13, fontWeight: FontWeight.w900)),
+                            Text(_ago(widget.moment.createdAt),
+                              style: const TextStyle(
+                                color: Colors.white70, fontSize: 10.5)),
+                          ],
+                        )),
+                      ]),
+                      if ((widget.moment.caption ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(widget.moment.caption!,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white,
+                            fontSize: 12.5, height: 1.45)),
+                      ],
+                      if (blinkOriginalTrack(widget.moment.musicTrackId) != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 7),
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 3),
+                              minimumSize: const Size(0, 34),
+                              foregroundColor: Colors.white),
+                            onPressed: _toggleSoundtrack,
+                            icon: Icon(_soundtrackPlaying
+                              ? Icons.pause_circle_outline_rounded
+                              : Icons.music_note_rounded, size: 17),
+                            label: Text(
+                              blinkOriginalTrack(widget.moment.musicTrackId)!.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white70, fontSize: 10.5)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ],
-            if (blinkOriginalTrack(widget.moment.musicTrackId) != null)
-              TextButton.icon(
-                onPressed: _toggleSoundtrack,
-                icon: Icon(_soundtrackPlaying ? Icons.pause_circle_outline
-                  : Icons.music_note_rounded, color: Colors.white, size: 18),
-                label: Text(blinkOriginalTrack(widget.moment.musicTrackId)!.title,
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 11)),
-              ),
-          ]),
+          ),
         ),
       ),
       SafeArea(
