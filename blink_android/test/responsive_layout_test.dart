@@ -89,7 +89,7 @@ void main() {
     expect(tester.takeException(), isNull);
     key.currentState!.openDrawer();
     await tester.pumpAndSettle();
-    expect(find.text('Your world, one moment at a time'), findsOneWidget);
+    expect(find.text('YOUR BLINK UNIVERSE'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
