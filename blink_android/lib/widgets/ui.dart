@@ -188,10 +188,14 @@ class BlinkBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: BlinkColors.orangeDark,
-      elevation: 10,
-      shadowColor: const Color(0x44000000),
-      child: SafeArea(
+      color: Colors.transparent,
+      elevation: 0,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFFFA4F00), Color(0xFFFF7728), Color(0xFFE94708)])),
+        child: SafeArea(
         top: false,
         child: SizedBox(
           // Preserve the camera label even at large accessibility text scales.
@@ -279,7 +283,7 @@ class BlinkBottomBar extends StatelessWidget {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }
@@ -328,9 +332,10 @@ class _NavItem extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: selected
-                      ? const Color(0x33FFFFFF)
+                      ? const Color(0x44FFFFFF)
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(18),
+                  border: selected ? Border.all(color: const Color(0x99FFFFFF)) : null,
                 ),
                 child: Icon(
                   icon,
@@ -393,7 +398,7 @@ class BlinkButton extends StatelessWidget {
           ),
           foregroundColor: BlinkColors.orange,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(18),
           ),
         ),
         onPressed: onPressed,
