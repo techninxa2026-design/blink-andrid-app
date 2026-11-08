@@ -1,9 +1,12 @@
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'core/theme.dart';
 import 'core/nav.dart';
 import 'core/blink_auth_guard.dart';
+import 'core/blink_auth_api.dart';
+import 'core/live_api.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,7 +14,7 @@ void main() async {
   runApp(const BlinkApp());
 }
 
-class BlinkApp extends StatelessWidget {
+class BlinkApp extends StatefulWidget {
   const BlinkApp({super.key});
 
   // Public pages do not require a login.
@@ -32,6 +35,57 @@ class BlinkApp extends StatelessWidget {
     '/reels',
     '/explore',
   ];
+
+  @override
+  State<BlinkApp> createState() => _BlinkAppState();
+}
+
+class _BlinkAppState extends State<BlinkApp> with WidgetsBindingObserver {
+  Timer? _presenceTimer;
+  bool _foreground = true;
+  bool _pinging = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_pingPresence());
+    });
+    _presenceTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+      unawaited(_pingPresence());
+    });
+  }
+
+  // A heartbeat belongs to the whole foreground app, not only the Inbox:
+  // friends appear online while using Moments, Reels or other Blink screens.
+  Future<void> _pingPresence() async {
+    if (!_foreground || _pinging) return;
+    _pinging = true;
+    try {
+      final token = await BlinkAuthApi.getToken();
+      if (token != null && token.isNotEmpty) {
+        await LiveApi.call('POST', '/inbox/presence/ping');
+      }
+    } catch (_) {
+      // Presence is optional metadata; old API deployments must not break UI.
+    } finally {
+      _pinging = false;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (_foreground) unawaited(_pingPresence());
+  }
+
+  @override
+  void dispose() {
+    _presenceTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +133,7 @@ class BlinkApp extends StatelessWidget {
             }
 
             // Authentication pages remain public.
-            if (publicRoutes.contains(route)) {
+            if (BlinkApp.publicRoutes.contains(route)) {
               return originalPage;
             }
 
@@ -88,7 +142,7 @@ class BlinkApp extends StatelessWidget {
               child: originalPage,
             );
 
-            if (mainTabs.contains(route)) {
+            if (BlinkApp.mainTabs.contains(route)) {
               return _SwipeNavigation(
                 route: route,
                 child: protectedPage,
