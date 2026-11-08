@@ -186,16 +186,16 @@ class BlinkBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final scaled = MediaQuery.textScalerOf(context).scale(10) - 10;
     return Container(
-      margin: const EdgeInsets.fromLTRB(8, 0, 8, 5),
+      margin: EdgeInsets.zero,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFFFFFFFF), Color(0xFFFFF8F1)]),
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: const Color(0xFFFFDCC7), width: 1.2),
+          colors: [Color(0xFF2B2228), Color(0xFF663029), BlinkColors.orangeDark]),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: const Border(top: BorderSide(color: Color(0x66FFB895), width: 1.1)),
         boxShadow: const [BoxShadow(
-          color: Color(0x1B5F321A), blurRadius: 18,
-          offset: Offset(0, 5))],
+          color: Color(0x4D190C17), blurRadius: 20,
+          offset: Offset(0, -4))],
       ),
       clipBehavior: Clip.antiAlias,
       child: SafeArea(
@@ -219,19 +219,18 @@ class BlinkBottomBar extends StatelessWidget {
                   Container(
                     width: 46, height: 44,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [
-                        Color(0xFFFF8C44), BlinkColors.orangeDark]),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(17),
                       boxShadow: const [BoxShadow(
-                        color: Color(0x3BFF5900),
-                        blurRadius: 11, offset: Offset(0, 4))]),
+                        color: Color(0x35000000),
+                        blurRadius: 10, offset: Offset(0, 3))]),
                     child: const Icon(
                       Icons.add_a_photo_rounded, size: 23,
-                      color: Colors.white)),
+                      color: BlinkColors.orangeDark)),
                   const SizedBox(height: 3),
                   const FittedBox(fit: BoxFit.scaleDown,
                     child: Text('Capture', maxLines: 1,
-                      style: TextStyle(color: BlinkColors.orangeDark,
+                      style: TextStyle(color: Colors.white,
                         fontSize: 10, fontWeight: FontWeight.w900))),
                 ],
               ),
@@ -271,7 +270,7 @@ class _NavItem extends StatelessWidget {
       label: title,
       child: InkWell(
         onTap: () => go(context, route, replace: true),
-        splashColor: BlinkColors.orangeSoft,
+        splashColor: const Color(0x33FFFFFF),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -280,27 +279,24 @@ class _NavItem extends StatelessWidget {
               curve: Curves.easeOutCubic,
               width: 44, height: 37,
               decoration: BoxDecoration(
-                color: selected ? BlinkColors.orangeSoft
+                color: selected ? const Color(0x28FFFFFF)
                   : Colors.transparent,
                 borderRadius: BorderRadius.circular(15),
                 border: selected
-                  ? Border.all(color: const Color(0xFFFFCAB1))
+                  ? Border.all(color: const Color(0x77FFFFFF))
                   : null),
               child: AnimatedScale(
                 duration: BlinkMotion.duration(context, ms: 200),
                 scale: selected ? 1.07 : 1,
                 child: Icon(icon, size: 22,
-                  color: selected
-                    ? BlinkColors.orangeDark
-                    : const Color(0xFF756D72)),
+                  color: Colors.white),
               ),
             ),
             const SizedBox(height: 3),
             Text(title, maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: selected ? BlinkColors.orangeDark
-                  : const Color(0xFF756D72),
+                color: Colors.white,
                 fontSize: 10,
                 fontWeight: selected ? FontWeight.w900 : FontWeight.w700)),
           ],
