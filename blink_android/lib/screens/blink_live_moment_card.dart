@@ -880,22 +880,29 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                       ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
                       color: myReaction == '❤️'
                         ? const Color(0xFFFF2851) : Colors.white,
-                      size: 27),
+                      size: 22),
                     label: reactions, tooltip: 'Like Moment',
                     tileKey: _likeActionKey,
                     accent: const Color(0xFFFF2851),
                     onPressed: _busy ? () {} : _like,
                   ),
-                  _actionTile(
-                    symbol: Text(myReaction.isNotEmpty && myReaction != '❤️'
-                      ? myReaction : '😊',
-                      style: const TextStyle(fontSize: 24)),
-                    label: 'React', onPressed: _reaction,
-                    accent: const Color(0xFFFFB547),
+                  BlinkReactionDock(
+                    enabled: !_busy,
+                    currentReaction: myReaction,
+                    onSelected: _applyReaction,
+                    child: _actionTile(
+                      symbol: Text(myReaction.isNotEmpty && myReaction != '❤️'
+                        ? myReaction : '😊',
+                        style: const TextStyle(fontSize: 22)),
+                      label: 'React · hold',
+                      tooltip: 'Tap to react, or hold and slide',
+                      onPressed: null,
+                      accent: const Color(0xFFFFB547),
+                    ),
                   ),
                   _actionTile(
                     symbol: const Icon(Icons.mode_comment_outlined,
-                      color: Colors.white, size: 25),
+                      color: Colors.white, size: 22),
                     label: comments, tooltip: 'Comments',
                     accent: const Color(0xFF8EBDFF),
                     onPressed: _comments,
@@ -903,7 +910,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                   _actionTile(
                     symbol: Icon(mine ? Icons.visibility_outlined
                         : Icons.card_giftcard_rounded,
-                      color: const Color(0xFFFFB27F), size: 25),
+                      color: const Color(0xFFFFB27F), size: 22),
                     label: mine ? 'Viewers' : 'BP',
                     accent: const Color(0xFFFFBF52),
                     tooltip: mine ? 'Moment viewers' : 'Give Blink Points',
@@ -911,7 +918,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                   ),
                   _actionTile(
                     symbol: const Icon(Icons.send_outlined,
-                      color: Colors.white, size: 25),
+                      color: Colors.white, size: 22),
                     label: 'Share', accent: const Color(0xFF9BE9D0),
                     onPressed: _shareOptions,
                   ),
