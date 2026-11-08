@@ -31,6 +31,7 @@ class BlinkCalls extends ChangeNotifier {
   bool _restartAttempted = false;
   int _candidateRelayFailures = 0;
   int _sentCandidates = 0;
+  int _relayCandidates = 0;
   int _receivedCandidates = 0;
 
   String _token = '';
@@ -330,6 +331,9 @@ class BlinkCalls extends ChangeNotifier {
     peer.onIceCandidate = (candidate) {
       if (id != callId || candidate.candidate == null) return;
       _sentCandidates++;
+      if ((candidate.candidate ?? '').contains(' typ relay ')) {
+        _relayCandidates++;
+      }
       unawaited(_ack('ice-candidate', {
         'callId': id,
         'candidate': {
@@ -405,9 +409,22 @@ class BlinkCalls extends ChangeNotifier {
         'CALL_TURN_SHARED_SECRET. $progress',
       );
     }
+    if (_relayCandidates == 0) {
+      return StateError(
+        'TURN is configured but this device gathered no relay candidates. '
+        'Check TURN credentials, public IP, UDP/TCP ports and firewall. '
+        '$progress',
+      );
+    }
+    if (_receivedCandidates == 0) {
+      return StateError(
+        'No peer ICE candidates could be applied. '
+        'Check both devices and Blink Socket.IO signaling. $progress',
+      );
+    }
     return StateError(
-      'No working media path. Check TURN server credentials, '
-      'UDP/TCP connectivity and relay firewall ports. $progress',
+      'TURN candidates were gathered but no media route worked. '
+      'Check relay reachability and firewall ports. $progress',
     );
   }
 
@@ -568,6 +585,7 @@ class BlinkCalls extends ChangeNotifier {
     _restartAttempted = false;
     _candidateRelayFailures = 0;
     _sentCandidates = 0;
+    _relayCandidates = 0;
     _receivedCandidates = 0;
     error = message;
     notifyListeners();
