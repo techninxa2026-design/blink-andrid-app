@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
@@ -13,6 +14,10 @@ import 'blink_call_audio_policy.dart';
 class BlinkCalls extends ChangeNotifier {
   BlinkCalls._();
   static final BlinkCalls instance = BlinkCalls._();
+
+  final AudioPlayer _ringPlayer = AudioPlayer();
+  bool _ringActive = false;
+  int _ringGeneration = 0;
 
   static const MethodChannel _native =
       MethodChannel('com.techinxa.blink_android/calls');
@@ -52,6 +57,32 @@ class BlinkCalls extends ChangeNotifier {
   bool get isVideo => kind == 'video';
   bool get hasRemoteVideo => _remote != null && isVideo;
   bool get hasLocalVideo => _local != null && isVideo;
+
+  Future<void> _playRing() async {
+    if (status != 'incoming' && status != 'ringing') return;
+    if (_ringActive) return;
+    _ringActive = true;
+    final generation = ++_ringGeneration;
+    try {
+      await _ringPlayer.setReleaseMode(ReleaseMode.loop);
+      if (!_ringActive || generation != _ringGeneration) return;
+      await _ringPlayer.play(
+        AssetSource('audio/blink-connect-ring.wav'), volume: 0.70);
+      if (!_ringActive || generation != _ringGeneration) {
+        await _ringPlayer.stop();
+      }
+    } catch (e) {
+      _ringActive = false;
+      debugPrint('Blink ringtone unavailable: $e');
+    }
+  }
+
+  void _stopRing() {
+    _ringActive = false;
+    _ringGeneration++;
+    unawaited(_ringPlayer.stop().catchError(
+      (Object e) => debugPrint('Blink ringtone stop: $e')));
+  }
 
   Map<String, dynamic> _map(dynamic raw) =>
       raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
@@ -116,12 +147,14 @@ class BlinkCalls extends ChangeNotifier {
       status = 'incoming';
       error = '';
       notifyListeners();
+      unawaited(_playRing());
     });
     socket.on('call-taken', (raw) {
       if (_map(raw)['callId'] == callId && status == 'incoming') _reset();
     });
     socket.on('call-accepted', (raw) {
       if (_map(raw)['callId'] == callId && status == 'ringing') {
+        _stopRing();
         unawaited(_makeOffer().catchError(_fail));
       }
     });
@@ -218,6 +251,7 @@ class BlinkCalls extends ChangeNotifier {
       callId = id;
       status = 'ringing';
       notifyListeners();
+      unawaited(_playRing());
     } catch (failure) {
       _reset(failure.toString());
     }
@@ -226,6 +260,7 @@ class BlinkCalls extends ChangeNotifier {
   Future<void> accept() async {
     if (status != 'incoming' || callId.isEmpty) return;
     final id = callId;
+    _stopRing();
     status = 'connecting';
     notifyListeners();
     try {
@@ -591,6 +626,7 @@ class BlinkCalls extends ChangeNotifier {
   }
 
   void _reset([String message = '']) {
+    _stopRing();
     _clearMediaTimers();
     final peer = _peer;
     _peer = null;
