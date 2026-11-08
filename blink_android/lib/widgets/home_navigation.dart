@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../core/nav.dart';
 import '../core/theme.dart';
 import 'ui.dart';
+import 'blink_motion.dart';
 
 // =====================================================
 // BLINK BRAND COLORS
@@ -31,68 +32,11 @@ const Color _textMuted = BlinkColors.muted;
 class BlinkHomeBottomBar extends StatelessWidget {
   const BlinkHomeBottomBar({super.key});
 
+  // Keep the legacy Home entrypoint visually and behaviorally consistent with
+  // the same five-destination navigation used by the live authenticated app.
   @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: const Color(0xFF512B29),
-      elevation: 11,
-      shadowColor: const Color(0x55000000),
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(28),
-        topRight: Radius.circular(28),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [Color(0xFF2B2228), Color(0xFF663029),
-              BlinkColors.orangeDark]),
-        ),
-        child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: MediaQuery.textScalerOf(context).scale(9) > 9
-              ? 64 + (MediaQuery.textScalerOf(context).scale(9) - 9)
-              : 64,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: const [
-              _HomeNavItem(
-                title: 'Home',
-                icon: Icons.home_rounded,
-                route: '/home',
-                selected: true,
-              ),
-
-              _HomeNavItem(
-                title: 'Connections',
-                icon: Icons.people_alt_outlined,
-                route: '/people',
-              ),
-
-              _CaptureNavItem(),
-
-              _HomeNavItem(
-                title: 'Reels',
-                icon: Icons.smart_display_outlined,
-                route: '/reels',
-              ),
-
-              // UPDATED: IRL -> EXPLORE
-              _HomeNavItem(
-                title: 'Explore',
-                icon: Icons.explore_outlined,
-                route: '/explore',
-              ),
-            ],
-          ),
-        ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+    const BlinkBottomBar(active: 'home');
 }
 
 // =====================================================
@@ -627,7 +571,7 @@ class BlinkHomeCheckins extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return BlinkReveal(child: Container(
       margin: const EdgeInsets.fromLTRB(
         14,
         13,
@@ -636,10 +580,14 @@ class BlinkHomeCheckins extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(19),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, Color(0xFFFFF0E5)]),
+        borderRadius: BorderRadius.circular(23),
         border: Border.all(
-          color: const Color(0xFFFFDCC7),
+          color: const Color(0xFFFFD2B9),
+          width: 1.2,
         ),
       ),
       child: LayoutBuilder(
@@ -753,6 +701,6 @@ class BlinkHomeCheckins extends StatelessWidget {
           );
         },
       ),
-    );
+    ));
   }
 }
