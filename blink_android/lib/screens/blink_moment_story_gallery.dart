@@ -178,7 +178,9 @@ class _BlinkMomentViewerState extends State<BlinkMomentViewer> {
   @override
   void initState() {
     super.initState();
-    _index = widget.initialIndex.clamp(0, widget.moments.length - 1).toInt();
+    _index = widget.moments.isEmpty
+        ? 0
+        : widget.initialIndex.clamp(0, widget.moments.length - 1).toInt();
     _controller = PageController(initialPage: _index);
     WidgetsBinding.instance.addPostFrameCallback((_) => _recordView(_index));
   }
@@ -216,6 +218,10 @@ class _BlinkMomentViewerState extends State<BlinkMomentViewer> {
         PageView.builder(
           key: const ValueKey('blink-moment-story-viewer'),
           controller: _controller,
+          // The four-wide gallery stays unchanged. Once opened, swipe
+          // UP for the next Moment and DOWN for the previous Moment.
+          scrollDirection: Axis.vertical,
+          physics: const PageScrollPhysics(),
           itemCount: widget.moments.length,
           onPageChanged: (index) {
             setState(() => _index = index);
@@ -238,9 +244,17 @@ class _BlinkMomentViewerState extends State<BlinkMomentViewer> {
               onPressed: () => Navigator.pop(context),
             ),
             const SizedBox(width: 3),
-            const Expanded(child: Text('Moments ✦',
-              style: TextStyle(color: Colors.white,
-                fontSize: 19, fontWeight: FontWeight.w900))),
+            const Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Moments ✦',
+                  style: TextStyle(color: Colors.white,
+                    fontSize: 18, fontWeight: FontWeight.w900)),
+                Text('Swipe up or down',
+                  style: TextStyle(color: Colors.white70, fontSize: 11)),
+              ],
+            )),
             Text('${_index + 1} / ${widget.moments.length}',
               style: const TextStyle(color: Colors.white70,
                 fontWeight: FontWeight.w700)),
