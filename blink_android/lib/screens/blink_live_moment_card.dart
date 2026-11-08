@@ -41,7 +41,8 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
   bool _soundtrackPlaying = false;
   bool _saved = false;
   bool _busy = false;
-  bool _taughtLove = false;
+  bool _captionExpanded = false;
+  bool _chromeVisible = true;
   // Activity and media failures are independent: valid Moments stay visible.
   String? _videoError;
 
@@ -134,7 +135,6 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     if (!widget.active || !mounted) return;
     final destination = _likeControlPosition();
     setState(() {
-      _taughtLove = true;
       _loveDestination = destination;
     });
     _loveController.forward(from: 0);
@@ -588,6 +588,8 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     return '${d.inDays}d ago';
   }
 
+  // The visible orb is compact; its 52x50 logical-pixel hit region remains
+  // easy to target even on a narrow phone or while holding it one-handed.
   Widget _actionTile({
     required Widget symbol,
     required String label,
@@ -596,7 +598,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     Key? tileKey,
     Color accent = Colors.white,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
+    padding: const EdgeInsets.only(bottom: 7),
     child: Tooltip(
       message: tooltip ?? label,
       child: Material(
@@ -604,56 +606,36 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(20),
-          splashColor: BlinkColors.orange.withValues(alpha: .18),
+          borderRadius: BorderRadius.circular(22),
           child: SizedBox(
-            width: 50,
+            width: 52,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(
-                width: 43, height: 43,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(0xD9252733),
-                      Color.lerp(const Color(0xC9212230),
-                        accent, .16) ?? const Color(0xC9212230),
-                    ],
+              SizedBox(
+                width: 52, height: 49,
+                child: Center(child: Container(
+                  width: 38, height: 38,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0x9D18171D),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: accent == Colors.white
+                        ? const Color(0x90FFFFFF)
+                        : accent.withValues(alpha: .68),
+                      width: 1.1),
                   ),
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(
-                    color: accent == Colors.white
-                      ? const Color(0x4CFFFFFF)
-                      : accent.withValues(alpha: .65),
-                    width: 1.1),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x70000000),
-                      blurRadius: 15, offset: Offset(0, 5)),
-                  ],
-                ),
-                child: symbol,
+                  child: symbol,
+                )),
               ),
-              const SizedBox(height: 4),
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xC4171922),
-                  borderRadius: BorderRadius.circular(9)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 3),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 47),
-                    child: Text(label, maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white, fontSize: 9.5,
-                        fontWeight: FontWeight.w800)),
-                  ),
-                ),
-              ),
+              Text(label,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  height: 1.1,
+                  fontWeight: FontWeight.w800,
+                  shadows: [Shadow(color: Colors.black87, blurRadius: 5)])),
             ]),
           ),
         ),
@@ -667,16 +649,18 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     final myReaction = (_activity?['myReaction'] ?? '').toString();
     final reactions = (_activity?['reactionTotal'] ?? 0).toString();
     final comments = (_activity?['commentCount'] ?? 0).toString();
+    final caption = widget.moment.caption?.trim() ?? '';
+    final track = blinkOriginalTrack(widget.moment.musicTrackId);
+    final height = MediaQuery.sizeOf(context).height;
+    final compact = height < 650;
 
     return Stack(fit: StackFit.expand, children: [
-      // Warm cinematic canvas: letterboxed photos and videos no longer
-      // sit inside a plain black void. Only the lower typography veil
-      // remains dark for accessibility, not the entire Moment.
+      // A bright ambient extension protects the original media aspect ratio;
+      // only a narrow bottom scrim is darkened for white foreground text.
       const DecoratedBox(decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFFFFD8BE), Color(0xFFF7F0EF),
-            Color(0xFFB6A6C5)]))),
+          colors: [Color(0xFFFFE0CB), Color(0xFFF6E9EA), Color(0xFFBEAFC5)]))),
       if (widget.moment.mediaType == 'video') ...[
         if (video != null && video.value.isInitialized)
           FittedBox(
@@ -684,250 +668,252 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
             child: SizedBox(
               width: video.value.size.width,
               height: video.value.size.height,
-              child: VideoPlayer(video)),
+              child: VideoPlayer(video),
+            ),
           )
         else
           Center(child: _videoError == null
             ? const CircularProgressIndicator(color: BlinkColors.orange)
             : const Icon(Icons.videocam_off_outlined,
-                color: Colors.white54, size: 46)),
+                color: BlinkColors.orangeDark, size: 48)),
         if (video != null && video.value.isInitialized)
-          Positioned.fill(child: IgnorePointer(
-            child: Center(child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 160),
-              opacity: video.value.isPlaying ? 0 : 1,
-              child: const Icon(Icons.play_circle_fill_rounded,
-                color: Colors.white, size: 72),
-            )),
-          )),
+          Center(child: IgnorePointer(child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 160),
+            opacity: video.value.isPlaying ? 0 : 1,
+            child: const Icon(Icons.play_circle_fill_rounded,
+              color: Colors.white, size: 67),
+          ))),
       ] else ...[
-        // Use the same cached image to create a softly colored extension
-        // behind photos of every aspect ratio without cropping the Moment.
         Positioned.fill(child: ImageFiltered(
-          imageFilter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
+          imageFilter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
           child: Image.network(
             BlinkHomeApi.mediaUrl(widget.moment.mediaUrl),
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) =>
-              const ColoredBox(color: Color(0xFFF6D7C7))),
+              const ColoredBox(color: Color(0xFFF6DACB))),
         )),
-        Positioned.fill(child: ColoredBox(
-          color: const Color(0x35FFF5E9))),
+        const Positioned.fill(child: ColoredBox(
+          color: Color(0x24FFF5ED))),
         Image.network(
           BlinkHomeApi.mediaUrl(widget.moment.mediaUrl),
           fit: BoxFit.contain,
           errorBuilder: (_, __, ___) =>
             const Center(child: Icon(Icons.broken_image_outlined,
-              color: BlinkColors.orangeDark, size: 50)),
+              color: BlinkColors.orangeDark, size: 47)),
         ),
       ],
-      const IgnorePointer(child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0x701D1722), Colors.transparent, Color(0xA8171522)],
-            stops: [0, .25, 1],
+      // The scrim lives near the caption, not across the entire photograph.
+      const Positioned(
+        bottom: 0, left: 0, right: 0,
+        height: 270,
+        child: IgnorePointer(child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              colors: [Colors.transparent, Color(0x4B17121B),
+                Color(0xA914111D), Color(0xD81B1421)],
+              stops: [0, .34, .69, 1],
+            )),
+        )),
+      ),
+      const Positioned(
+        top: 0, left: 0, right: 0,
+        height: 145,
+        child: IgnorePointer(child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              colors: [Color(0x77000000), Colors.transparent]),
           )),
-      )),
-      // Handle one-tap video play/pause and double-tap love in the SAME
-      // gesture recognizer. This keeps vertical PageView swipes available.
+        ),
+      ),
+      // The PageView still owns vertical navigation. A single tap on an
+      // image toggles the controls for distraction-free viewing.
       Positioned.fill(child: GestureDetector(
         key: const ValueKey('blink-moment-immersive-media'),
         behavior: HitTestBehavior.translucent,
-        onTap: widget.moment.mediaType == 'video' ? _togglePlayback : null,
+        onTap: widget.moment.mediaType == 'video'
+          ? _togglePlayback
+          : () => setState(() => _chromeVisible = !_chromeVisible),
         onDoubleTapDown: (details) => _loveTapPoint = details.localPosition,
         onDoubleTap: _doubleTapLove,
-        onLongPress: _reaction,
       )),
       _loveBurst(),
-      // A compact editorial identity card, not a wall of controls over media.
-      // The 78px right gutter keeps it clear of the floating action orbs.
-      SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(15, 56, 65, 19),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Spacer(),
-              if (!_taughtLove) ...[
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Color(0xA5292233),
-                    borderRadius: BorderRadius.all(Radius.circular(22)),
-                    border: Border.fromBorderSide(
-                      BorderSide(color: Color(0x62FFFFFF), width: .7)),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: Text('❤️  Double-tap to love  ·  Hold to react',
-                      maxLines: 2, textAlign: TextAlign.left,
-                      style: TextStyle(color: Colors.white,
-                        fontSize: 10.5, fontWeight: FontWeight.w700)),
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
-              Container(
-                constraints: const BoxConstraints(maxHeight: 230),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
-                    colors: [Color(0xEA16161F), Color(0xCB24242D)]),
-                  borderRadius: BorderRadius.circular(23),
-                  border: Border.all(color: const Color(0x55FFFFFF)),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x77000000),
-                      blurRadius: 22, offset: Offset(0, 8)),
-                  ],
-                ),
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('✦  BLINK MOMENT',
-                        style: TextStyle(
-                          color: Color(0xFFFFB78E),
-                          letterSpacing: 1.3, fontSize: 9,
-                          fontWeight: FontWeight.w900)),
-                      const SizedBox(height: 10),
-                      Row(children: [
-                        Container(
-                          width: 41, height: 41,
-                          padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(colors: [
-                              Color(0xFFFF5F18), Color(0xFFFF315F),
-                            ])),
-                          child: CircleAvatar(
-                            backgroundColor: BlinkColors.orangeDark,
-                            backgroundImage: widget.moment.avatarKey == null
-                              ? null : NetworkImage(
-                                BlinkHomeApi.mediaUrl(widget.moment.avatarKey!)),
-                            child: widget.moment.avatarKey == null
-                              ? const Icon(Icons.person_rounded,
-                                color: Colors.white, size: 23)
-                              : null,
+      Positioned.fill(child: IgnorePointer(
+        ignoring: !_chromeVisible,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 190),
+          opacity: _chromeVisible ? 1 : 0,
+          child: Stack(children: [
+            SafeArea(child: Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(17, 0, 70, 20),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: compact ? height * .30 : height * .28),
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Container(
+                            width: 39, height: 39,
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(colors: [
+                                Color(0xFFFF5900), Color(0xFFFF9F5C)])),
+                            child: CircleAvatar(
+                              backgroundColor: BlinkColors.orangeDark,
+                              backgroundImage: widget.moment.avatarKey == null
+                                ? null : NetworkImage(
+                                  BlinkHomeApi.mediaUrl(widget.moment.avatarKey!)),
+                              child: widget.moment.avatarKey == null
+                                ? const Icon(Icons.person_rounded,
+                                    color: Colors.white, size: 20)
+                                : null,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 9),
-                        Expanded(child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(widget.moment.author,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white,
-                                fontSize: 13, fontWeight: FontWeight.w900)),
-                            Text(_ago(widget.moment.createdAt),
-                              style: const TextStyle(
-                                color: Colors.white70, fontSize: 10.5)),
-                          ],
-                        )),
-                      ]),
-                      if ((widget.moment.caption ?? '').isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        Text(widget.moment.caption!,
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white,
-                            fontSize: 12.5, height: 1.45)),
+                          const SizedBox(width: 9),
+                          Expanded(child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(widget.moment.author,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Colors.white,
+                                  fontSize: 14, fontWeight: FontWeight.w900)),
+                              Text(_ago(widget.moment.createdAt),
+                                style: const TextStyle(
+                                  color: Color(0xD6FFFFFF), fontSize: 11)),
+                            ],
+                          )),
+                          SizedBox(width: 40, height: 42,
+                            child: IconButton(
+                              tooltip: _saved ? 'Remove saved Moment' : 'Save Moment',
+                              padding: EdgeInsets.zero,
+                              onPressed: _toggleSave,
+                              icon: Icon(_saved
+                                ? Icons.bookmark_rounded
+                                : Icons.bookmark_border_rounded,
+                                color: Colors.white, size: 23)),
+                          ),
+                        ]),
+                        if (caption.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(caption,
+                            maxLines: _captionExpanded ? null : 2,
+                            overflow: _captionExpanded
+                              ? TextOverflow.visible : TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white, fontSize: 13.5,
+                              height: 1.43, fontWeight: FontWeight.w500)),
+                          if (caption.length > 55 || caption.contains('\n'))
+                            GestureDetector(
+                              onTap: () => setState(
+                                () => _captionExpanded = !_captionExpanded),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 7),
+                                child: Text(
+                                  _captionExpanded ? 'Show less' : 'Read more',
+                                  style: const TextStyle(color: Color(0xFFFFC5A1),
+                                    fontSize: 12, fontWeight: FontWeight.w900)),
+                              ),
+                            ),
+                        ],
+                        if (track != null)
+                          InkWell(
+                            onTap: _toggleSoundtrack,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                Icon(_soundtrackPlaying
+                                  ? Icons.pause_circle_outline_rounded
+                                  : Icons.music_note_rounded,
+                                  color: const Color(0xFFFFC5A1), size: 19),
+                                const SizedBox(width: 5),
+                                Flexible(child: Text(track.title,
+                                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white,
+                                    fontSize: 11.5, fontWeight: FontWeight.w600))),
+                              ]),
+                            ),
+                          ),
                       ],
-                      if (blinkOriginalTrack(widget.moment.musicTrackId) != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 7),
-                          child: TextButton.icon(
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 5, vertical: 3),
-                              minimumSize: const Size(0, 34),
-                              foregroundColor: Colors.white),
-                            onPressed: _toggleSoundtrack,
-                            icon: Icon(_soundtrackPlaying
-                              ? Icons.pause_circle_outline_rounded
-                              : Icons.music_note_rounded, size: 17),
-                            label: Text(
-                              blinkOriginalTrack(widget.moment.musicTrackId)!.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white70, fontSize: 10.5)),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      SafeArea(
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: Padding(
-            padding: const EdgeInsets.only(right: 7, top: 30, bottom: 46),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(context).height * .70),
-              child: SingleChildScrollView(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  _actionTile(
-                    symbol: Icon(myReaction == '❤️'
-                      ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
-                      color: myReaction == '❤️'
-                        ? const Color(0xFFFF2851) : Colors.white,
-                      size: 22),
-                    label: reactions, tooltip: 'Like Moment',
-                    tileKey: _likeActionKey,
-                    accent: const Color(0xFFFF2851),
-                    onPressed: _busy ? () {} : _like,
-                  ),
-                  BlinkReactionDock(
-                    enabled: !_busy,
-                    currentReaction: myReaction,
-                    onSelected: _applyReaction,
-                    child: _actionTile(
-                      symbol: Text(myReaction.isNotEmpty && myReaction != '❤️'
-                        ? myReaction : '😊',
-                        style: const TextStyle(fontSize: 22)),
-                      label: 'React · hold',
-                      tooltip: 'React',
-                      onPressed: null,
-                      accent: const Color(0xFFFFB547),
                     ),
                   ),
-                  _actionTile(
-                    symbol: const Icon(Icons.mode_comment_outlined,
-                      color: Colors.white, size: 22),
-                    label: comments, tooltip: 'Comments',
-                    accent: const Color(0xFF8EBDFF),
-                    onPressed: _comments,
-                  ),
-                  _actionTile(
-                    symbol: Icon(mine ? Icons.visibility_outlined
-                        : Icons.card_giftcard_rounded,
-                      color: const Color(0xFFFFB27F), size: 22),
-                    label: mine ? 'Viewers' : 'BP',
-                    accent: const Color(0xFFFFBF52),
-                    tooltip: mine ? 'Moment viewers' : 'Give Blink Points',
-                    onPressed: mine ? _viewers : _giftBp,
-                  ),
-                  _actionTile(
-                    symbol: const Icon(Icons.send_outlined,
-                      color: Colors.white, size: 22),
-                    label: 'Share', accent: const Color(0xFF9BE9D0),
-                    onPressed: _shareOptions,
-                  ),
-                ]),
+                ),
               ),
-            ),
-          ),
+            )),
+            SafeArea(child: Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 5, top: 65, bottom: 45),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: height * .65),
+                  child: SingleChildScrollView(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      _actionTile(
+                        symbol: Icon(myReaction == '❤️'
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_outline_rounded,
+                          color: myReaction == '❤️'
+                            ? const Color(0xFFFF3758) : Colors.white,
+                          size: 23),
+                        label: reactions,
+                        tooltip: 'Like Moment',
+                        tileKey: _likeActionKey,
+                        accent: const Color(0xFFFF3758),
+                        onPressed: _busy ? null : _like,
+                      ),
+                      BlinkReactionDock(
+                        enabled: !_busy,
+                        currentReaction: myReaction,
+                        onSelected: _applyReaction,
+                        child: _actionTile(
+                          symbol: Text(myReaction.isNotEmpty &&
+                              myReaction != '❤️' ? myReaction : '😊',
+                            style: const TextStyle(fontSize: 22)),
+                          label: 'React',
+                          tooltip: 'React',
+                          onPressed: null,
+                          accent: const Color(0xFFFFD08B),
+                        ),
+                      ),
+                      _actionTile(
+                        symbol: const Icon(Icons.mode_comment_outlined,
+                          color: Colors.white, size: 22),
+                        label: comments, tooltip: 'Comments',
+                        onPressed: _comments,
+                      ),
+                      _actionTile(
+                        symbol: Icon(mine
+                            ? Icons.visibility_outlined
+                            : Icons.card_giftcard_rounded,
+                          color: const Color(0xFFFFC28E), size: 22),
+                        label: mine ? 'Views' : 'BP',
+                        tooltip: mine ? 'Moment viewers' : 'Give Blink Points',
+                        accent: const Color(0xFFFFC28E),
+                        onPressed: mine ? _viewers : _giftBp,
+                      ),
+                      _actionTile(
+                        symbol: const Icon(Icons.send_outlined,
+                          color: Colors.white, size: 22),
+                        label: 'Share', tooltip: 'Share',
+                        onPressed: _shareOptions,
+                      ),
+                    ]),
+                  ),
+                ),
+              ),
+            )),
+          ]),
         ),
-      ),
+      )),
     ]);
   }
 
