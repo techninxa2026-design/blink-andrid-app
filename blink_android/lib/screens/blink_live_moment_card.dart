@@ -671,7 +671,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
             fontSize: 11, fontWeight: FontWeight.w800,
             shadows: [Shadow(color: Colors.black, blurRadius: 8)])),
       ]),
-    ]),
+    ),
   );
 
   Widget _buildImmersive() {
