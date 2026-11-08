@@ -5,6 +5,7 @@ import '../core/theme.dart';
 import '../core/nav.dart';
 import '../core/live_api.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 
 /// BP Wallet reflects the real MySQL user.blinkPoints balance.
 /// The API does not yet expose a transaction ledger, so never invent one.
@@ -42,8 +43,14 @@ class _WalletState extends State<WalletScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         children: [
-          const SectionHeading('Your Blink Points', subtitle: 'Rewards earned through real Blink activity'),
-          Container(
+          const BlinkSectionBand(
+            eyebrow: 'REAL REWARDS',
+            title: 'Your Blink Points',
+            subtitle: 'Rewards earned through real Blink activity',
+            mood: BlinkMood.rewards,
+            icon: Icons.workspace_premium_rounded,
+            padding: EdgeInsets.fromLTRB(0, 1, 0, 14)),
+          BlinkReveal(child: Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
@@ -69,17 +76,29 @@ class _WalletState extends State<WalletScreen> {
                   const Text('Available balance',style:TextStyle(
                     color:Colors.white70,fontSize:13)),
                   const SizedBox(height:7),
-                  Text(loading?'Loading...'
-                    :balance==null?'Unavailable':'$balance BP',
-                    style:const TextStyle(color:Colors.white,
-                      fontSize:38,fontWeight:FontWeight.w900,letterSpacing:-1.0)),
+                  if (loading || balance == null ||
+                      double.tryParse(balance!) == null)
+                    Text(loading ? 'Loading…' : 'Unavailable',
+                      style: const TextStyle(color: Colors.white,
+                        fontSize: 30, fontWeight: FontWeight.w900))
+                  else
+                    TweenAnimationBuilder<double>(
+                      duration: BlinkMotion.duration(context, ms: 740),
+                      curve: Curves.easeOutCubic,
+                      tween: Tween(begin: 0, end: double.parse(balance!)),
+                      builder: (_, value, __) => Text(
+                        value.toStringAsFixed(0) + ' BP',
+                        style: const TextStyle(color: Colors.white,
+                          fontSize: 38, fontWeight: FontWeight.w900,
+                          letterSpacing: -1.1))),
+
                   const SizedBox(height:25),
                   const Text('Earned through your real Blink activity',
                     style:TextStyle(color:Colors.white70,fontSize:11)),
                 ]),
               ),
             ]),
-          ),
+          )),
           if (error != null) liveError(error, _load),
           if (!loading && balance == null && error == null)
             const ListTile(title: Text('Balance not available'),
@@ -120,6 +139,13 @@ class SettingsScreen extends StatelessWidget {
           icon:Icons.tune_rounded,mood:BlinkMood.studio,
           margin:EdgeInsets.fromLTRB(0,0,0,18),
         ),
+        const BlinkSectionBand(
+          eyebrow: 'PROFILE & IDENTITY',
+          title: 'Your Blink account',
+          subtitle: 'Manage the way people see and reach you',
+          mood: BlinkMood.community,
+          icon: Icons.account_circle_outlined,
+          padding: EdgeInsets.fromLTRB(0, 2, 0, 14)),
         BlinkProListCard(
           icon:Icons.account_circle_rounded,
           eyebrow:'YOUR PROFILE',
@@ -127,8 +153,13 @@ class SettingsScreen extends StatelessWidget {
           subtitle:'Edit who you are and how you show up on Blink.',
           onTap:()=>go(context,'/profile'),
         ),
-        const SizedBox(height:7),
-        const SizedBox(height: 10),
+        const BlinkSectionBand(
+          eyebrow: 'APP PREFERENCES',
+          title: 'Controls & settings',
+          subtitle: 'Account tools, notifications and privacy actions',
+          mood: BlinkMood.studio,
+          icon: Icons.tune_rounded,
+          padding: EdgeInsets.fromLTRB(0, 12, 0, 14)),
         BlinkPanel(
           child: Column(
             children: [
@@ -249,8 +280,11 @@ class _NotificationsState extends State<NotificationsScreen> {
           ),
           const SectionHeading('Your updates', subtitle: 'New messages and friend requests'),
           if (incoming.isEmpty && conversations.isEmpty)
-            const ListTile(leading: Icon(Icons.notifications_none, color: BlinkColors.orange),
-              title: Text('All caught up'),subtitle: Text('No unread messages or pending friend requests.')),
+            const BlinkExperienceState(
+              title: 'All caught up',
+              subtitle: 'No unread messages or pending friend requests.',
+              icon: Icons.notifications_none_rounded,
+              mood: BlinkMood.community),
           ...incoming.map((raw) {
             final r = obj(raw);
             final user = obj(r['sender']);
