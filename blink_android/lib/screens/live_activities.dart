@@ -795,18 +795,103 @@ class _HeartThreadState extends State<LiveHeartThreadScreen>{
       TextButton(onPressed:()=>_action('reveal'),child:const Text('Reveal my identity')),
     if(data['side']=='incoming'&&data['blockedByMe']!=true)
       TextButton(onPressed:()=>_action('block'),child:const Text('Block sender')),
-    Expanded(child:ListView(padding:const EdgeInsets.all(15),children:arr(data['messages']).map((m)=>Card(
-      child:ListTile(title:Text(field(m,'text')),
-        subtitle:obj(m)['editedAt']!=null?const Text('Edited'):null,
-        trailing:obj(m)['fromMe']==true?IconButton(
-          tooltip:'Edit Heart message',onPressed:()=>_editMessage(m),
-          icon:const Icon(Icons.edit_outlined,color:BlinkColors.orange)):null))).toList())),
-    SafeArea(top:false,child:Row(children:[
-      Expanded(child:TextField(controller:message,decoration:const InputDecoration(hintText:'Write a Heart reply...'))),
-      IconButton(onPressed:()async{if(message.text.trim().isEmpty)return;
-        await _action('messages',{'text':message.text.trim()});message.clear();},
-        icon:const Icon(Icons.send,color:BlinkColors.orange)),
-    ])),
+    Expanded(child:ListView(
+      padding:const EdgeInsets.fromLTRB(13, 8, 13, 16),
+      children: [
+        const BlinkSectionBand(
+          eyebrow: 'ONE-TO-ONE HEARTS',
+          title: 'A meaningful conversation',
+          subtitle: 'Kind words, shared privately',
+          mood: BlinkMood.community,
+          icon: Icons.favorite_border_rounded,
+          padding: EdgeInsets.fromLTRB(0, 0, 0, 14)),
+        if(arr(data['messages']).isEmpty)
+          const BlinkExperienceState(
+            title: 'Your story starts here',
+            subtitle: 'Write a kind thought to begin.',
+            icon: Icons.forum_outlined,
+            mood: BlinkMood.community),
+        ...arr(data['messages']).map((raw) {
+          final item=obj(raw);
+          final mine=item['fromMe']==true;
+          return BlinkReveal(
+            child: Align(
+              alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.sizeOf(context).width * .82),
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.fromLTRB(14, 11, 12, 10),
+                decoration: BoxDecoration(
+                  color: mine ? const Color(0xFFFFE4EA) : Colors.white,
+                  border: Border.all(color: mine
+                    ? const Color(0xFFFFBBCB) : const Color(0xFFFFE0DB)),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(mine ? 17 : 5),
+                    topRight: Radius.circular(mine ? 5 : 17),
+                    bottomLeft: const Radius.circular(17),
+                    bottomRight: const Radius.circular(17))),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(field(item,'text'),
+                      style: const TextStyle(
+                        color: BlinkColors.ink,
+                        fontSize: 13, height: 1.5)),
+                    const SizedBox(height: 6),
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text(mine ? 'YOU' : 'HEART',
+                        style: const TextStyle(
+                          color: Color(0xFFCF4C74),
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1)),
+                      if(item['editedAt']!=null) ...[
+                        const SizedBox(width: 8),
+                        const Text('Edited',
+                          style: TextStyle(color: BlinkColors.muted,
+                            fontSize: 10)),
+                      ],
+                      if(mine) ...[
+                        const SizedBox(width: 7),
+                        SizedBox(width: 30, height: 30,
+                          child: IconButton(
+                            tooltip: 'Edit Heart message',
+                            padding: EdgeInsets.zero,
+                            onPressed:()=>_editMessage(raw),
+                            icon: const Icon(Icons.edit_outlined,
+                              size: 17, color: Color(0xFFCF4C74)))),
+                      ],
+                    ]),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    )),
+    SafeArea(top:false,child:Padding(
+      padding:const EdgeInsets.fromLTRB(11, 7, 11, 12),
+      child:Row(children:[
+        Expanded(child:TextField(
+          controller:message, minLines:1, maxLines:4,
+          decoration:const InputDecoration(
+            hintText:'Write a Heart reply...',
+            prefixIcon:Icon(Icons.favorite_border_rounded)))),
+        const SizedBox(width:7),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable:message,
+          builder:(context,value,_)=>IconButton.filled(
+            tooltip:'Send Heart reply',
+            onPressed:value.text.trim().isEmpty ? null : () async {
+              await _action('messages',{'text':message.text.trim()});
+              message.clear();
+            },
+            icon:const Icon(Icons.arrow_upward_rounded)),
+        ),
+      ]),
+    )),
   ]));
 }
 
