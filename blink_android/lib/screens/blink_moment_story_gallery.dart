@@ -213,84 +213,99 @@ class _BlinkMomentViewerState extends State<BlinkMomentViewer> {
   Widget build(BuildContext context) {
     if (widget.moments.isEmpty) {
       return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: Text('No Moments to view',
-          style: TextStyle(color: Colors.white))),
+        backgroundColor: Color(0xFFF8F3F0),
+        body: Center(child: Text('No Moments to view')),
       );
     }
 
+    final count = widget.moments.length;
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFFF8F3F0),
       body: Stack(children: [
         PageView.builder(
           key: const ValueKey('blink-moment-story-viewer'),
           controller: _controller,
-          // The four-wide gallery stays unchanged. Once opened, swipe
-          // UP for the next Moment and DOWN for the previous Moment.
           scrollDirection: Axis.vertical,
           physics: const PageScrollPhysics(),
-          itemCount: widget.moments.length,
+          itemCount: count,
           onPageChanged: (index) {
             setState(() => _index = index);
             _recordView(index);
           },
           itemBuilder: (context, index) => BlinkLiveMomentCard(
-            key: ValueKey('immersive-${widget.moments[index].id}'),
+            key: ValueKey('immersive-' + widget.moments[index].id),
             moment: widget.moments[index],
             myUserId: widget.viewerId,
             immersive: true,
             active: _index == index,
           ),
         ),
-        SafeArea(child: Padding(
-          padding: const EdgeInsets.fromLTRB(9, 8, 16, 0),
-          child: Row(children: [
-            IconButton(
-              tooltip: 'Close Moments',
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-            const SizedBox(width: 3),
-            const Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Moments ✦',
-                  style: TextStyle(color: Colors.white,
-                    fontSize: 18, fontWeight: FontWeight.w900)),
-                Text('Swipe up or down',
-                  style: TextStyle(color: Colors.white70, fontSize: 11)),
-              ],
-            )),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(color: const Color(0x991D1D25),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0x55FFFFFF))),
-              child: Text('${_index + 1} / ${widget.moments.length}',
-                style: const TextStyle(color: Colors.white,
-                  fontSize: 12, fontWeight: FontWeight.w800))),
-          ]),
-        )),
-        Positioned(
-          left: 0, right: 0, bottom: 0,
-          child: SafeArea(top: false, child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 90, 10),
-            child: Row(children: [
-              const Icon(Icons.swipe_vertical_rounded,
-                color: Colors.white54, size: 17),
-              const SizedBox(width: 7),
-              const Expanded(child: Text('SWIPE TO EXPLORE',
-                maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: Colors.white60, fontSize: 9,
-                  fontWeight: FontWeight.w900, letterSpacing: .8))),
-              const SizedBox(width: 6),
-              Text('${((_index + 1) / widget.moments.length * 100).round()}%',
-                style: const TextStyle(color: Colors.white70, fontSize: 10)),
+        // A thin timeline replaces the previously duplicated footer meter.
+        SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(13, 5, 13, 0),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  key: const ValueKey('blink-moment-viewer-progress'),
+                  value: (_index + 1) / count,
+                  minHeight: 3,
+                  backgroundColor: const Color(0x77FFFFFF),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFFFF9956)),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(children: [
+                Material(
+                  color: const Color(0x9C17141B),
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    tooltip: 'Close Moments',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back_rounded,
+                      color: Colors.white, size: 23),
+                  ),
+                ),
+                const SizedBox(width: 9),
+                const Expanded(child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('BLINK MOMENTS',
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white, letterSpacing: 1.25,
+                        fontSize: 13, fontWeight: FontWeight.w900,
+                        shadows: [Shadow(
+                          color: Colors.black87, blurRadius: 8)])),
+                    Text('Swipe up or down',
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Color(0xE6FFFFFF), fontSize: 10.5,
+                        shadows: [Shadow(
+                          color: Colors.black87, blurRadius: 8)])),
+                  ],
+                )),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0x9717141B),
+                    borderRadius: BorderRadius.circular(19),
+                    border: Border.all(color: const Color(0x66FFFFFF))),
+                  child: Text((_index + 1).toString() + ' / ' +
+                      count.toString(),
+                    style: const TextStyle(
+                      color: Colors.white, fontSize: 11.5,
+                      fontWeight: FontWeight.w900)),
+                ),
+              ]),
             ]),
-          )),
+          ),
         ),
       ]),
     );
-  }
-}
+  }}
