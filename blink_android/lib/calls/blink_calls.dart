@@ -162,18 +162,31 @@ class BlinkCalls extends ChangeNotifier {
     return result;
   }
 
+  Future<void> _awaitConnected() async {
+    // A first call immediately after login must not race the socket handshake.
+    for (var attempt = 0; attempt < 35; attempt++) {
+      if (_socket?.connected == true) return;
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+    throw StateError('Calling service is offline. Please reconnect.');
+  }
+
   Future<void> placeCall(
     String userId, String name, {bool video = false}
   ) async {
     if (status != 'idle' || userId.isEmpty) return;
-    peerId = userId;
-    peerName = name;
-    kind = video ? 'video' : 'audio';
-    status = 'starting';
-    error = '';
-    notifyListeners();
     try {
       await connectIfSignedIn();
+      await _awaitConnected();
+      // An incoming invitation might have appeared during connection setup.
+      if (status != 'idle') return;
+      peerId = userId;
+      peerName = name;
+      kind = video ? 'video' : 'audio';
+      status = 'starting';
+      error = '';
+      notifyListeners();
+
       final result = await _ack('call-initiate', {
         'calleeId': userId, 'kind': kind,
       });
