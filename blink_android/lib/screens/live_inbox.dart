@@ -29,6 +29,9 @@ class _LiveInboxState extends State<LiveInboxScreen>
   String? error;
   String query = '';
   Timer? _presenceRefresh;
+  Timer? _conversationRefresh;
+  bool _foreground = true;
+  bool _listLoading = false;
 
   @override
   void initState() {
@@ -36,23 +39,30 @@ class _LiveInboxState extends State<LiveInboxScreen>
     WidgetsBinding.instance.addObserver(this);
     _refreshAll();
     _presenceRefresh = Timer.periodic(const Duration(seconds: 25), (_) {
-      _refreshPresence();
+      if (_foreground) _refreshPresence();
+    });
+    _conversationRefresh = Timer.periodic(const Duration(seconds: 7), (_) {
+      if (_foreground) _load();
     });
   }
 
   @override
   void dispose() {
     _presenceRefresh?.cancel();
+    _conversationRefresh?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _refreshAll();
+    _foreground = state == AppLifecycleState.resumed;
+    if (_foreground) _refreshAll();
   }
 
   Future<void> _load() async {
+    if (_listLoading) return;
+    _listLoading = true;
     try {
       final rows = arr(await LiveApi.call('GET', '/inbox'));
       if (mounted) setState(() {
@@ -61,7 +71,13 @@ class _LiveInboxState extends State<LiveInboxScreen>
         error = null;
       });
     } catch (e) {
-      if (mounted) setState(() { error = e.toString(); loading = false; });
+      // Keep an already-visible conversation list during brief outages.
+      if (mounted) setState(() {
+        if (conversations.isEmpty) error = e.toString();
+        loading = false;
+      });
+    } finally {
+      _listLoading = false;
     }
   }
 
@@ -486,31 +502,126 @@ class LiveChatScreen extends StatefulWidget {
   const LiveChatScreen({super.key,required this.conversationId,required this.title});
   @override State<LiveChatScreen> createState()=>_LiveChatState();
 }
-class _LiveChatState extends State<LiveChatScreen>{
-  final input=TextEditingController();
-  List<dynamic> messages=[];String? error;String myId='';String bearer='';bool busy=false;bool loading=true;
-  Map<String,dynamic> conversation={}; Map<String,dynamic>? replyTo;
+class _LiveChatState extends State<LiveChatScreen>
+    with WidgetsBindingObserver {
+  final input = TextEditingController();
+  List<dynamic> messages = [];
+  String? error;
+  String myId = '';
+  String bearer = '';
+  bool busy = false;
+  bool loading = true;
+  bool _foreground = true;
+  bool _loadingMessages = false;
+  Map<String,dynamic> conversation = {};
+  Map<String,dynamic>? replyTo;
+  final Map<String, Map<String,dynamic>> _confirmed = {};
+  String? _lastReadMarker;
   Timer? timer;
-  @override void initState(){super.initState();_load();timer=Timer.periodic(const Duration(seconds:12),(_)=>_load(silent:true));}
-  @override void dispose(){timer?.cancel();input.dispose();super.dispose();}
-  Future<void> _load({bool silent=false}) async {
-    try{
-      final self=await BlinkAuthApi.cachedUser();
-      final token=await BlinkAuthApi.getToken() ?? '';
-      final data=obj(await LiveApi.call('GET','/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}'));
-      if(!mounted)return;
-      setState((){myId=field(self,'id');bearer=token;conversation=data;messages=arr(data['messages']);error=null;loading=false;});
-      if(!silent)await LiveApi.call('POST','/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}/read');
-    }catch(e){if(mounted&&!silent)setState((){error=e.toString();loading=false;});}
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _load();
+    timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (_foreground) _load(silent: true);
+    });
   }
-  Future<void> _send()async{
-    final text=input.text.trim();if(text.isEmpty||busy)return;
-    setState(()=>busy=true);
-    try{await LiveApi.call('POST','/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}/messages',{'body':text,if(replyTo!=null)'replyToId':field(replyTo,'id')});
-      input.clear();setState(()=>replyTo=null);await _load();
-    }catch(e){if(mounted)liveNotice(context,e.toString());}
-    finally{if(mounted)setState(()=>busy=false);}
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    input.dispose();
+    super.dispose();
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _foreground = state == AppLifecycleState.resumed;
+    if (_foreground) _load(silent: true);
+  }
+
+  List<dynamic> _mergedMessages(List<dynamic> fresh) {
+    final serverIds = fresh.map((item) => field(item, 'id')).toSet();
+    _confirmed.removeWhere((id, _) => serverIds.contains(id));
+    final combined = <dynamic>[...fresh, ..._confirmed.values];
+    combined.sort((a, b) {
+      final first = field(a, 'createdAt');
+      final second = field(b, 'createdAt');
+      final order = first.compareTo(second);
+      return order != 0 ? order : field(a, 'id').compareTo(field(b, 'id'));
+    });
+    return combined;
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    if (_loadingMessages || !_foreground) return;
+    _loadingMessages = true;
+    try {
+      final self = await BlinkAuthApi.cachedUser();
+      final token = await BlinkAuthApi.getToken() ?? '';
+      final data = obj(await LiveApi.call('GET',
+        '/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}'));
+      if (!mounted) return;
+      final fresh = arr(data['messages']);
+      final all = _mergedMessages(fresh);
+      final marker = all.isEmpty ? '<empty>' : field(all.last, 'id');
+      setState(() {
+        myId = field(self, 'id');
+        bearer = token;
+        conversation = data;
+        messages = all;
+        error = null;
+        loading = false;
+      });
+      // Read receipts stay in sync for both Android and Web.
+      if (_foreground && marker != _lastReadMarker) {
+        _lastReadMarker = marker;
+        try {
+          await LiveApi.call('POST',
+            '/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}/read');
+        } catch (_) {
+          _lastReadMarker = null; // Retry on next successful refresh.
+        }
+      }
+    } catch (e) {
+      if (mounted && !silent) {
+        setState(() { error = e.toString(); loading = false; });
+      }
+    } finally {
+      _loadingMessages = false;
+    }
+  }
+
+  Future<void> _send() async {
+    final text = input.text.trim();
+    if (text.isEmpty || busy) return;
+    setState(() => busy = true);
+    try {
+      final response = obj(await LiveApi.call('POST',
+        '/inbox/conversations/${Uri.encodeComponent(widget.conversationId)}/messages',
+        {'body': text, if (replyTo != null)
+          'replyToId': field(replyTo, 'id')}));
+      if (!mounted) return;
+      final id = field(response, 'id');
+      setState(() {
+        if (id.isNotEmpty) {
+          _confirmed[id] = response;
+          messages = _mergedMessages(messages);
+        }
+        input.clear();
+        replyTo = null;
+      });
+      await _load(silent: true);
+    } catch (e) {
+      if (mounted) liveNotice(context, e.toString());
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   Future<void> _upload()async{
     final selection = await showModalBottomSheet<bool>(context:context,builder:(ctx)=>SafeArea(
       child:Column(mainAxisSize:MainAxisSize.min,children:[
