@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'blink_full_drawer.dart';
 
 import '../core/theme.dart';
-export '../core/theme.dart' show BlinkMood, BlinkMoodColors;
 import 'blink_motion.dart';
 import '../core/nav.dart';
 import '../core/data.dart';
