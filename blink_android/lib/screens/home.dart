@@ -579,31 +579,44 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
             activeCount: _checkinCount,
           ),
 
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 20, 16, 5),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'YOUR PEOPLE, YOUR MOMENTS',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: BlinkColors.orange,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.3,
-                ),
-              ),
-              SizedBox(height: 6),
-              Text(
-                'Moments ✦',
-                style: TextStyle(
-                  fontSize: 26,
-                  color: BlinkColors.ink,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
+        Container(
+          margin: const EdgeInsets.fromLTRB(14, 14, 14, 5),
+          padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF3EC),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0xFFFFD4BF)),
           ),
+          child: Row(children: [
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text('YOUR PEOPLE, YOUR MOMENTS',
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 9.5,
+                    color: BlinkColors.orangeDark,
+                    fontWeight: FontWeight.w900, letterSpacing: 1)),
+                SizedBox(height: 4),
+                Text('Moments ✦', style: TextStyle(
+                  fontSize: 23, color: BlinkColors.ink,
+                  fontWeight: FontWeight.w900, letterSpacing: -.5)),
+                SizedBox(height: 4),
+                Text('Pick a tile · Swipe vertically · Double-tap to love',
+                  maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 10.5,
+                    color: BlinkColors.muted)),
+              ],
+            )),
+            const SizedBox(width: 11),
+            Container(
+              width: 50, height: 57,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF8C54), BlinkColors.orangeDark]),
+                borderRadius: BorderRadius.circular(18)),
+              child: const Icon(Icons.favorite_rounded,
+                size: 28, color: Colors.white)),
+          ]),
         ),
 
         const SizedBox(height: 12),
@@ -860,9 +873,16 @@ class ExploreScreen extends StatelessWidget {
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
+          const BlinkFeatureHero(
+            eyebrow:'ONE APP. SO MANY STORIES.',
+            title:'Find your next thing.',
+            subtitle:'New people, creative challenges, real-life plans and conversations that matter.',
+            icon:Icons.explore_rounded,
+            mood:BlinkMood.studio,
+          ),
           const SectionHeading(
             'Explore Blink',
-            subtitle: 'Discover everything Blink has to offer',
+            subtitle: 'Every space has something for you',
           ),
 
           const BlinkSearchBox(),

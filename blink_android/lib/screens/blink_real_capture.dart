@@ -832,14 +832,22 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     return GestureDetector(onTap: pressed, child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 27, vertical: 11),
       decoration: BoxDecoration(
-        color: selected ? BlinkColors.orange : Colors.white60,
+        gradient:selected ? const LinearGradient(
+          colors:[BlinkColors.orange,Color(0xFFF03853)]) : null,
+        color:selected ? null : const Color(0xD5232028),
+        border:Border.all(
+          color:selected ? const Color(0xFFFFC4A7) : const Color(0x88FFFFFF),
+          width:1.1),
+        boxShadow:selected ? const [BoxShadow(
+          color:Color(0x77F04D24),blurRadius:14,offset:Offset(0,5))] : null,
         borderRadius: BorderRadius.horizontal(
           left: left ? const Radius.circular(24) : Radius.zero,
           right: !left ? const Radius.circular(24) : Radius.zero,
         ),
       ),
-      child: Text(title, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12,
-        color: selected ? Colors.white : BlinkColors.ink)),
+      child: Text(title, style: const TextStyle(
+        fontWeight: FontWeight.w900, fontSize: 12,
+        color: Colors.white)),
     ));
   }
 
@@ -889,6 +897,14 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
           if (!_videoMode && !_recording) _lensPicker(),
           const Spacer(),
           if (preview) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(19,0,19,9),
+              child: Align(alignment:Alignment.centerLeft,
+                child:Text('✦  READY TO SHARE YOUR BLINK',
+                  style:TextStyle(color:Color(0xFFFFD6C1),
+                    fontSize:10,letterSpacing:1.3,
+                    fontWeight:FontWeight.w900))),
+            ),
             Padding(padding: const EdgeInsets.symmetric(horizontal: 17), child: TextField(
               controller: _caption,
               maxLength: _videoMode && _publishReel ? 1000 : 500,
@@ -972,12 +988,26 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
             const SizedBox(height: 25),
             Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
               IconButton(onPressed: _pickerActive ? null : _gallery, icon: const Icon(Icons.photo_library_outlined, color: Colors.white, size: 28)),
-              GestureDetector(onTap: _shoot, child: Container(
-                width: 78, height: 78, padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(shape: BoxShape.circle,
-                  border: Border.all(color: _recording ? Colors.red : Colors.white, width: 4)),
-                child: CircleAvatar(backgroundColor: _recording ? Colors.red : BlinkColors.orange,
-                  child: Icon(_recording ? Icons.stop_rounded : (_videoMode ? Icons.videocam_rounded : Icons.camera_alt_rounded), color: Colors.white)),
+              GestureDetector(onTap:_shoot,child:Container(
+                width:84,height:84,padding:const EdgeInsets.all(6),
+                decoration:BoxDecoration(
+                  shape:BoxShape.circle,
+                  gradient:const LinearGradient(
+                    colors:[Colors.white,Color(0xFFFFBC9B)]),
+                  border:Border.all(
+                    color:_recording?const Color(0xFFFF2F56):Colors.white,
+                    width:3),
+                  boxShadow:const [BoxShadow(color:Color(0x66FF5900),
+                    blurRadius:20,spreadRadius:3)]),
+                child:Container(
+                  decoration:BoxDecoration(
+                    shape:BoxShape.circle,
+                    gradient:LinearGradient(colors:_recording
+                      ?[const Color(0xFFFF254B),const Color(0xFFBA1233)]
+                      :[BlinkColors.orange,const Color(0xFFE13D4C)])),
+                  child:Icon(_recording?Icons.stop_rounded:
+                    (_videoMode?Icons.videocam_rounded:Icons.camera_alt_rounded),
+                    color:Colors.white,size:30)),
               )),
               IconButton(onPressed: _toggleFlash,
                 icon: Icon(_flash ? Icons.flash_on_rounded : Icons.flash_off_rounded, color: Colors.white, size: 28)),

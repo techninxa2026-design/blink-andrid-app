@@ -1,6 +1,7 @@
 import 'package:blink_android/core/blink_home_api.dart';
 import 'package:blink_android/screens/blink_moment_story_gallery.dart';
 import 'package:flutter/material.dart';
+import 'package:blink_android/widgets/blink_heart_flight.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -139,12 +140,16 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 180));
 
-      final heart = find.byKey(
-        const ValueKey('blink-moment-double-tap-heart'));
-      expect(heart, findsOneWidget);
-      final fade = tester.widget<FadeTransition>(
-        find.ancestor(of: heart, matching: find.byType(FadeTransition)).first);
-      expect(fade.opacity.value, greaterThan(0));
+      final flight = find.byKey(
+        const ValueKey('blink-moment-heart-flight'));
+      expect(flight, findsOneWidget);
+      final burst = tester.widget<BlinkHeartFlight>(
+        find.ancestor(of: flight, matching: find.byType(BlinkHeartFlight)).first);
+      expect(burst.progress.value, greaterThan(0));
+      expect(burst.progress.value, lessThan(1));
+      expect(burst.origin.dx, closeTo(mediaPoint.dx, 18));
+      // The particles move to the right-side Like action, not a random spot.
+      expect(burst.destination.dx, greaterThan(210));
       expect(tester.takeException(), isNull);
     },
   );

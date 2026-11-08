@@ -19,7 +19,9 @@ class BlinkFullDrawer extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 18, 12, 18),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [BlinkColors.orangeDark, BlinkColors.orange],
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  colors: [Color(0xFF34222B),
+                    Color(0xFF9E3E31),BlinkColors.orange],
                 ),
               ),
               child: Row(
@@ -38,10 +40,16 @@ class BlinkFullDrawer extends StatelessWidget {
                             height: 25, fit: BoxFit.contain,
                             semanticLabel: 'Blink official logo'),
                         ),
-                        const SizedBox(height: 7),
-                        const Text('Your world, one moment at a time',
+                        const SizedBox(height: 12),
+                        const Text('YOUR BLINK UNIVERSE',
+                          style: TextStyle(color: Color(0xFFFFD0AD),
+                            letterSpacing: 1.6,
+                            fontSize: 9.5,fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 5),
+                        const Text('Make your next moment count.',
                           maxLines: 2, overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.white, fontSize: 11)),
+                          style: TextStyle(color: Colors.white, fontSize: 12,
+                            fontWeight: FontWeight.w700)),
                       ],
                     ),
                   ),
@@ -99,9 +107,16 @@ class _DrawerSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(13, 18, 13, 8),
-    child: Text(title, style: const TextStyle(
-      color: BlinkColors.orangeDark, fontSize: 11,
-      fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+    child: Row(children: [
+      Container(width: 7,height: 7,
+        decoration: const BoxDecoration(
+          color: BlinkColors.orange,shape: BoxShape.circle)),
+      const SizedBox(width: 9),
+      Expanded(child: Text(title, style: const TextStyle(
+        color: BlinkColors.orangeDark,fontSize: 10.5,
+        fontWeight: FontWeight.w900,letterSpacing: 1.4))),
+      const Expanded(child: Divider(color: Color(0xFFFFDDCC))),
+    ]),
   );
 }
 
@@ -112,17 +127,31 @@ class _DrawerLink extends StatelessWidget {
   final String route;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2),
-    child: ListTile(
+  Widget build(BuildContext context) {
+    final accent = route.startsWith('/business') ? const Color(0xFF1A6470)
+      : route.startsWith('/irl') ? const Color(0xFF047F93)
+      : route.startsWith('/exchange') ? const Color(0xFF574DB3)
+      : route.startsWith('/hearts') || route.startsWith('/people')
+        ? const Color(0xFFE63B66)
+      : BlinkColors.orangeDark;
+    return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(17),
+        side: BorderSide(color: accent.withValues(alpha: .10)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
       dense: true,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       leading: Container(
-        width: 36, height: 36,
+        width: 37, height: 37,
         decoration: BoxDecoration(
-          color: BlinkColors.orangeSoft,
-          borderRadius: BorderRadius.circular(11)),
-        child: Icon(icon, size: 20, color: BlinkColors.orangeDark),
+          color: accent.withValues(alpha: .10),
+          borderRadius: BorderRadius.circular(12)),
+        child: Icon(icon, size: 20, color: accent),
       ),
       title: Text(title, style: const TextStyle(
         color: BlinkColors.ink, fontSize: 13, fontWeight: FontWeight.w700)),
@@ -133,6 +162,8 @@ class _DrawerLink extends StatelessWidget {
         navigator.pop();
         navigator.pushNamed(route);
       },
+      ),
     ),
   );
+  }
 }

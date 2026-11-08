@@ -168,28 +168,54 @@ class _ReelsScreenState extends State<ReelsScreen> with WidgetsBindingObserver {
               ),
             ),
           Positioned(
-            top: 12, left: 10, right: 12,
-            child: Row(children: [
-              Builder(builder: (scaffoldContext) => IconButton(
-                tooltip: 'Open Blink navigation',
-                onPressed: () => Scaffold.of(scaffoldContext).openDrawer(),
-                icon: const Icon(Icons.menu_rounded, color: BlinkColors.orangeDark),
-              )),
-              const Text('Reels', style: TextStyle(
-                color: BlinkColors.orangeDark, fontSize: 23, fontWeight: FontWeight.w900,
-              )),
-              const Spacer(),
-              IconButton(
-                tooltip: 'Refresh public Reels',
-                onPressed: _refresh,
-                icon: const Icon(Icons.refresh_rounded, color: BlinkColors.orangeDark),
-              ),
-              IconButton(
-                tooltip: 'Publish a Reel',
-                onPressed: () => go(context, '/reel/upload'),
-                icon: const Icon(Icons.add_circle_outline, color: BlinkColors.orangeDark),
-              ),
-            ]),
+            top: 12, left: 11, right: 11,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xF1272028), Color(0xDE562E2D)]),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: const Color(0x77FFFFFF)),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x44000000),
+                    blurRadius: 18, offset: Offset(0, 7)),
+                ]),
+              child: Row(children: [
+                Builder(builder: (scaffoldContext) => IconButton(
+                  tooltip: 'Open Blink navigation',
+                  onPressed: () => Scaffold.of(scaffoldContext).openDrawer(),
+                  icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                )),
+                const Expanded(child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('REELS · BLINK',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Color(0xFFFFB78E),
+                        fontSize: 9, fontWeight: FontWeight.w900,
+                        letterSpacing: 1)),
+                    Text('Watch your world',
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.white,
+                        fontSize: 16, fontWeight: FontWeight.w900)),
+                  ],
+                )),
+                IconButton(
+                  tooltip: 'Refresh public Reels',
+                  onPressed: _refresh,
+                  icon: const Icon(Icons.refresh_rounded,
+                    color: Colors.white),
+                ),
+                IconButton(
+                  tooltip: 'Publish a Reel',
+                  onPressed: () => go(context, '/reel/upload'),
+                  icon: const Icon(Icons.add_circle_outline,
+                    color: Color(0xFFFFB78E)),
+                ),
+              ]),
+            ),
           ),
           if (_loadingNext)
             const Positioned(bottom: 10, right: 14,

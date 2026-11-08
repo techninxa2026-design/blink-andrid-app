@@ -82,12 +82,6 @@ class _FullExchangeScreenState extends State<FullExchangeScreen> {
           onPressed: () => _openEditor()),
     ]),
     body: Column(children: [
-      const BlinkFeatureHero(eyebrow: 'THE BLINK EXCHANGE',
-        title: 'Make it happen',
-        subtitle: 'Ideas, services and collaborations in motion.',
-        icon: Icons.handshake_rounded,
-        accent: Color(0xFF313C69), secondary: Color(0xFF6F82C9)),
-
       Padding(padding: const EdgeInsets.all(12), child: Column(children: [
         TextField(controller: search, textInputAction: TextInputAction.search,
           decoration: InputDecoration(hintText: 'Search services, skills and requests',
@@ -129,6 +123,14 @@ class _FullExchangeScreenState extends State<FullExchangeScreen> {
         : RefreshIndicator(onRefresh: _load, child: ListView(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
           children: [
+            const BlinkFeatureHero(
+              eyebrow:'SKILLS · SERVICES · POSSIBILITIES',
+              title:'Make a better exchange.',
+              subtitle:'Connect over real skills, negotiate privately and discover your next collaboration.',
+              icon:Icons.handshake_rounded,
+              mood:BlinkMood.exchange,
+              margin:EdgeInsets.fromLTRB(0,0,0,18),
+            ),
             if (posts.isEmpty) const Padding(padding: EdgeInsets.all(28),
               child: Center(child: Text('No Exchange posts found.'))),
             ...posts.map((raw) {
@@ -399,11 +401,34 @@ class _FullExchangeDetailState extends State<FullExchangeDetail> {
       : RefreshIndicator(onRefresh: _load, child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(field(post, 'title'), style: Theme.of(context).textTheme.headlineSmall),
-          Text(field(post, 'kind') + ' • ' + field(post, 'status') +
-            ' • ' + field(post['author'], 'name')),
-          const SizedBox(height: 14),
-          Text(field(post, 'description')),
+          BlinkFeatureHero(
+            eyebrow:'BLINK EXCHANGE · DISCOVER',
+            title:field(post,'title'),
+            subtitle:'A space for skills, ideas and honest collaboration.',
+            icon:Icons.handshake_rounded,
+            mood:BlinkMood.exchange,
+            margin:const EdgeInsets.fromLTRB(0,0,0,15),
+          ),
+          Wrap(spacing:8,runSpacing:8,children:[
+            BlinkInfoPill(field(post,'kind','Service'),
+              icon:Icons.swap_horiz_rounded,highlight:true),
+            BlinkInfoPill(field(post,'status','OPEN'),
+              icon:Icons.verified_outlined),
+            BlinkInfoPill(field(post['author'],'name','Blink member'),
+              icon:Icons.account_circle_outlined),
+          ]),
+          const SizedBox(height:16),
+          BlinkProCard(
+            mood:BlinkMood.exchange,
+            child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              const Text('ABOUT THIS EXCHANGE',style:TextStyle(
+                fontSize:10,letterSpacing:1.2,fontWeight:FontWeight.w900,
+                color:BlinkColors.orangeDark)),
+              const SizedBox(height:10),
+              Text(field(post,'description'),
+                style:const TextStyle(color:BlinkColors.ink,height:1.55)),
+            ]),
+          ),
           if (arr(post['media']).isNotEmpty) ...[
             const SizedBox(height: 14),
             SizedBox(height: 150, child: ListView(scrollDirection: Axis.horizontal, children: [
@@ -426,27 +451,32 @@ class _FullExchangeDetailState extends State<FullExchangeDetail> {
           if (owner) ...[
             Text('Interested people (' + threads.length.toString() + ')',
               style: Theme.of(context).textTheme.titleLarge),
-            ...threads.map((r) => Card(child: ListTile(
-              leading: const Icon(Icons.people_outline, color: BlinkColors.orange),
-              title: Text(field(r['requester'], 'name', 'Interested user')),
-              subtitle: Text(field(r, 'updatedAt')),
-              onTap: () => Navigator.push(context, MaterialPageRoute<void>(
-                builder: (_) => FullExchangeThread(postId: widget.id,
-                  threadId: field(r, 'id'), title: field(post, 'title'), owner: true))),
-            ))),
+            ...threads.map((r) => BlinkProListCard(
+              icon:Icons.forum_outlined,
+              eyebrow:'PRIVATE NEGOTIATION',
+              title:field(r['requester'],'name','Interested user'),
+              subtitle:field(r,'updatedAt'),
+              mood:BlinkMood.exchange,
+              onTap:()=>Navigator.push(context,MaterialPageRoute<void>(
+                builder:(_)=>FullExchangeThread(postId:widget.id,
+                  threadId:field(r,'id'),title:field(post,'title'),owner:true))),
+            )),
           ],
           const Divider(height: 32),
           Text('Responses', style: Theme.of(context).textTheme.titleLarge),
           ...arr(post['responses']).map((r) {
             final response = obj(r);
-            return ListTile(
-              title: Text(field(response['author'], 'name', 'Blink member')),
-              subtitle: Text(field(response, 'message')),
-              trailing: owner && response['acknowledgedAt'] == null
-                ? IconButton(tooltip: 'Acknowledge response',
-                    onPressed: () => _ack(field(response, 'id')),
-                    icon: const Icon(Icons.done_all, color: BlinkColors.orange))
-                : null,
+            return BlinkProListCard(
+              icon:Icons.mode_comment_outlined,
+              eyebrow:'PUBLIC RESPONSE',
+              title:field(response['author'],'name','Blink member'),
+              subtitle:field(response,'message'),
+              mood:BlinkMood.exchange,
+              trailing:owner&&response['acknowledgedAt']==null
+                ?IconButton(tooltip:'Acknowledge response',
+                  onPressed:()=>_ack(field(response,'id')),
+                  icon:const Icon(Icons.done_all,color:BlinkColors.orange))
+                :null,
             );
           }),
         ],

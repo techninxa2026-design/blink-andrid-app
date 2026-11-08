@@ -8,6 +8,7 @@ import '../core/blink_home_api.dart';
 import '../core/blink_original_music.dart';
 import '../core/live_api.dart';
 import '../core/theme.dart';
+import '../widgets/blink_heart_flight.dart';
 
 class BlinkLiveMomentCard extends StatefulWidget {
   const BlinkLiveMomentCard({
@@ -38,46 +39,22 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
   bool _soundtrackPlaying = false;
   bool _saved = false;
   bool _busy = false;
+  bool _taughtLove = false;
   // Activity and media failures are independent: valid Moments stay visible.
   String? _videoError;
 
   // Instagram-style double-tap feedback is deliberately separate from the
   // backend reaction state, so the heart animation runs immediately.
   late final AnimationController _loveController;
-  late final Animation<double> _loveScale;
-  late final Animation<double> _loveOpacity;
+  final GlobalKey _likeActionKey = GlobalKey(debugLabel: 'Blink Moment Like');
   Offset? _loveTapPoint;
+  Offset? _loveDestination;
 
   @override
   void initState() {
     super.initState();
     _loveController = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 840));
-    _loveScale = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: .40, end: 1.16)
-          .chain(CurveTween(curve: Curves.easeOutBack)),
-        weight: 55,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.16, end: 1.0)
-          .chain(CurveTween(curve: Curves.easeOutCubic)),
-        weight: 45,
-      ),
-    ]).animate(_loveController);
-    _loveOpacity = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0, end: 1)
-          .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 16,
-      ),
-      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 57),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1, end: 0)
-          .chain(CurveTween(curve: Curves.easeIn)),
-        weight: 27,
-      ),
-    ]).animate(_loveController);
+      vsync: this, duration: const Duration(milliseconds: 1120));
     _loadActivity();
     _loadSaved();
     if (widget.moment.mediaType == 'video') _initVideo();
@@ -152,7 +129,12 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
   /// Double tapping any Moment media gives ❤️, never toggles it OFF.
   /// The normal heart button intentionally retains the web's toggle behavior.
   Future<void> _doubleTapLove() async {
-    if (!widget.active) return;
+    if (!widget.active || !mounted) return;
+    final destination = _likeControlPosition();
+    setState(() {
+      _taughtLove = true;
+      _loveDestination = destination;
+    });
     _loveController.forward(from: 0);
     if (_busy || _activity?['myReaction'] == '❤️') return;
 
@@ -202,80 +184,35 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     }
   }
 
-  /// Red heart constellation: the center heart pops at the tap, while
-  /// smaller hearts arc toward the right-hand reaction rail.
-  /// All overlays ignore pointer events, preserving vertical story swipes.
+  /// Measure the Like control after its frame has been laid out, at gesture
+  /// time. Never call localToGlobal() from a LayoutBuilder layout callback.
+  Offset _likeControlPosition() {
+    final fallback = Offset(
+      MediaQuery.sizeOf(context).width - 41,
+      MediaQuery.sizeOf(context).height * .33,
+    );
+    try {
+      final root = context.findRenderObject();
+      final target = _likeActionKey.currentContext?.findRenderObject();
+      if (root is RenderBox && target is RenderBox &&
+          root.hasSize && target.hasSize) {
+        return root.globalToLocal(
+          target.localToGlobal(target.size.center(Offset.zero)));
+      }
+    } catch (error) {
+      debugPrint('Blink love target calculation: $error');
+    }
+    return fallback;
+  }
+
   Widget _loveBurst() => Positioned.fill(
-    child: IgnorePointer(
-      child: LayoutBuilder(builder: (context, space) {
-        const dimension = 112.0;
-        final point = _loveTapPoint ??
-            Offset(space.maxWidth / 2, space.maxHeight / 2);
-        final origin = Offset(
-          point.dx.clamp(36.0, space.maxWidth - 36.0).toDouble(),
-          point.dy.clamp(80.0, space.maxHeight - 90.0).toDouble(),
-        );
-        final destination = Offset(
-          space.maxWidth - 38,
-          space.maxHeight * .37,
-        );
-        const spread = <Offset>[
-          Offset(-64, -52), Offset(46, -80), Offset(-82, 22),
-          Offset(72, 45), Offset(-35, 83), Offset(15, -108),
-          Offset(90, -16), Offset(-98, -35), Offset(42, 100),
-        ];
-        return AnimatedBuilder(
-          animation: _loveController,
-          builder: (context, child) {
-            final progress = _loveController.value;
-            final fly = Curves.easeInOutCubic.transform(
-              ((progress - .19) / .81).clamp(0.0, 1.0).toDouble());
-            return Stack(children: [
-              Positioned(
-                left: (origin.dx - dimension / 2)
-                    .clamp(0.0, space.maxWidth - dimension).toDouble(),
-                top: (origin.dy - dimension / 2)
-                    .clamp(0.0, space.maxHeight - dimension).toDouble(),
-                child: Transform.scale(
-                  scale: _loveScale.value,
-                  child: Opacity(
-                    opacity: _loveOpacity.value,
-                    child: const Icon(Icons.favorite_rounded,
-                      key: ValueKey('blink-moment-double-tap-heart'),
-                      color: Color(0xFFFF234F), size: dimension,
-                      shadows: [
-                        Shadow(color: Color(0xAAFF244D), blurRadius: 30),
-                        Shadow(color: Color(0x77000000), blurRadius: 12,
-                          offset: Offset(0, 5)),
-                      ]),
-                  ),
-                ),
-              ),
-              for (var i = 0; i < spread.length; i++)
-                Positioned(
-                  left: origin.dx + spread[i].dx * (1 - fly) +
-                      (destination.dx - origin.dx) * fly - 12,
-                  top: origin.dy + spread[i].dy * (1 - fly) +
-                      (destination.dy - origin.dy) * fly -
-                      25 * (1 - fly) - 12,
-                  child: Opacity(
-                    opacity: (progress < .07 ? progress / .07 :
-                        (1 - fly)).clamp(0.0, 1.0).toDouble(),
-                    child: Transform.rotate(
-                      angle: (i.isEven ? 1 : -1) * fly * .65,
-                      child: Icon(Icons.favorite_rounded,
-                        size: 13.0 + (i % 3) * 5,
-                        color: i.isEven
-                          ? const Color(0xFFFF1847)
-                          : const Color(0xFFFF5576)),
-                    ),
-                  ),
-                ),
-            ]);
-          },
-        );
-      }),
-    ),
+    child: LayoutBuilder(builder: (context, space) => BlinkHeartFlight(
+      progress: _loveController,
+      origin: _loveTapPoint ??
+        Offset(space.maxWidth * .5, space.maxHeight * .5),
+      destination: _loveDestination ??
+        Offset(space.maxWidth - 41, space.maxHeight * .33),
+    )),
   );
 
   Future<void> _reaction() async {
@@ -649,28 +586,71 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     required String label,
     required VoidCallback onPressed,
     String? tooltip,
+    Key? tileKey,
+    Color accent = Colors.white,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 13),
+    padding: const EdgeInsets.only(bottom: 8),
     child: Tooltip(
       message: tooltip ?? label,
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Material(
-          color: const Color(0xAA19191F),
-          shape: CircleBorder(
-            side: BorderSide(color: Colors.white.withValues(alpha: .26))),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onPressed,
-            child: SizedBox(width: 54, height: 54,
-              child: Center(child: symbol)),
+      child: Material(
+        key: tileKey,
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(24),
+          splashColor: BlinkColors.orange.withValues(alpha: .18),
+          child: SizedBox(
+            width: 64,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: 52, height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xD9252733),
+                      Color.lerp(const Color(0xC9212230),
+                        accent, .16) ?? const Color(0xC9212230),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(19),
+                  border: Border.all(
+                    color: accent == Colors.white
+                      ? const Color(0x4CFFFFFF)
+                      : accent.withValues(alpha: .65),
+                    width: 1.1),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x70000000),
+                      blurRadius: 15, offset: Offset(0, 5)),
+                  ],
+                ),
+                child: symbol,
+              ),
+              const SizedBox(height: 4),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xC4171922),
+                  borderRadius: BorderRadius.circular(9)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 58),
+                    child: Text(label, maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white, fontSize: 10,
+                        fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ),
+            ]),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(label, maxLines: 1,
-          style: const TextStyle(color: Colors.white,
-            fontSize: 11, fontWeight: FontWeight.w800,
-            shadows: [Shadow(color: Colors.black, blurRadius: 8)])),
-      ]),
+      ),
     ),
   );
 
@@ -731,77 +711,152 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
         onTap: widget.moment.mediaType == 'video' ? _togglePlayback : null,
         onDoubleTapDown: (details) => _loveTapPoint = details.localPosition,
         onDoubleTap: _doubleTapLove,
+        onLongPress: _reaction,
       )),
       _loveBurst(),
+      // A compact editorial identity card, not a wall of controls over media.
+      // The 78px right gutter keeps it clear of the floating action orbs.
       SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(17, 72, 78, 36),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Spacer(),
-            Row(children: [
-              CircleAvatar(
-                radius: 19, backgroundColor: BlinkColors.orange,
-                backgroundImage: widget.moment.avatarKey == null
-                  ? null : NetworkImage(
-                      BlinkHomeApi.mediaUrl(widget.moment.avatarKey!)),
-                child: widget.moment.avatarKey == null
-                  ? const Icon(Icons.person_rounded, color: Colors.white)
-                  : null,
-              ),
-              const SizedBox(width: 9),
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.moment.author,
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white,
-                      fontSize: 14, fontWeight: FontWeight.w900)),
-                  Text(_ago(widget.moment.createdAt),
-                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
-                ],
-              )),
-              IconButton(
-                tooltip: 'Share Moment',
-                onPressed: _shareOptions,
-                icon: const Icon(Icons.send_outlined, color: Colors.white)),
-            ]),
-            if ((widget.moment.caption ?? '').isNotEmpty) ...[
-              const SizedBox(height: 9),
-              Padding(
-                padding: const EdgeInsets.only(right: 64),
-                child: Text(widget.moment.caption!,
-                  maxLines: 3, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 13)),
+          padding: const EdgeInsets.fromLTRB(13, 56, 77, 19),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Spacer(),
+              if (!_taughtLove) ...[
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Color(0xBC15151C),
+                    borderRadius: BorderRadius.all(Radius.circular(22)),
+                    border: Border.fromBorderSide(
+                      BorderSide(color: Color(0x62FFFFFF), width: .7)),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Text('❤️  Double-tap to love  ·  Hold to react',
+                      maxLines: 2, textAlign: TextAlign.left,
+                      style: TextStyle(color: Colors.white,
+                        fontSize: 10.5, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+              Container(
+                constraints: const BoxConstraints(maxHeight: 230),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    colors: [Color(0xEA16161F), Color(0xCB24242D)]),
+                  borderRadius: BorderRadius.circular(23),
+                  border: Border.all(color: const Color(0x55FFFFFF)),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x77000000),
+                      blurRadius: 22, offset: Offset(0, 8)),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('✦  BLINK MOMENT',
+                        style: TextStyle(
+                          color: Color(0xFFFFB78E),
+                          letterSpacing: 1.3, fontSize: 9,
+                          fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        Container(
+                          width: 41, height: 41,
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(colors: [
+                              Color(0xFFFF5F18), Color(0xFFFF315F),
+                            ])),
+                          child: CircleAvatar(
+                            backgroundColor: BlinkColors.orangeDark,
+                            backgroundImage: widget.moment.avatarKey == null
+                              ? null : NetworkImage(
+                                BlinkHomeApi.mediaUrl(widget.moment.avatarKey!)),
+                            child: widget.moment.avatarKey == null
+                              ? const Icon(Icons.person_rounded,
+                                color: Colors.white, size: 23)
+                              : null,
+                          ),
+                        ),
+                        const SizedBox(width: 9),
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(widget.moment.author,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white,
+                                fontSize: 13, fontWeight: FontWeight.w900)),
+                            Text(_ago(widget.moment.createdAt),
+                              style: const TextStyle(
+                                color: Colors.white70, fontSize: 10.5)),
+                          ],
+                        )),
+                      ]),
+                      if ((widget.moment.caption ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(widget.moment.caption!,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white,
+                            fontSize: 12.5, height: 1.45)),
+                      ],
+                      if (blinkOriginalTrack(widget.moment.musicTrackId) != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 7),
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 3),
+                              minimumSize: const Size(0, 34),
+                              foregroundColor: Colors.white),
+                            onPressed: _toggleSoundtrack,
+                            icon: Icon(_soundtrackPlaying
+                              ? Icons.pause_circle_outline_rounded
+                              : Icons.music_note_rounded, size: 17),
+                            label: Text(
+                              blinkOriginalTrack(widget.moment.musicTrackId)!.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white70, fontSize: 10.5)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ],
-            if (blinkOriginalTrack(widget.moment.musicTrackId) != null)
-              TextButton.icon(
-                onPressed: _toggleSoundtrack,
-                icon: Icon(_soundtrackPlaying ? Icons.pause_circle_outline
-                  : Icons.music_note_rounded, color: Colors.white, size: 18),
-                label: Text(blinkOriginalTrack(widget.moment.musicTrackId)!.title,
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 11)),
-              ),
-          ]),
+          ),
         ),
       ),
       SafeArea(
         child: Align(
           alignment: Alignment.centerRight,
           child: Padding(
-            padding: const EdgeInsets.only(right: 14, top: 65, bottom: 65),
+            padding: const EdgeInsets.only(right: 10, top: 30, bottom: 46),
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.sizeOf(context).height * .67),
+                maxHeight: MediaQuery.sizeOf(context).height * .70),
               child: SingleChildScrollView(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   _actionTile(
                     symbol: Icon(myReaction == '❤️'
                       ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
-                      color: myReaction == '❤️' ? const Color(0xFFFF3158) : Colors.white,
-                      size: 25),
+                      color: myReaction == '❤️'
+                        ? const Color(0xFFFF2851) : Colors.white,
+                      size: 27),
                     label: reactions, tooltip: 'Like Moment',
+                    tileKey: _likeActionKey,
+                    accent: const Color(0xFFFF2851),
                     onPressed: _busy ? () {} : _like,
                   ),
                   _actionTile(
@@ -809,11 +864,13 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                       ? myReaction : '😊',
                       style: const TextStyle(fontSize: 24)),
                     label: 'React', onPressed: _reaction,
+                    accent: const Color(0xFFFFB547),
                   ),
                   _actionTile(
                     symbol: const Icon(Icons.mode_comment_outlined,
                       color: Colors.white, size: 25),
                     label: comments, tooltip: 'Comments',
+                    accent: const Color(0xFF8EBDFF),
                     onPressed: _comments,
                   ),
                   _actionTile(
@@ -821,13 +878,15 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                         : Icons.card_giftcard_rounded,
                       color: const Color(0xFFFFB27F), size: 25),
                     label: mine ? 'Viewers' : 'BP',
+                    accent: const Color(0xFFFFBF52),
                     tooltip: mine ? 'Moment viewers' : 'Give Blink Points',
                     onPressed: mine ? _viewers : _giftBp,
                   ),
                   _actionTile(
                     symbol: const Icon(Icons.send_outlined,
                       color: Colors.white, size: 25),
-                    label: 'Share', onPressed: _shareOptions,
+                    label: 'Share', accent: const Color(0xFF9BE9D0),
+                    onPressed: _shareOptions,
                   ),
                 ]),
               ),

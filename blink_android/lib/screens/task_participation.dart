@@ -66,10 +66,21 @@ class _FullTaskDetailState extends State<FullTaskDetail> {
       body:loading?const Center(child:CircularProgressIndicator(color:BlinkColors.orange))
         :error.isNotEmpty?liveError(error,_load)
         :RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(16),children:[
-          Text(field(task,'title'),style:Theme.of(context).textTheme.headlineSmall),
-          Text(field(task['creator'],'name')+' · '+field(task,'rewardBp')+' BP'),
-          const SizedBox(height:15),
-          Text(field(task,'description')),
+          BlinkFeatureHero(
+            eyebrow:'VERIFIED CREATOR CHALLENGE',
+            title:field(task,'title'),
+            subtitle:field(task,'description'),
+            icon:Icons.task_alt_rounded,
+            mood:BlinkMood.studio,
+            margin:const EdgeInsets.fromLTRB(0,0,0,16),
+          ),
+          Wrap(spacing:8,runSpacing:8,children:[
+            BlinkInfoPill(field(task['creator'],'name','Creator'),
+              icon:Icons.person_outline_rounded),
+            BlinkInfoPill('${field(task,'rewardBp','0')} BP',
+              icon:Icons.stars_rounded,highlight:true),
+          ]),
+          const SizedBox(height:16),
           if(field(task,'videoUrl').isNotEmpty)Padding(padding:const EdgeInsets.only(top:14),
             child:SizedBox(height:240,child:TaskMediaVideo(
               url:LiveApi.root+field(task,'videoUrl')))),

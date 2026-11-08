@@ -28,11 +28,14 @@ class _DiscoverState extends State<LiveDiscoverPeopleScreen>{
     IconButton(icon:const Icon(Icons.people),tooltip:'My friends',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveFriendsScreen()))),
     IconButton(icon:const Icon(Icons.person_add_alt),tooltip:'Requests',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveRequestsScreen()))),
   ]),body:Column(children:[
-    const BlinkFeatureHero(eyebrow: 'YOUR BLINK CIRCLE',
-      title: 'Find your people', subtitle: 'A community built around your energy.',
-      icon: Icons.diversity_3_rounded,
-      accent: Color(0xFFEF571B), secondary: Color(0xFFF99A4E)),
-
+    const BlinkFeatureHero(
+      eyebrow:'FIND YOUR PEOPLE',
+      title:'Good people. Great connections.',
+      subtitle:'Discover your community and make the next meaningful introduction.',
+      icon:Icons.people_alt_rounded,
+      mood:BlinkMood.community,
+      margin:EdgeInsets.fromLTRB(13,11,13,0),
+    ),
     Padding(padding:const EdgeInsets.all(14),child:TextField(decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search Blink members'),onChanged:(v)=>query=v,onSubmitted:(_)=>_load())),
     Expanded(child:loading?const Center(child:CircularProgressIndicator()):
       error!=null?liveError(error,_load):
@@ -70,6 +73,13 @@ class _FriendsState extends State<LiveFriendsScreen>{
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('My Friends')),
     body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
     RefreshIndicator(onRefresh:_load,child:ListView(children:[
+      const BlinkFeatureHero(
+        eyebrow:'YOUR CIRCLE',
+        title:'People you know.',
+        subtitle:'Stay in touch with the friends who make Blink feel like yours.',
+        icon:Icons.diversity_3_rounded,
+        mood:BlinkMood.community,
+      ),
       if(friends.isEmpty)const ListTile(title:Text('No friends yet'),subtitle:Text('Discover people and send a friend request.')),
       ...friends.map((row){final user=obj(obj(row)['user']);return Padding(
         padding:const EdgeInsets.symmetric(horizontal:12),
@@ -113,6 +123,13 @@ class _RequestsState extends State<LiveRequestsScreen>{
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Friend Requests')),body:
     loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
     RefreshIndicator(onRefresh:_load,child:ListView(children:[
+      const BlinkFeatureHero(
+        eyebrow:'GROW YOUR COMMUNITY',
+        title:'Make a new connection.',
+        subtitle:'Review requests and meet the people reaching out to you.',
+        icon:Icons.person_add_alt_1_rounded,
+        mood:BlinkMood.community,
+      ),
       const ListTile(title:Text('Incoming requests',style:TextStyle(fontWeight:FontWeight.bold))),
       if(incoming.isEmpty)const ListTile(title:Text('No incoming requests')),
       ...incoming.map((r)=>Padding(
@@ -344,27 +361,23 @@ class _ProfileState extends State<LiveProfileScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 32),
                 children: [
-                  if (field(p, 'coverKey').isNotEmpty)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(LiveApi.url(field(p, 'coverKey')),
-                        height: 140, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox(
-                          height: 140, child: Icon(Icons.image_not_supported_outlined))),
-                    ),
-                  const SizedBox(height: 14),
-                  Center(child: liveAvatar(p, radius: 48)),
-                  const SizedBox(height: 10),
-                  Center(child: Text(field(p, 'name'), style: Theme.of(context).textTheme.headlineSmall)),
-                  if (field(p, 'bio').isNotEmpty)
-                    Center(child: Text(field(p, 'bio'), textAlign: TextAlign.center)),
-                  const SizedBox(height: 16),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-                    _stat(field(p, 'followersCount', '0'), 'Followers'),
-                    _stat(field(p, 'followingCount', '0'), 'Following'),
-                    _stat(field(p, 'connectionsCount', '0'), 'Friends'),
-                  ]),
-                  const Divider(height: 28),
+                  BlinkProfileMasthead(
+                    name:field(p,'name','Blink member'),
+                    bio:field(p,'bio'),
+                    avatar:liveAvatar(p,radius:48),
+                    cover:field(p,'coverKey').isEmpty?null:Image.network(
+                      LiveApi.url(field(p,'coverKey')),
+                      fit:BoxFit.cover,
+                      errorBuilder:(_,__,___)=>const SizedBox.shrink()),
+                    stats:Wrap(
+                      alignment:WrapAlignment.spaceEvenly,
+                      spacing:14,runSpacing:12,
+                      children:[
+                        _stat(field(p,'followersCount','0'),'Followers'),
+                        _stat(field(p,'followingCount','0'),'Following'),
+                        _stat(field(p,'connectionsCount','0'),'Friends'),
+                      ]),
+                  ),
                   _info('Email', field(p, 'email')),
                   _info('Occupation', field(p, 'occupation')),
                   _info('Workplace', field(p, 'workplace')),
@@ -719,21 +732,23 @@ class _PublicState extends State<LivePublicProfileScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 28),
                 children: [
-                  if (field(p, 'coverKey').isNotEmpty)
-                    ClipRRect(borderRadius: BorderRadius.circular(15),
-                      child: Image.network(LiveApi.url(field(p, 'coverKey')),
-                        height: 136, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox(height: 136))),
-                  const SizedBox(height: 14),
-                  Center(child: liveAvatar(p, radius: 45)),
-                  const SizedBox(height: 12),
-                  Center(child: Text(field(p, 'name'),
-                    style: Theme.of(context).textTheme.headlineSmall)),
-                  if (field(p, 'bio').isNotEmpty)
-                    Center(child: Text(field(p, 'bio'), textAlign: TextAlign.center)),
-                  const SizedBox(height: 12),
-                  Center(child: Text('${field(p,'connectionsCount','0')} connections')),
-                  const SizedBox(height: 15),
+                  BlinkProfileMasthead(
+                    name:field(p,'name','Blink member'),
+                    bio:field(p,'bio'),
+                    avatar:liveAvatar(p,radius:45),
+                    cover:field(p,'coverKey').isEmpty?null:Image.network(
+                      LiveApi.url(field(p,'coverKey')),
+                      fit:BoxFit.cover,
+                      errorBuilder:(_,__,___)=>const SizedBox.shrink()),
+                    stats:Row(children:[
+                      const Icon(Icons.people_alt_outlined,
+                        color:BlinkColors.orange,size:17),
+                      const SizedBox(width:7),
+                      Text('${field(p,'connectionsCount','0')} connections',
+                        style:const TextStyle(
+                          color:BlinkColors.ink,fontWeight:FontWeight.w800)),
+                    ]),
+                  ),
                   if (relationship == 'SELF')
                     FilledButton.icon(
                       onPressed: () => Navigator.pushNamed(context, '/profile'),

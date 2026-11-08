@@ -134,7 +134,7 @@ class BlinkScreen extends StatelessWidget {
       drawer: const BlinkFullDrawer(),
       appBar: AppBar(
         title: logoTitle
-            ? const BlinkLogo()
+            ? BlinkBrandedTitle(title)
             : Text(
           title,
           style: const TextStyle(
@@ -189,12 +189,17 @@ class BlinkBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      elevation: 0,
-      child: DecoratedBox(
+      elevation: 12,
+      shadowColor: const Color(0x44000000),
+      child: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFFFA4F00), Color(0xFFFF7728), Color(0xFFE94708)])),
+            begin: Alignment.centerLeft, end: Alignment.centerRight,
+            colors: [Color(0xFF2B2228), Color(0xFF663029),
+              BlinkColors.orangeDark]),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border(top: BorderSide(color: Color(0x66FFB895))),
+        ),
         child: SafeArea(
         top: false,
         child: SizedBox(
@@ -283,7 +288,8 @@ class BlinkBottomBar extends StatelessWidget {
             ],
           ),
         ),
-      )),
+      ),
+      ),
     );
   }
 }
@@ -331,11 +337,12 @@ class _NavItem extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: selected
-                      ? const Color(0x44FFFFFF)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(18),
-                  border: selected ? Border.all(color: const Color(0x99FFFFFF)) : null,
+                  color: selected ? null : Colors.transparent,
+                  gradient: selected ? const LinearGradient(
+                    colors: [Color(0x55FFFFFF),Color(0x18FFFFFF)]) : null,
+                  border: selected ? Border.all(
+                    color: const Color(0x55FFFFFF)) : null,
+                  borderRadius: BorderRadius.circular(15),
                 ),
                 child: Icon(
                   icon,
@@ -605,49 +612,59 @@ class SectionHeading extends StatelessWidget {
   final String? subtitle;
   final Widget? action;
 
-  const SectionHeading(
-      this.title, {
-        super.key,
-        this.subtitle,
-        this.action,
-      });
+  const SectionHeading(this.title, {
+    super.key,
+    this.subtitle,
+    this.action,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 20, 18, 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -.65,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: BlinkColors.muted,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (action != null) action!,
-        ],
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(17, 18, 17, 14),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+      Container(
+        width: 4, height: subtitle == null ? 43 : 65,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter, end: Alignment.bottomCenter,
+            colors: [BlinkColors.orange, Color(0xFFFFB17E)]),
+          borderRadius: BorderRadius.circular(4)),
       ),
-    );
-  }
+      const SizedBox(width: 11),
+      Expanded(child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(children: [
+            Icon(Icons.auto_awesome_rounded, color: BlinkColors.orange,
+              size: 11),
+            SizedBox(width: 5),
+            Expanded(child: Text('YOUR BLINK SPACE',
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: BlinkColors.orangeDark,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.3, fontSize: 9))),
+          ]),
+          const SizedBox(height: 4),
+          Text(title,
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 21,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -.55, color: BlinkColors.ink)),
+          if (subtitle != null) ...[
+            const SizedBox(height: 3),
+            Text(subtitle!, maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: BlinkColors.muted, fontSize: 11.5, height: 1.4)),
+          ],
+        ],
+      )),
+      if (action != null) ...[
+        const SizedBox(width: 7),
+        action!,
+      ],
+    ]),
+  );
 }
 
 // ========================================
@@ -688,6 +705,282 @@ class BlinkPanel extends StatelessWidget {
 }
 
 // ========================================
+// BLINK EDITORIAL SYSTEM — VISUAL IDENTITIES BY FEATURE
+// ========================================
+
+enum BlinkMood { studio, community, business, exchange, adventure, rewards }
+
+class BlinkMoodColors {
+  static Color primary(BlinkMood mood) {
+    switch (mood) {
+      case BlinkMood.community: return const Color(0xFFEE3264);
+      case BlinkMood.business: return const Color(0xFF1A5564);
+      case BlinkMood.exchange: return const Color(0xFF4C61B8);
+      case BlinkMood.adventure: return const Color(0xFF007E9C);
+      case BlinkMood.rewards: return const Color(0xFFAF6913);
+      case BlinkMood.studio: return BlinkColors.orangeDark;
+    }
+  }
+
+  static List<Color> gradient(BlinkMood mood) {
+    switch (mood) {
+      case BlinkMood.community:
+        return const [Color(0xFF391831), Color(0xFF872B57), Color(0xFFE85C5B)];
+      case BlinkMood.business:
+        return const [Color(0xFF102B38), Color(0xFF164B58), Color(0xFF2B6E69)];
+      case BlinkMood.exchange:
+        return const [Color(0xFF222243), Color(0xFF4C4280), Color(0xFFDC754B)];
+      case BlinkMood.adventure:
+        return const [Color(0xFF083E4E), Color(0xFF126E81), Color(0xFFEE8B5B)];
+      case BlinkMood.rewards:
+        return const [Color(0xFF382413), Color(0xFF975415), Color(0xFFE2A342)];
+      case BlinkMood.studio:
+        return const [Color(0xFF271D22), Color(0xFFA83B24), BlinkColors.orange];
+    }
+  }
+
+  static BlinkMood infer(String? eyebrow) {
+    final label = (eyebrow ?? '').toUpperCase();
+    if (label.contains('BUSINESS') || label.contains('PROFESSION') ||
+        label.contains('NETWORK') || label.contains('MEETING')) {
+      return BlinkMood.business;
+    }
+    if (label.contains('EXCHANGE') || label.contains('NEGOTIAT') ||
+        label.contains('OFFER')) return BlinkMood.exchange;
+    if (label.contains('IRL') || label.contains('PLAN') ||
+        label.contains('MEETUP')) return BlinkMood.adventure;
+    if (label.contains('BP') || label.contains('REWARD') ||
+        label.contains('WALLET')) return BlinkMood.rewards;
+    if (label.contains('HEART') || label.contains('CONNECTION') ||
+        label.contains('FRIEND') || label.contains('CHECK') ||
+        label.contains('PEOPLE')) return BlinkMood.community;
+    return BlinkMood.studio;
+  }
+}
+
+/// An editorial masthead with typographic hierarchy, non-rectangular
+/// ornamental forms and feature-specific hues. It is intentionally different
+/// from a generic Card with a shadow. All icons/actions remain accessible.
+class BlinkFeatureHero extends StatelessWidget {
+  const BlinkFeatureHero({
+    super.key,
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    this.mood = BlinkMood.studio,
+    this.action,
+    this.margin = const EdgeInsets.fromLTRB(14, 13, 14, 18),
+  });
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final BlinkMood mood;
+  final Widget? action;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = BlinkMoodColors.gradient(mood);
+    return Container(
+      margin: margin,
+      constraints: const BoxConstraints(minHeight: 158),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(27),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: palette),
+        boxShadow: [
+          BoxShadow(color: palette[1].withValues(alpha: .22),
+            blurRadius: 28, offset: const Offset(0, 12)),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(children: [
+        Positioned(right: -48, top: -84,
+          child: Container(width: 201, height: 201,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white.withValues(alpha: .17),
+                width: 29),
+              shape: BoxShape.circle))),
+        Positioned(right: -12, bottom: -70,
+          child: Transform.rotate(
+            angle: -.28,
+            child: Container(width: 158, height: 140,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: .055),
+                borderRadius: BorderRadius.circular(40))))),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 19, 18, 20),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: .15),
+                        borderRadius: BorderRadius.circular(30)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                        child: Text(eyebrow.toUpperCase(),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 9.5, letterSpacing: 1.3,
+                            color: Colors.white, fontWeight: FontWeight.w900)),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white,
+                        fontSize: 24, height: 1.09, letterSpacing: -.65,
+                        fontWeight: FontWeight.w900)),
+                  ],
+                )),
+                const SizedBox(width: 10),
+                Container(
+                  width: 52, height: 52,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .30)),
+                    borderRadius: BorderRadius.circular(18)),
+                  child: Icon(icon, size: 28, color: Colors.white)),
+              ]),
+              const SizedBox(height: 10),
+              Text(subtitle,
+                maxLines: 3, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFFFAF0EC), fontSize: 12,
+                  height: 1.45)),
+              if (action != null) ...[
+                const SizedBox(height: 14),
+                action!,
+              ],
+            ]),
+        ),
+      ]),
+    );
+  }
+}
+
+
+class BlinkProfileMasthead extends StatelessWidget {
+  const BlinkProfileMasthead({
+    super.key,
+    required this.name,
+    required this.avatar,
+    this.bio,
+    this.cover,
+    this.stats,
+    this.action,
+    this.mood = BlinkMood.community,
+  });
+
+  final String name;
+  final String? bio;
+  final Widget avatar;
+  final Widget? cover;
+  final Widget? stats;
+  final Widget? action;
+  final BlinkMood mood;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = BlinkMoodColors.primary(mood);
+    final palette = BlinkMoodColors.gradient(mood);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(27),
+        border: Border.all(color: accent.withValues(alpha: .22)),
+        boxShadow: [
+          BoxShadow(color: accent.withValues(alpha: .10),
+            blurRadius: 26, offset: const Offset(0, 11)),
+        ]),
+      clipBehavior: Clip.antiAlias,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Stack(clipBehavior: Clip.none, children: [
+          SizedBox(
+            height: 155,
+            child: Stack(fit: StackFit.expand, children: [
+              DecoratedBox(decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  colors: palette))),
+              if (cover != null) cover!,
+              Positioned(
+                right: -39, top: -69,
+                child: IgnorePointer(child: Container(
+                  width: 200, height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .17), width: 34)),
+                ))),
+              const Positioned(top: 16, left: 18,
+                child: Text('✦  BLINK IDENTITY',
+                  style: TextStyle(color: Colors.white,
+                    fontSize: 10, letterSpacing: 1.35,
+                    fontWeight: FontWeight.w900))),
+            ]),
+          ),
+          Positioned(
+            bottom: -45, left: 19,
+            child: Container(
+              width: 98, height: 98,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: accent, width: 2),
+                boxShadow: const [BoxShadow(color: Color(0x33000000),
+                  blurRadius: 12, offset: Offset(0, 5))]),
+              child: ClipOval(child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(width: 100, height: 100, child: avatar))),
+            ),
+          ),
+        ]),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 51, 20, 19),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name, maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: BlinkColors.ink,
+                  fontSize: 24, letterSpacing: -.6,
+                  fontWeight: FontWeight.w900)),
+              if (bio != null && bio!.isNotEmpty) ...[
+                const SizedBox(height: 7),
+                Text(bio!, maxLines: 3, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: BlinkColors.muted, fontSize: 12.5, height: 1.4)),
+              ],
+              if (stats != null) ...[
+                const SizedBox(height: 17),
+                const Divider(height: 1),
+                const SizedBox(height: 13),
+                stats!,
+              ],
+              if (action != null) ...[
+                const SizedBox(height: 14),
+                action!,
+              ],
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+// ========================================
 // PREMIUM CARD DESIGN SYSTEM
 // ========================================
 
@@ -701,143 +994,77 @@ class BlinkProCard extends StatelessWidget {
     this.onTap,
     this.padding = const EdgeInsets.all(17),
     this.margin = const EdgeInsets.only(bottom: 12),
+    this.mood = BlinkMood.studio,
   });
 
   final Widget child;
   final VoidCallback? onTap;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry margin;
+  final BlinkMood mood;
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: margin,
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFFFFFFFF), Color(0xFFFFFAF6), Color(0xFFFFF0E5)],
+  Widget build(BuildContext context) {
+    final accent = BlinkMoodColors.primary(mood);
+    return Container(
+      margin: margin,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: accent.withValues(alpha: .20), width: 1.05),
+        boxShadow: [
+          BoxShadow(color: accent.withValues(alpha: .085),
+            blurRadius: 23, offset: const Offset(0, 10)),
+          const BoxShadow(color: Color(0x08000000),
+            blurRadius: 7, offset: Offset(0, 3)),
+        ],
       ),
-      borderRadius: BorderRadius.circular(25),
-      border: Border.all(color: const Color(0xFFFFDCC5), width: 1.2),
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: Stack(children: [
-      Positioned(
-        right: -28, top: -46,
-        child: IgnorePointer(child: Container(
-          width: 132, height: 132,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0x33FF9E62), width: 19),
-          ),
-        )),
-      ),
-      Positioned(
-        left: 0, top: 0, bottom: 0,
-        child: IgnorePointer(child: Container(
-          width: 4,
-          decoration: const BoxDecoration(
+      clipBehavior: Clip.antiAlias,
+      child: Stack(children: [
+        Positioned.fill(child: IgnorePointer(
+          child: DecoratedBox(decoration: BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topCenter, end: Alignment.bottomCenter,
-              colors: [Color(0xFFFF5900), Color(0xFFFFBC8C)]),
-          ),
-        )),
-      ),
-      Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(padding: padding, child: child),
-        ),
-      ),
-    ]),
-  );
-}
-
-/// An editorial feature identity, not another generic shadow card.
-/// Distinct accents let Inbox, People, Exchange and Tasks feel like
-/// different Blink destinations while keeping the official brand language.
-class BlinkFeatureHero extends StatelessWidget {
-  const BlinkFeatureHero({
-    super.key,
-    required this.eyebrow,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    this.accent = BlinkColors.orange,
-    this.secondary = const Color(0xFFFFAD6A),
-    this.action,
-  });
-
-  final String eyebrow;
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color accent;
-  final Color secondary;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-    constraints: const BoxConstraints(minHeight: 125),
-    clipBehavior: Clip.antiAlias,
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [accent, Color.lerp(accent, secondary, .52)!, secondary]),
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(30),
-        topRight: Radius.circular(11),
-        bottomLeft: Radius.circular(11),
-        bottomRight: Radius.circular(30)),
-    ),
-    child: Stack(children: [
-      Positioned(
-        right: -43, top: -57,
-        child: IgnorePointer(child: Container(
-          width: 180, height: 180,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0x33FFFFFF), width: 31)),
-        )),
-      ),
-      Positioned(
-        right: 34, bottom: -35,
-        child: IgnorePointer(child: Icon(icon, size: 130,
-          color: const Color(0x20FFFFFF))),
-      ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(19, 18, 18, 19),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(eyebrow.toUpperCase(),
-                style: const TextStyle(fontSize: 10, letterSpacing: 1.5,
-                  fontWeight: FontWeight.w900, color: Color(0xDDFFFFFF))),
-              const SizedBox(height: 7),
-              Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 23, height: 1.04,
-                  fontWeight: FontWeight.w900, letterSpacing: -.7,
-                  color: Colors.white)),
-              const SizedBox(height: 7),
-              Text(subtitle, maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11.5, height: 1.35,
-                  color: Color(0xEEFFFFFF))),
-            ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                Color.lerp(Colors.white, accent, .035)!,
+                Color.lerp(Colors.white, accent, .075)!,
+              ],
+              stops: const [0, .62, 1],
+            ),
           )),
-          if (action != null) ...[
-            const SizedBox(width: 9),
-            action!,
-          ],
-        ]),
-      ),
-    ]),
-  );
+        )),
+        Positioned(
+          right: -30, top: -42,
+          child: IgnorePointer(child: Container(
+            width: 94, height: 94,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: accent.withValues(alpha: .085), width: 19)),
+          )),
+        ),
+        Positioned(left: 0, top: 0, bottom: 0,
+          child: Container(
+            width: 3.5,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                colors: [accent, accent.withValues(alpha: .10)]),
+            ),
+          ),
+        ),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(padding: padding, child: child),
+          ),
+        ),
+      ]),
+    );
+  }
 }
 
 /// Compact premium metadata label. Wrap multiple chips rather than putting
@@ -903,6 +1130,7 @@ class BlinkProListCard extends StatelessWidget {
     this.onTap,
     this.leading,
     this.margin = const EdgeInsets.only(bottom: 12),
+    this.mood,
   });
 
   final String title;
@@ -915,9 +1143,14 @@ class BlinkProListCard extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? leading;
   final EdgeInsetsGeometry margin;
+  final BlinkMood? mood;
 
   @override
-  Widget build(BuildContext context) => BlinkProCard(
+  Widget build(BuildContext context) {
+    final tone = mood ?? BlinkMoodColors.infer(eyebrow);
+    final accent = BlinkMoodColors.primary(tone);
+    return BlinkProCard(
+    mood: tone,
     onTap: onTap,
     margin: margin,
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -925,14 +1158,19 @@ class BlinkProListCard extends StatelessWidget {
         Container(
           width: 52, height: 52,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [
-              Color(0xFFFFE2D0), Color(0xFFFFF5EE),
+            gradient: LinearGradient(colors: [
+              accent.withValues(alpha: .20),
+              accent.withValues(alpha: .055),
             ]),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFFFD0B7)),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(9),
+              topRight: Radius.circular(19),
+              bottomLeft: Radius.circular(19),
+              bottomRight: Radius.circular(9)),
+            border: Border.all(color: accent.withValues(alpha: .23)),
           ),
           child: Center(child: leading ?? Icon(icon,
-            color: BlinkColors.orangeDark, size: 25)),
+            color: accent, size: 25)),
         ),
         const SizedBox(width: 13),
         Expanded(child: Column(
@@ -941,9 +1179,9 @@ class BlinkProListCard extends StatelessWidget {
             if (eyebrow != null && eyebrow!.isNotEmpty) ...[
               Text(eyebrow!.toUpperCase(), maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 10, letterSpacing: 0.9,
+                style: TextStyle(fontSize: 10, letterSpacing: 0.9,
                   fontWeight: FontWeight.w800,
-                  color: BlinkColors.orangeDark)),
+                  color: accent)),
               const SizedBox(height: 5),
             ],
             Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
@@ -963,8 +1201,8 @@ class BlinkProListCard extends StatelessWidget {
           trailing!,
         ] else if (onTap != null) ...[
           const SizedBox(width: 4),
-          const Icon(Icons.arrow_outward_rounded,
-            color: BlinkColors.orangeDark, size: 20),
+          Icon(Icons.arrow_outward_rounded,
+            color: accent, size: 20),
         ],
       ]),
       if (badges.isNotEmpty) ...[
@@ -979,6 +1217,7 @@ class BlinkProListCard extends StatelessWidget {
       ],
     ]),
   );
+  }
 }
 
 /// Shared visual layout for existing Blink create/edit pages.
@@ -1024,42 +1263,13 @@ class BlinkCreateLayout extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(17),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [
-                        Color(0xFFFFF0E4), Color(0xFFFFFAF6),
-                      ]),
-                      borderRadius: BorderRadius.circular(19),
-                      border: Border.all(color: BlinkColors.line),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 48, height: 48,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(icon, color: BlinkColors.orange, size: 25),
-                        ),
-                        const SizedBox(width: 13),
-                        Expanded(child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(title, maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 19, fontWeight: FontWeight.w900,
-                                color: BlinkColors.ink)),
-                            const SizedBox(height: 4),
-                            Text(subtitle, style: const TextStyle(
-                              fontSize: 12, color: BlinkColors.muted)),
-                          ],
-                        )),
-                      ],
-                    ),
+                  BlinkFeatureHero(
+                    margin: EdgeInsets.zero,
+                    eyebrow: 'CREATE ON BLINK',
+                    title: title,
+                    subtitle: subtitle,
+                    icon: icon,
+                    mood: BlinkMood.studio,
                   ),
                   const SizedBox(height: 16),
                   content,
@@ -1193,8 +1403,19 @@ class BlinkFormSection extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(heading, style: const TextStyle(fontWeight: FontWeight.w900,
-          fontSize: 15, color: BlinkColors.ink)),
+        Row(children:[
+          Container(width:29,height:29,
+            decoration:BoxDecoration(
+              color:BlinkColors.orangeSoft,
+              borderRadius:BorderRadius.circular(10)),
+            child:const Icon(Icons.tune_rounded,
+              size:17,color:BlinkColors.orangeDark)),
+          const SizedBox(width:9),
+          Expanded(child:Text(heading,
+            style:const TextStyle(
+              fontSize:15, fontWeight:FontWeight.w900,
+              color:BlinkColors.ink))),
+        ]),
         if (helper != null) ...[
           const SizedBox(height: 3),
           Text(helper!, style: const TextStyle(

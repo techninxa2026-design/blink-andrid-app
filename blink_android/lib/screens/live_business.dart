@@ -158,11 +158,7 @@ class _BusinessState extends State<LiveBusinessScreen>{
     ]),
     body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
       RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
-        const BlinkFeatureHero(eyebrow: 'PROFESSIONAL CONNECTIONS',
-          title: 'Build your circle',
-          subtitle: 'Meet collaborators, teams and the next big opportunity.',
-          icon: Icons.auto_graph_rounded,
-          accent: Color(0xFF162E56), secondary: Color(0xFF3F7FA6)),
+const BlinkFeatureHero(eyebrow:'YOUR PROFESSIONAL WORLD',title:'People. Purpose. Possibility.',subtitle:'Build a credible presence, find collaborators and make real business connections.',icon:Icons.business_center_rounded,mood:BlinkMood.business,margin:EdgeInsets.fromLTRB(0,0,0,18)),
         BlinkProCard(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Text('YOUR PROFESSIONAL IDENTITY',style:TextStyle(
             letterSpacing:1.1,fontWeight:FontWeight.w900,fontSize:10,

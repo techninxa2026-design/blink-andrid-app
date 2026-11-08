@@ -30,12 +30,6 @@ class _TasksState extends State<FullTasksScreen> {
       onPressed:()=>Navigator.push<void>(context,MaterialPageRoute(
         builder:(_)=>const FullCreatorDashboard())))]),
     body:Column(children:[
-      const BlinkFeatureHero(eyebrow: 'CREATE · PARTICIPATE · EARN',
-        title: 'Creator challenges',
-        subtitle: 'Turn your creativity into meaningful rewards.',
-        icon: Icons.workspace_premium_rounded,
-        accent: Color(0xFF174B48), secondary: Color(0xFF36A78B)),
-
       Padding(padding:const EdgeInsets.all(12),child:TextField(controller:query,
         onSubmitted:(_){page=1;_load();},
         decoration:InputDecoration(prefixIcon:const Icon(Icons.search),hintText:'Search Creator Tasks',
@@ -44,6 +38,7 @@ class _TasksState extends State<FullTasksScreen> {
       Expanded(child:loading?const Center(child:CircularProgressIndicator(color:BlinkColors.orange))
         :error.isNotEmpty?liveError(error,_load)
         :RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
+const BlinkFeatureHero(eyebrow:'CREATE · EARN · INSPIRE',title:'Creator Challenges',subtitle:'Join real tasks, build proof of your skills and collect Blink Points.',icon:Icons.workspace_premium_rounded,mood:BlinkMood.studio,margin:EdgeInsets.fromLTRB(0,0,0,18)),
           if(tasks.isEmpty)const ListTile(title:Text('No published tasks found.')),
           ...tasks.map((raw){
             final t=obj(raw);
@@ -113,6 +108,7 @@ class _CreatorState extends State<FullCreatorDashboard>{
           child:const Text('Activate Professional Business Profile')),
         TextButton(onPressed:_load,child:const Text('Retry')),
       ])):RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
+const BlinkFeatureHero(eyebrow:'YOUR CREATIVE STUDIO',title:'Make something happen.',subtitle:'Design challenges, review evidence and reward your community.',icon:Icons.auto_awesome_motion_rounded,mood:BlinkMood.rewards,margin:EdgeInsets.fromLTRB(0,0,0,18)),
         const ListTile(title:Text('My Creator Tasks'),subtitle:Text('Publish and verify BP rewards.')),
         if(tasks.isEmpty)const ListTile(title:Text('No tasks yet.')),
         ...tasks.map((raw){final t=obj(raw),id=field(t,'id');
