@@ -263,16 +263,14 @@ class _CheckinsState extends State<LiveCheckinsScreen> {
           onRefresh: _load,
           child: ListView(padding: const EdgeInsets.fromLTRB(16, 18, 16, 90),
             physics: const AlwaysScrollableScrollPhysics(), children: [
-            const Text('A LITTLE UPDATE, A LOT OF CONNECTION',
-              style: TextStyle(color: BlinkColors.orange, fontSize: 10,
-                letterSpacing: 1.3, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            const Text('Check-Ins 🧡', style: TextStyle(
-              fontSize: 30, fontWeight: FontWeight.w900, letterSpacing: -0.8)),
-            const SizedBox(height: 5),
-            const Text('Let your friends know how you are feeling, right now.',
-              style: TextStyle(color: BlinkColors.muted, fontSize: 13)),
-            const SizedBox(height: 16),
+            const BlinkFeatureHero(
+              eyebrow:'A LITTLE UPDATE. A LOT OF CONNECTION.',
+              title:'Check-Ins 🧡',
+              subtitle:'Say how you feel, share the moment, and stay closer to your people.',
+              icon:Icons.waving_hand_rounded,
+              mood:BlinkMood.community,
+              margin:EdgeInsets.fromLTRB(0,0,0,18),
+            ),
             if (mine.isNotEmpty) _tile(mine, own: true)
             else SizedBox(width: double.infinity, child: FilledButton.icon(
               onPressed: _compose, icon: const Icon(Icons.add_circle_outline),
@@ -569,6 +567,14 @@ class _SecretsState extends State<LiveSecretsScreen>{
       :error!=null?liveError(error,_load)
       :RefreshIndicator(onRefresh:_load,child:ListView(
         padding:const EdgeInsets.all(12),children:[
+          const BlinkFeatureHero(
+            eyebrow:'ANONYMOUS · CURIOUS · HUMAN',
+            title:'Share a secret. Reveal a surprise.',
+            subtitle:'Ask what matters, guess the answers, and let the truth unfold.',
+            icon:Icons.lock_open_rounded,
+            mood:BlinkMood.studio,
+            margin:EdgeInsets.fromLTRB(0,0,0,18),
+          ),
           BlinkAdaptiveSegments<String>(segments:const [
             ButtonSegment(value:'all',label:Text('Explore')),
             ButtonSegment(value:'mine',label:Text('My Secrets')),
@@ -681,10 +687,18 @@ class _HeartsState extends State<LiveHeartsScreen>{
       IconButton(tooltip:'Send Heart',onPressed:_send,icon:const Icon(Icons.favorite_border))]),
     body:loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
     RefreshIndicator(onRefresh:_load,child:ListView(padding:const EdgeInsets.all(12),children:[
-      const ListTile(title:Text('Received Hearts',style:TextStyle(fontWeight:FontWeight.bold))),
+      const BlinkFeatureHero(
+        eyebrow:'WHAT THE HEART HAS TO SAY',
+        title:'Messages with meaning.',
+        subtitle:'Send a little kindness, keep it private, and connect more deeply.',
+        icon:Icons.favorite_rounded,
+        mood:BlinkMood.community,
+        margin:EdgeInsets.fromLTRB(0,0,0,18),
+      ),
+      const SectionHeading('Received Hearts',subtitle:'Thoughtful notes just for you'),
       ...incoming.map((x)=>_heartTile(x)),
-      const Divider(),
-      const ListTile(title:Text('Sent Hearts',style:TextStyle(fontWeight:FontWeight.bold))),
+      const SizedBox(height:14),
+      const SectionHeading('Sent Hearts',subtitle:'The notes you have shared'),
       ...sent.map((x)=>_heartTile(x)),
       if(incoming.isEmpty&&sent.isEmpty)const ListTile(title:Text('No Hearts yet')),
     ])),
