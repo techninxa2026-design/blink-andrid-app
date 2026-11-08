@@ -128,6 +128,7 @@ class _DrawerLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selected = ModalRoute.of(context)?.settings.name == route;
     final accent = route.startsWith('/business') ? const Color(0xFF1A6470)
       : route.startsWith('/irl') ? const Color(0xFF047F93)
       : route.startsWith('/exchange') ? const Color(0xFF574DB3)
@@ -137,10 +138,10 @@ class _DrawerLink extends StatelessWidget {
     return Padding(
     padding: const EdgeInsets.symmetric(vertical: 3),
     child: Material(
-      color: Colors.white,
+      color: selected ? accent.withValues(alpha: .09) : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(17),
-        side: BorderSide(color: accent.withValues(alpha: .10)),
+        side: BorderSide(color: accent.withValues(alpha: selected ? .40 : .12)),
       ),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
@@ -155,8 +156,9 @@ class _DrawerLink extends StatelessWidget {
       ),
       title: Text(title, style: const TextStyle(
         color: BlinkColors.ink, fontSize: 13, fontWeight: FontWeight.w700)),
-      trailing: const Icon(Icons.chevron_right_rounded,
-        size: 17, color: BlinkColors.orange),
+      trailing: selected
+        ? Icon(Icons.circle_rounded, size: 10, color: accent)
+        : Icon(Icons.chevron_right_rounded, size: 17, color: accent),
       onTap: () {
         final navigator = Navigator.of(context);
         navigator.pop();
