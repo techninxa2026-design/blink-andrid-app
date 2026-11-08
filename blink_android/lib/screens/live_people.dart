@@ -361,27 +361,22 @@ class _ProfileState extends State<LiveProfileScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 32),
                 children: [
-                  if (field(p, 'coverKey').isNotEmpty)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(LiveApi.url(field(p, 'coverKey')),
-                        height: 140, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox(
-                          height: 140, child: Icon(Icons.image_not_supported_outlined))),
-                    ),
-                  const SizedBox(height: 14),
-                  Center(child: liveAvatar(p, radius: 48)),
-                  const SizedBox(height: 10),
-                  Center(child: Text(field(p, 'name'), style: Theme.of(context).textTheme.headlineSmall)),
-                  if (field(p, 'bio').isNotEmpty)
-                    Center(child: Text(field(p, 'bio'), textAlign: TextAlign.center)),
-                  const SizedBox(height: 16),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-                    _stat(field(p, 'followersCount', '0'), 'Followers'),
-                    _stat(field(p, 'followingCount', '0'), 'Following'),
-                    _stat(field(p, 'connectionsCount', '0'), 'Friends'),
-                  ]),
-                  const Divider(height: 28),
+                  BlinkProfileMasthead(
+                    name:field(p,'name','Blink member'),
+                    bio:field(p,'bio'),
+                    avatar:liveAvatar(p,radius:48),
+                    cover:field(p,'coverKey').isEmpty?null:Image.network(
+                      LiveApi.url(field(p,'coverKey')),
+                      fit:BoxFit.cover,
+                      errorBuilder:(_,__,___)=>const SizedBox.shrink()),
+                    stats:Row(
+                      mainAxisAlignment:MainAxisAlignment.spaceEvenly,
+                      children:[
+                        _stat(field(p,'followersCount','0'),'Followers'),
+                        _stat(field(p,'followingCount','0'),'Following'),
+                        _stat(field(p,'connectionsCount','0'),'Friends'),
+                      ]),
+                  ),
                   _info('Email', field(p, 'email')),
                   _info('Occupation', field(p, 'occupation')),
                   _info('Workplace', field(p, 'workplace')),
@@ -736,21 +731,23 @@ class _PublicState extends State<LivePublicProfileScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 28),
                 children: [
-                  if (field(p, 'coverKey').isNotEmpty)
-                    ClipRRect(borderRadius: BorderRadius.circular(15),
-                      child: Image.network(LiveApi.url(field(p, 'coverKey')),
-                        height: 136, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox(height: 136))),
-                  const SizedBox(height: 14),
-                  Center(child: liveAvatar(p, radius: 45)),
-                  const SizedBox(height: 12),
-                  Center(child: Text(field(p, 'name'),
-                    style: Theme.of(context).textTheme.headlineSmall)),
-                  if (field(p, 'bio').isNotEmpty)
-                    Center(child: Text(field(p, 'bio'), textAlign: TextAlign.center)),
-                  const SizedBox(height: 12),
-                  Center(child: Text('${field(p,'connectionsCount','0')} connections')),
-                  const SizedBox(height: 15),
+                  BlinkProfileMasthead(
+                    name:field(p,'name','Blink member'),
+                    bio:field(p,'bio'),
+                    avatar:liveAvatar(p,radius:45),
+                    cover:field(p,'coverKey').isEmpty?null:Image.network(
+                      LiveApi.url(field(p,'coverKey')),
+                      fit:BoxFit.cover,
+                      errorBuilder:(_,__,___)=>const SizedBox.shrink()),
+                    stats:Row(children:[
+                      const Icon(Icons.people_alt_outlined,
+                        color:BlinkColors.orange,size:17),
+                      const SizedBox(width:7),
+                      Text('${field(p,'connectionsCount','0')} connections',
+                        style:const TextStyle(
+                          color:BlinkColors.ink,fontWeight:FontWeight.w800)),
+                    ]),
+                  ),
                   if (relationship == 'SELF')
                     FilledButton.icon(
                       onPressed: () => Navigator.pushNamed(context, '/profile'),
