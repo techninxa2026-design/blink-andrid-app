@@ -1,5 +1,7 @@
 package com.techinxa.blink_android;
 
+import android.content.Intent;
+import android.os.Build;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -33,12 +35,37 @@ import io.flutter.plugin.common.MethodChannel;
  * a clearly branded, valid JPEG cover instead of exposing a Java stack trace.
  */
 public class MainActivity extends FlutterActivity {
+    private static final String CALL_CHANNEL = "com.techinxa.blink_android/calls";
     private static final String COVER_CHANNEL = "blink_android/reel_cover";
     private final ExecutorService coverExecutor = Executors.newSingleThreadExecutor();
 
     @Override
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
         super.configureFlutterEngine(flutterEngine);
+        new MethodChannel(
+            flutterEngine.getDartExecutor().getBinaryMessenger(), CALL_CHANNEL
+        ).setMethodCallHandler((call, result) -> {
+            if ("startCall".equals(call.method)) {
+                try {
+                    final boolean video = Boolean.TRUE.equals(call.argument("video"));
+                    final Intent intent = new Intent(this, BlinkCallForegroundService.class);
+                    intent.putExtra("video", video);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(intent);
+                    } else {
+                        startService(intent);
+                    }
+                    result.success(true);
+                } catch (Exception error) {
+                    result.error("CALL_SERVICE", "Unable to keep the call active in background.", null);
+                }
+            } else if ("stopCall".equals(call.method)) {
+                stopService(new Intent(this, BlinkCallForegroundService.class));
+                result.success(true);
+            } else {
+                result.notImplemented();
+            }
+        });
         new MethodChannel(
             flutterEngine.getDartExecutor().getBinaryMessenger(), COVER_CHANNEL
         ).setMethodCallHandler((call, result) -> {
