@@ -12,6 +12,7 @@ import '../widgets/ui.dart';
 import '../widgets/blink_motion.dart';
 import '../widgets/blink_full_drawer.dart';
 import 'voice_message.dart';
+import '../calls/blink_calls.dart';
 
 class LiveInboxScreen extends StatefulWidget {
   const LiveInboxScreen({super.key});
@@ -992,6 +993,30 @@ class _LiveChatState extends State<LiveChatScreen>
         ],
       )),
     ]),actions:[
+      if(conversation['isGroup'] != true &&
+          conversation['blockedByMe'] != true &&
+          conversation['blockedByOther'] != true &&
+          field(conversation['otherUser'],'id').isNotEmpty) ...[
+        IconButton(
+          tooltip: 'Voice call',
+          icon: const Icon(Icons.call_rounded,
+            color: BlinkColors.orangeDark),
+          onPressed: () => unawaited(BlinkCalls.instance.placeCall(
+            field(conversation['otherUser'],'id'),
+            field(conversation['otherUser'],'name',widget.title),
+          )),
+        ),
+        IconButton(
+          tooltip: 'Video call',
+          icon: const Icon(Icons.videocam_rounded,
+            color: BlinkColors.orangeDark),
+          onPressed: () => unawaited(BlinkCalls.instance.placeCall(
+            field(conversation['otherUser'],'id'),
+            field(conversation['otherUser'],'name',widget.title),
+            video: true,
+          )),
+        ),
+      ],
       PopupMenuButton<String>(tooltip:'Conversation options',
         onSelected:_conversationAction,itemBuilder:(_)=>[
           const PopupMenuItem(value:'search',child:Text('Search messages')),
