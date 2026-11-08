@@ -10,6 +10,7 @@ import '../core/blink_auth_api.dart';
 import '../core/blink_home_api.dart';
 
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 import '../widgets/home_navigation.dart';
 import '../widgets/blink_full_drawer.dart';
 
@@ -571,71 +572,113 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
   // ==========================================================
 
   Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (widget.showCheckins)
-          BlinkHomeCheckins(
-            activeCount: _checkinCount,
-          ),
-
-        Container(
-          margin: const EdgeInsets.fromLTRB(14, 14, 14, 5),
-          padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFF3EC),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: const Color(0xFFFFD4BF)),
-          ),
-          child: Row(children: [
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text('YOUR PEOPLE, YOUR MOMENTS',
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 9.5,
-                    color: BlinkColors.orangeDark,
-                    fontWeight: FontWeight.w900, letterSpacing: 1)),
-                SizedBox(height: 4),
-                Text('Moments ✦', style: TextStyle(
-                  fontSize: 23, color: BlinkColors.ink,
-                  fontWeight: FontWeight.w900, letterSpacing: -.5)),
-                SizedBox(height: 4),
-                Text('Pick a tile · Swipe vertically · Double-tap to love',
-                  maxLines: 2, overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 10.5,
-                    color: BlinkColors.muted)),
-              ],
-            )),
-            const SizedBox(width: 11),
-            Container(
-              width: 50, height: 57,
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (widget.showCheckins)
+        BlinkHomeCheckins(activeCount: _checkinCount),
+      BlinkReveal(child: Container(
+        margin: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+        clipBehavior: Clip.antiAlias,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFF2B1E27), Color(0xFF933E32),
+              Color(0xFFFA6925)]),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(29),
+            topRight: Radius.circular(11),
+            bottomLeft: Radius.circular(12),
+            bottomRight: Radius.circular(29))),
+        child: Stack(children: [
+          Positioned(top: -57, right: -51,
+            child: IgnorePointer(child: Container(
+              width: 192, height: 192,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFF8C54), BlinkColors.orangeDark]),
-                borderRadius: BorderRadius.circular(18)),
-              child: const Icon(Icons.favorite_rounded,
-                size: 28, color: Colors.white)),
-          ]),
-        ),
-
-        const SizedBox(height: 12),
-
-        BlinkChips(
-          key: ValueKey('moments-${_mine ? "mine" : "public"}'),
-          initial: _mine ? 1 : 0,
-          labels: const [
-            'Public Moments',
-            'My Moments',
-          ],
-          onChanged: _changeFeed,
-        ),
-
-        const SizedBox(height: 10),
-
-        // Debug diagnostics remain in debugPrint, not in the user-facing UI.
-      ],
-    );
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0x39FFFFFF), width: 31)),
+            ))),
+          const Positioned(right: 10, bottom: -44,
+            child: IgnorePointer(child: Icon(Icons.auto_awesome_rounded,
+              size: 142, color: Color(0x1CFFFFFF)))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 19, 17, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0x30FFFFFF),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: const Color(0x38FFFFFF))),
+                    child: const Text('✦  THE BLINK FEED',
+                      style: TextStyle(fontSize: 9.5, letterSpacing: 1.2,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white))),
+                  const Spacer(),
+                  if (!_loading && _items.isNotEmpty)
+                    Text(_items.length.toString() + ' moments',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: Color(0xFFFFE3D4),
+                        fontWeight: FontWeight.w700)),
+                ]),
+                const SizedBox(height: 13),
+                const Text('Your world, right now.',
+                  maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 24,
+                    letterSpacing: -.7, height: 1.1,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900)),
+                const SizedBox(height: 6),
+                const Text('Discover real stories. Create one worth sharing.',
+                  maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11.7,
+                    height: 1.35, color: Color(0xFFFFE5D9))),
+                const SizedBox(height: 15),
+                Wrap(spacing: 8, runSpacing: 9, children: [
+                  FilledButton.icon(
+                    onPressed: () => go(context, '/capture'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 43),
+                      backgroundColor: Colors.white,
+                      foregroundColor: BlinkColors.orangeDark,
+                      padding: const EdgeInsets.symmetric(horizontal: 14)),
+                    icon: const Icon(Icons.add_a_photo_rounded, size: 17),
+                    label: const Text('Create a Moment')),
+                  OutlinedButton.icon(
+                    onPressed: () => _changeFeed(1),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 43),
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0x98FFFFFF)),
+                      padding: const EdgeInsets.symmetric(horizontal: 13)),
+                    icon: const Icon(Icons.grid_view_rounded, size: 16),
+                    label: const Text('My Moments')),
+                ]),
+              ],
+            ),
+          ),
+        ]),
+      )),
+      BlinkSectionBand(
+        eyebrow: _mine ? 'YOUR COLLECTION' : 'THE COMMUNITY',
+        title: _mine ? 'Your Moments' : 'Discover Moments',
+        subtitle: _mine ? 'Everything you have shared'
+          : 'People, places and stories from across Blink',
+        mood: BlinkMood.studio,
+        icon: Icons.auto_awesome_rounded,
+      ),
+      BlinkChips(
+        key: ValueKey('moments-' + (_mine ? 'mine' : 'public')),
+        initial: _mine ? 1 : 0,
+        labels: const ['Public Moments', 'My Moments'],
+        onChanged: _changeFeed,
+      ),
+      const SizedBox(height: 13),
+    ]);
   }
 
   // ==========================================================
