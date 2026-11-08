@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/blink_heart_flight.dart';
+import '../widgets/blink_reaction_dock.dart';
 import 'package:share_plus/share_plus.dart';
 import 'live_inbox.dart';
 import 'package:video_player/video_player.dart';
@@ -242,7 +244,8 @@ class ReelFullScreen extends StatefulWidget {
   State<ReelFullScreen> createState() => _ReelFullScreenState();
 }
 
-class _ReelFullScreenState extends State<ReelFullScreen> {
+class _ReelFullScreenState extends State<ReelFullScreen>
+    with SingleTickerProviderStateMixin {
   VideoPlayerController? _player;
   bool _busy = false;
   String? _playbackError;
@@ -250,10 +253,14 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
   int _reactionCount = 0;
   int _commentCount = 0;
   bool _viewRecorded = false;
+  late final AnimationController _loveController;
+  Offset? _loveTapPosition;
 
   @override
   void initState() {
     super.initState();
+    _loveController = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1120));
     _reaction = widget.reel.myReaction;
     _reactionCount = widget.reel.reactionCount;
     _commentCount = widget.reel.commentCount;
@@ -301,6 +308,7 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
 
   @override
   void dispose() {
+    _loveController.dispose();
     _player?.dispose();
     super.dispose();
   }
@@ -318,27 +326,11 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
-  Future<void> _react() async {
-    if (_busy) return;
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Padding(padding: EdgeInsets.all(15),
-          child: Text('React to Reel', style: TextStyle(fontWeight: FontWeight.w800))),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          ...['❤️','😂','😍','😮','😢','👍','🔥'].map((emoji) => TextButton(
-            onPressed: () => Navigator.pop(ctx, emoji),
-            child: Text(emoji, style: const TextStyle(fontSize: 29)))),
-        ]),
-        if (_reaction != null && _reaction!.isNotEmpty)
-          TextButton(onPressed: () => Navigator.pop(ctx, 'remove'),
-            child: const Text('Remove reaction')),
-      ])),
-    );
-    if (choice == null || !mounted) return;
+  Future<void> _setReelReaction(String selected) async {
+    if (_busy || !mounted) return;
+    final emoji = selected == 'remove' ? null : selected;
     setState(() => _busy = true);
     try {
-      final emoji = choice == 'remove' ? null : choice;
       final result = await BlinkHomeApi.reactReel(widget.reel.id, emoji);
       if (!mounted) return;
       setState(() {
@@ -346,8 +338,19 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
         final n = result['reactionCount'];
         _reactionCount = n is num ? n.toInt() : _reactionCount;
       });
-    } catch (e) { _toast('Reaction failed: $e'); }
-    finally { if (mounted) setState(() => _busy = false); }
+    } catch (e) {
+      _toast('Reaction failed: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _doubleTapLove() async {
+    if (!widget.active || !mounted) return;
+    _loveController.forward(from: 0);
+    // Never unlove an already-loved Reel on repeated double taps.
+    if (_busy || _reaction == '❤️') return;
+    await _setReelReaction('❤️');
   }
 
   Future<void> _comments() async {
@@ -393,93 +396,186 @@ class _ReelFullScreenState extends State<ReelFullScreen> {
     );
   }
 
-  Widget _action(IconData icon, String text, VoidCallback handler, {Color color = Colors.white}) {
+  Widget _action(IconData icon, String text, VoidCallback? handler,
+      {Color color = Colors.white}) {
     final compact = MediaQuery.sizeOf(context).height < 650;
     return Padding(
-      padding: EdgeInsets.only(bottom: compact ? 9 : 18),
-      child: InkWell(onTap: handler, child: SizedBox(
-        width: 54,
-        child: Column(children: [
-          Icon(icon, color: color, size: compact ? 25 : 30),
-          const SizedBox(height: 4),
-          Text(text, maxLines: 1, textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white,
-              fontSize: 11, fontWeight: FontWeight.w700)),
-        ]),
-      )),
+      padding: EdgeInsets.only(bottom: compact ? 8 : 12),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: handler,
+          borderRadius: BorderRadius.circular(16),
+          child: SizedBox(width: 52, child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xBC27212B),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0x70FFFFFF))),
+                child: Icon(icon, color: color, size: 23)),
+              const SizedBox(height: 5),
+              Text(text, maxLines: 1, overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 10.5,
+                  color: Colors.white, fontWeight: FontWeight.w900,
+                  shadows: [Shadow(color: Colors.black87, blurRadius: 6)])),
+            ],
+          )),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final player = _player;
-    return Stack(children: [
-      Positioned.fill(child: ColoredBox(color: BlinkColors.orangeSoft,
-        child: Stack(fit: StackFit.expand, children: [
-          if (player != null && player.value.isInitialized)
-            FittedBox(fit: BoxFit.cover, child: SizedBox(
-              width: player.value.size.width,
-              height: player.value.size.height,
-              child: VideoPlayer(player),
-            ))
-          else
-            Image.network(
-              BlinkHomeApi.mediaUrl(widget.reel.thumbnailUrl),
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const ColoredBox(color: BlinkColors.orangeSoft),
-            ),
-          if (player == null || !player.value.isInitialized)
-            Center(child: _playbackError != null
-              ? Text(_playbackError!, textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white))
-              : const CircularProgressIndicator(color: BlinkColors.orange)),
-          if (player != null && player.value.isInitialized)
-            InkWell(onTap: _togglePlay, child: Center(child: AnimatedOpacity(
-              opacity: player.value.isPlaying ? 0 : 1,
-              duration: const Duration(milliseconds: 170),
-              child: IgnorePointer(child: const Icon(
-                Icons.play_circle_fill_rounded, color: BlinkColors.orange, size: 78,
-              )),
-            ))),
-        ]),
-      )),
-      const Positioned.fill(child: IgnorePointer(child: DecoratedBox(
+    return Stack(fit: StackFit.expand, children: [
+      const DecoratedBox(decoration: BoxDecoration(
+        gradient: LinearGradient(begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFD4B8), Color(0xFF4D385A),
+            Color(0xFF191524)]))),
+      if (player != null && player.value.isInitialized)
+        FittedBox(fit: BoxFit.cover, child: SizedBox(
+          width: player.value.size.width,
+          height: player.value.size.height,
+          child: VideoPlayer(player),
+        ))
+      else Image.network(
+        BlinkHomeApi.mediaUrl(widget.reel.thumbnailUrl),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) =>
+          const ColoredBox(color: Color(0xFF4D385A)),
+      ),
+      if (player == null || !player.value.isInitialized)
+        Center(child: _playbackError != null
+          ? Padding(padding: const EdgeInsets.all(35),
+              child: Text(_playbackError!, textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white)))
+          : const CircularProgressIndicator(color: BlinkColors.orange)),
+      const IgnorePointer(child: DecoratedBox(
         decoration: BoxDecoration(gradient: LinearGradient(
           begin: Alignment.topCenter, end: Alignment.bottomCenter,
-          colors: [Color(0x45000000), Colors.transparent, Color(0xC9000000)],
+          colors: [Color(0x75151120), Colors.transparent,
+            Color(0xD7181522)],
+          stops: [0, .4, 1],
         )),
-      ))),
-      Positioned(right: 10, bottom: MediaQuery.sizeOf(context).height < 650 ? 65 : 95,
-        child: Column(children: [
-        _action(_reaction != null && _reaction!.isNotEmpty ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-          '$_reactionCount', _react, color: _reaction != null && _reaction!.isNotEmpty ? BlinkColors.orange : Colors.white),
-        _action(Icons.mode_comment_outlined, '$_commentCount', _comments),
-        _action(Icons.share_rounded, 'Share', _share),
-      ])),
-      Positioned(left: 15, right: 70, bottom: 35, child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            CircleAvatar(
-              radius: 18, backgroundColor: BlinkColors.orange,
-              backgroundImage: widget.reel.avatarKey != null
-                ? NetworkImage(BlinkHomeApi.mediaUrl(widget.reel.avatarKey!)) : null,
-              child: widget.reel.avatarKey == null
-                ? const Icon(Icons.person, color: Colors.white, size: 22) : null,
-            ),
-            const SizedBox(width: 10),
-            Expanded(child: Text(widget.reel.authorName,
-              maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white,
-                fontSize: 14, fontWeight: FontWeight.w900))),
-          ]),
-          if ((widget.reel.caption ?? '').isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(widget.reel.caption!, maxLines: 3, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 13)),
-          ],
-        ],
       )),
+      // Let the PageView own vertical swipes. This single recognizer
+      // handles tap-to-pause and double-tap love without action conflicts.
+      Positioned.fill(child: GestureDetector(
+        key: const ValueKey('blink-reel-immersive-media'),
+        behavior: HitTestBehavior.translucent,
+        onTap: _togglePlay,
+        onDoubleTapDown: (details) =>
+          _loveTapPosition = details.localPosition,
+        onDoubleTap: _doubleTapLove,
+        child: Center(child: IgnorePointer(child: AnimatedOpacity(
+          opacity: player?.value.isPlaying == false ? 1 : 0,
+          duration: const Duration(milliseconds: 170),
+          child: const Icon(Icons.play_circle_fill_rounded,
+            size: 72, color: Color(0xFFFFE9D8)),
+        ))),
+      )),
+      Positioned.fill(child: LayoutBuilder(
+        builder: (context, space) => BlinkHeartFlight(
+          progress: _loveController,
+          origin: _loveTapPosition ??
+            Offset(space.maxWidth * .5, space.maxHeight * .5),
+          destination: Offset(space.maxWidth - 38,
+            space.maxHeight * .56),
+        ),
+      )),
+      Positioned(
+        right: 9,
+        bottom: MediaQuery.sizeOf(context).height < 650 ? 52 : 80,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          BlinkReactionDock(
+            enabled: !_busy,
+            reactions: const ['❤️', '😍', '😂', '😮', '😢', '🔥', '👍'],
+            currentReaction: _reaction,
+            allowRemove: true,
+            onSelected: _setReelReaction,
+            child: _action(
+              _reaction != null && _reaction!.isNotEmpty
+                ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              '$_reactionCount', null,
+              color: _reaction != null && _reaction!.isNotEmpty
+                ? const Color(0xFFFF3E63) : Colors.white,
+            ),
+          ),
+          _action(Icons.mode_comment_outlined, '$_commentCount', _comments),
+          _action(Icons.send_rounded, 'Share', _share),
+        ]),
+      ),
+      Positioned(
+        left: 13, right: 72, bottom: 33,
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * .30),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+              colors: [Color(0xD421202C), Color(0xB733283B)]),
+            borderRadius: BorderRadius.circular(19),
+            border: Border.all(color: const Color(0x62FFFFFF))),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('✦  BLINK ORIGINAL',
+                  style: TextStyle(color: Color(0xFFFFC39B),
+                    letterSpacing: 1.1, fontSize: 9,
+                    fontWeight: FontWeight.w900)),
+                const SizedBox(height: 8),
+                Row(children: [
+                  CircleAvatar(
+                    radius: 19, backgroundColor: BlinkColors.orange,
+                    backgroundImage: widget.reel.avatarKey != null
+                      ? NetworkImage(BlinkHomeApi.mediaUrl(widget.reel.avatarKey!))
+                      : null,
+                    child: widget.reel.avatarKey == null
+                      ? const Icon(Icons.person,
+                          color: Colors.white, size: 22) : null,
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(child: Text(widget.reel.authorName,
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white,
+                      fontSize: 13, fontWeight: FontWeight.w900))),
+                ]),
+                if ((widget.reel.caption ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 9),
+                  Text(widget.reel.caption!,
+                    maxLines: 3, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white,
+                      height: 1.4, fontSize: 12.5)),
+                ],
+                const SizedBox(height: 6),
+                const Text('Double tap to love · Hold a reaction to choose',
+                  style: TextStyle(fontSize: 9.5,
+                    color: Color(0xDDFFFFFF))),
+              ],
+            ),
+          ),
+        ),
+      ),
+      if (player != null && player.value.isInitialized)
+        Positioned(
+          left: 0, right: 0, bottom: 0,
+          child: VideoProgressIndicator(player,
+            allowScrubbing: true,
+            padding: EdgeInsets.zero,
+            colors: const VideoProgressColors(
+              playedColor: BlinkColors.orange,
+              bufferedColor: Color(0x88FFD9C2),
+              backgroundColor: Color(0x66555555))),
+        ),
     ]);
   }
 }
