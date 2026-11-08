@@ -181,131 +181,82 @@ class BlinkScreen extends StatelessWidget {
 
 class BlinkBottomBar extends StatelessWidget {
   final String active;
-
-  const BlinkBottomBar({
-    super.key,
-    this.active = '',
-  });
+  const BlinkBottomBar({super.key, this.active = ''});
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      elevation: 12,
-      shadowColor: const Color(0x44000000),
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.centerLeft, end: Alignment.centerRight,
-            colors: [Color(0xFF2B2228), Color(0xFF663029),
-              BlinkColors.orangeDark]),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border(top: BorderSide(color: Color(0x66FFB895))),
-        ),
-        child: SafeArea(
+    final scaled = MediaQuery.textScalerOf(context).scale(10) - 10;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(8, 0, 8, 5),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [Color(0xFFFFFFFF), Color(0xFFFFF8F1)]),
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: const Color(0xFFFFDCC7), width: 1.2),
+        boxShadow: const [BoxShadow(
+          color: Color(0x1B5F321A), blurRadius: 18,
+          offset: Offset(0, 5))],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: SafeArea(
         top: false,
         child: SizedBox(
-          // Preserve the camera label even at large accessibility text scales.
-          height: MediaQuery.textScalerOf(context).scale(10) > 10
-              ? 74 + (MediaQuery.textScalerOf(context).scale(10) - 10)
-              : 74,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _NavItem(
-                icon: Icons.home_rounded,
-                title: 'Home',
-                route: '/home',
-                selected: active == 'home',
+          height: 67 + (scaled > 0 ? scaled : 0),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            _NavItem(
+              icon: Icons.home_rounded, title: 'Home',
+              route: '/home', selected: active == 'home'),
+            _NavItem(
+              icon: Icons.smart_display_outlined, title: 'Reels',
+              route: '/reels', selected: active == 'reels'),
+            Expanded(child: BlinkPressable(
+              radius: 21,
+              semanticLabel: 'Capture a moment',
+              onTap: () => go(context, '/capture'),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 46, height: 44,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [
+                        Color(0xFFFF8C44), BlinkColors.orangeDark]),
+                      borderRadius: BorderRadius.circular(17),
+                      boxShadow: const [BoxShadow(
+                        color: Color(0x3BFF5900),
+                        blurRadius: 11, offset: Offset(0, 4))]),
+                    child: const Icon(
+                      Icons.add_a_photo_rounded, size: 23,
+                      color: Colors.white)),
+                  const SizedBox(height: 3),
+                  const FittedBox(fit: BoxFit.scaleDown,
+                    child: Text('Capture', maxLines: 1,
+                      style: TextStyle(color: BlinkColors.orangeDark,
+                        fontSize: 10, fontWeight: FontWeight.w900))),
+                ],
               ),
-              _NavItem(
-                icon: Icons.smart_display_outlined,
-                title: 'Reels',
-                route: '/reels',
-                selected: active == 'reels',
-              ),
-
-              // CENTER CAPTURE BUTTON
-              Expanded(
-                child: Semantics(
-                  label: 'Capture a moment',
-                  button: true,
-                  child: InkWell(
-                    onTap: () => go(context, '/capture'),
-                    splashColor: Colors.white24,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFFFFB089),
-                              width: 2,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x40000000),
-                                blurRadius: 9,
-                                offset: Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.photo_camera_rounded,
-                            color: BlinkColors.orangeDark,
-                            size: 25,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        const SizedBox(
-                          width: double.infinity,
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text('Capture', maxLines: 1, softWrap: false,
-                              style: TextStyle(color: Colors.white,
-                                fontSize: 10, fontWeight: FontWeight.w800)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              _NavItem(
-                icon: Icons.chat_bubble_outline_rounded,
-                title: 'Inbox',
-                route: '/inbox',
-                selected: active == 'inbox',
-              ),
-              _NavItem(
-                icon: Icons.explore_outlined,
-                title: 'Space',
-                route: '/explore',
-                selected: active == 'explore' || active == 'space',
-              ),
-            ],
-          ),
+            )),
+            _NavItem(
+              icon: Icons.chat_bubble_outline_rounded,
+              title: 'Inbox',
+              route: '/inbox', selected: active == 'inbox'),
+            _NavItem(
+              icon: Icons.explore_outlined, title: 'Space',
+              route: '/explore',
+              selected: active == 'explore' || active == 'space'),
+          ]),
         ),
-      ),
       ),
     );
   }
 }
-
-// ========================================
-// SINGLE NAV ITEM COMPONENT
-// ========================================
 
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final String title;
   final String route;
   final bool selected;
-
   const _NavItem({
     required this.icon,
     required this.title,
@@ -314,63 +265,50 @@ class _NavItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Semantics(
-        label: title,
-        button: true,
-        selected: selected,
-        child: InkWell(
-          onTap: () => go(
-            context,
-            route,
-            replace: true,
-          ),
-          splashColor: Colors.white24,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(
-                  milliseconds: 180,
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: selected ? null : Colors.transparent,
-                  gradient: selected ? const LinearGradient(
-                    colors: [Color(0x55FFFFFF),Color(0x18FFFFFF)]) : null,
-                  border: selected ? Border.all(
-                    color: const Color(0x55FFFFFF)) : null,
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 23,
-                ),
+  Widget build(BuildContext context) => Expanded(
+    child: Semantics(
+      button: true,
+      selected: selected,
+      label: title,
+      child: InkWell(
+        onTap: () => go(context, route, replace: true),
+        splashColor: BlinkColors.orangeSoft,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: BlinkMotion.duration(context, ms: 220),
+              curve: Curves.easeOutCubic,
+              width: 44, height: 37,
+              decoration: BoxDecoration(
+                color: selected ? BlinkColors.orangeSoft
+                  : Colors.transparent,
+                borderRadius: BorderRadius.circular(15),
+                border: selected
+                  ? Border.all(color: const Color(0xFFFFCAB1))
+                  : null),
+              child: AnimatedScale(
+                duration: BlinkMotion.duration(context, ms: 200),
+                scale: selected ? 1.07 : 1,
+                child: Icon(icon, size: 22,
+                  color: selected
+                    ? BlinkColors.orangeDark
+                    : const Color(0xFF756D72)),
               ),
-              const SizedBox(height: 5),
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: selected
-                      ? FontWeight.w800
-                      : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 3),
+            Text(title, maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: selected ? BlinkColors.orangeDark
+                  : const Color(0xFF756D72),
+                fontSize: 10,
+                fontWeight: selected ? FontWeight.w900 : FontWeight.w700)),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 // ========================================
