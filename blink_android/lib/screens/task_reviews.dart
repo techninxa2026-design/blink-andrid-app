@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 import '../core/blink_auth_api.dart';
 import '../core/live_api.dart';
 import '../core/theme.dart';
@@ -81,14 +82,33 @@ class _ReviewState extends State<FullTaskReviews>{
       body:loading?const Center(child:CircularProgressIndicator(color:BlinkColors.orange))
       :error.isNotEmpty?liveError(error,_load)
       :ListView(padding:const EdgeInsets.all(12),children:[
-        Text(field(data['task'],'title'),style:Theme.of(context).textTheme.titleLarge),
+        BlinkFeatureHero(
+          eyebrow: 'CREATOR VERIFICATION',
+          title: field(data['task'], 'title', 'Task reviews'),
+          subtitle: 'Review real participant evidence and verify earned BP.',
+          icon: Icons.fact_check_rounded,
+          mood: BlinkMood.rewards,
+          margin: const EdgeInsets.fromLTRB(0, 0, 0, 14),
+        ),
+        BlinkSectionBand(
+          eyebrow: 'SUBMISSIONS',
+          title: 'Evidence to review',
+          subtitle: entries.length.toString() + ' submissions in this view',
+          mood: BlinkMood.rewards,
+          icon: Icons.assignment_turned_in_outlined,
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 12)),
         const SizedBox(height:12),
         BlinkAdaptiveSegments<String>(segments:const [
           ButtonSegment(value:'SUBMITTED',label:Text('Pending')),
           ButtonSegment(value:'REVIEWED',label:Text('Reviewed')),
           ButtonSegment(value:'ALL',label:Text('All')),
         ],selected:{filter},onChanged:(value)=>setState(()=>filter=value.first)),
-        if(entries.isEmpty)const ListTile(title:Text('No submissions in this category.')),
+        if(entries.isEmpty)
+          const BlinkExperienceState(
+            title: 'Nothing to verify here',
+            subtitle: 'Choose another status to view task submissions.',
+            icon: Icons.fact_check_outlined,
+            mood: BlinkMood.rewards),
         ...entries.map((raw){
           final person=obj(raw);
           return BlinkProCard(padding:EdgeInsets.zero,child:ExpansionTile(
