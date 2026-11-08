@@ -8,6 +8,7 @@ import '../core/blink_home_api.dart';
 import '../core/blink_original_music.dart';
 import '../core/live_api.dart';
 import '../core/theme.dart';
+import '../widgets/blink_heart_flight.dart';
 
 class BlinkLiveMomentCard extends StatefulWidget {
   const BlinkLiveMomentCard({
@@ -44,40 +45,14 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
   // Instagram-style double-tap feedback is deliberately separate from the
   // backend reaction state, so the heart animation runs immediately.
   late final AnimationController _loveController;
-  late final Animation<double> _loveScale;
-  late final Animation<double> _loveOpacity;
+  final GlobalKey _likeActionKey = GlobalKey(debugLabel: 'Blink Moment Like');
   Offset? _loveTapPoint;
 
   @override
   void initState() {
     super.initState();
     _loveController = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 840));
-    _loveScale = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: .40, end: 1.16)
-          .chain(CurveTween(curve: Curves.easeOutBack)),
-        weight: 55,
-      ),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1.16, end: 1.0)
-          .chain(CurveTween(curve: Curves.easeOutCubic)),
-        weight: 45,
-      ),
-    ]).animate(_loveController);
-    _loveOpacity = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 0, end: 1)
-          .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 16,
-      ),
-      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 57),
-      TweenSequenceItem(
-        tween: Tween<double>(begin: 1, end: 0)
-          .chain(CurveTween(curve: Curves.easeIn)),
-        weight: 27,
-      ),
-    ]).animate(_loveController);
+      vsync: this, duration: const Duration(milliseconds: 1120));
     _loadActivity();
     _loadSaved();
     if (widget.moment.mediaType == 'video') _initVideo();
@@ -202,44 +177,27 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     }
   }
 
-  /// A large white heart pops exactly where the user double-tapped,
-  /// fades away, and never absorbs swipes or action-rail taps.
+  /// The particle destination is measured from the actual Like control,
+  /// not approximated using a hard-coded screen height. It remains accurate
+  /// on short phones, large fonts and when the system insets change.
   Widget _loveBurst() => Positioned.fill(
-    child: IgnorePointer(
-      child: LayoutBuilder(builder: (context, space) {
-        const dimension = 124.0;
-        final point = _loveTapPoint ?? Offset(
-          space.maxWidth / 2, space.maxHeight / 2);
-        final maxX = space.maxWidth > dimension
-          ? space.maxWidth - dimension : 0.0;
-        final maxY = space.maxHeight > dimension
-          ? space.maxHeight - dimension : 0.0;
-        return Stack(children: [
-          Positioned(
-            left: (point.dx - dimension / 2).clamp(0.0, maxX).toDouble(),
-            top: (point.dy - dimension / 2).clamp(0.0, maxY).toDouble(),
-            child: ScaleTransition(
-              scale: _loveScale,
-              child: FadeTransition(
-                opacity: _loveOpacity,
-                child: const Icon(
-                  Icons.favorite_rounded,
-                  key: ValueKey('blink-moment-double-tap-heart'),
-                  size: dimension,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(color: Color(0xCCFF5900),
-                      blurRadius: 24, offset: Offset(0, 8)),
-                    Shadow(color: Color(0x88000000),
-                      blurRadius: 9, offset: Offset(0, 4)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ]);
-      }),
-    ),
+    child: LayoutBuilder(builder: (context, space) {
+      final host = this.context.findRenderObject();
+      final like = _likeActionKey.currentContext?.findRenderObject();
+      Offset? target;
+      if (host is RenderBox && like is RenderBox &&
+          host.hasSize && like.hasSize) {
+        target = host.globalToLocal(
+          like.localToGlobal(like.size.center(Offset.zero)));
+      }
+      return BlinkHeartFlight(
+        progress: _loveController,
+        origin: _loveTapPoint ??
+          Offset(space.maxWidth / 2, space.maxHeight / 2),
+        destination: target ??
+          Offset(space.maxWidth - 37, space.maxHeight * .35),
+      );
+    }),
   );
 
   Future<void> _reaction() async {
@@ -613,11 +571,13 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     required String label,
     required VoidCallback onPressed,
     String? tooltip,
+    Key? tileKey,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 7),
     child: Tooltip(
       message: tooltip ?? label,
       child: Material(
+        key: tileKey,
         color: const Color(0xDF24242D),
         borderRadius: BorderRadius.circular(13),
         child: InkWell(
@@ -768,6 +728,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
                       color: myReaction == '❤️' ? BlinkColors.orange : Colors.white,
                       size: 25),
                     label: reactions, tooltip: 'Like Moment',
+                    tileKey: _likeActionKey,
                     onPressed: _busy ? () {} : _like,
                   ),
                   _actionTile(
