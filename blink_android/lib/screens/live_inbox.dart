@@ -16,37 +16,247 @@ class LiveInboxScreen extends StatefulWidget {
   @override State<LiveInboxScreen> createState() => _LiveInboxState();
 }
 
-class _LiveInboxState extends State<LiveInboxScreen> {
+class _LiveInboxState extends State<LiveInboxScreen>
+    with WidgetsBindingObserver {
   List<dynamic> conversations = [];
+  List<dynamic> friends = [];
+  Map<String, bool> online = {};
   bool loading = true;
+  bool friendsLoading = true;
+  bool presenceAvailable = false;
+  bool openingFriend = false;
   String? error;
   String query = '';
-  @override void initState() { super.initState(); _load(); }
+  Timer? _presenceRefresh;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshAll();
+    _presenceRefresh = Timer.periodic(const Duration(seconds: 25), (_) {
+      _refreshPresence();
+    });
+  }
+
+  @override
+  void dispose() {
+    _presenceRefresh?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshAll();
+  }
+
   Future<void> _load() async {
     try {
-      final response = arr(await LiveApi.call('GET', '/inbox'));
-      if (mounted) setState(() { conversations = response; loading = false; error = null; });
-    } catch (e) { if (mounted) setState(() {error=e.toString();loading=false;}); }
+      final rows = arr(await LiveApi.call('GET', '/inbox'));
+      if (mounted) setState(() {
+        conversations = rows;
+        loading = false;
+        error = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() { error = e.toString(); loading = false; });
+    }
   }
-  @override Widget build(BuildContext context) {
-    final rows = conversations.where((e) {
-      final c = obj(e);
+
+  Future<void> _loadFriends() async {
+    try {
+      final data = arr(await LiveApi.call('GET', '/inbox/friends'));
+      if (mounted) setState(() { friends = data; friendsLoading = false; });
+    } catch (_) {
+      if (mounted) setState(() => friendsLoading = false);
+    }
+  }
+
+  Future<void> _refreshPresence() async {
+    try {
+      final result = arr(await LiveApi.call('GET', '/inbox/presence'));
+      final statuses = <String, bool>{};
+      for (final item in result) {
+        final data = obj(item);
+        final id = field(data, 'userId');
+        if (id.isNotEmpty) statuses[id] = data['online'] == true;
+      }
+      if (mounted) setState(() {
+        online = statuses;
+        presenceAvailable = true;
+      });
+    } catch (_) {
+      // Backward compatibility: never display guessed green "online" dots
+      // when the NestJS API has not deployed the presence endpoint.
+      if (mounted) setState(() {
+        online = {};
+        presenceAvailable = false;
+      });
+    }
+  }
+
+  Future<void> _refreshAll() async {
+    await Future.wait([_load(), _loadFriends(), _refreshPresence()]);
+  }
+
+  Future<void> _openFriend(dynamic raw) async {
+    if (openingFriend) return;
+    final friend = obj(raw);
+    final id = field(friend, 'id');
+    if (id.isEmpty) return;
+    setState(() => openingFriend = true);
+    try {
+      final data = obj(await LiveApi.call('POST', '/inbox/conversations',
+        {'friendId': id}));
+      final conversationId = field(data, 'conversationId');
+      if (conversationId.isEmpty) throw const LiveApiError('Could not open this conversation.');
+      if (!mounted) return;
+      await Navigator.push(context, MaterialPageRoute<void>(
+        builder: (_) => LiveChatScreen(conversationId: conversationId,
+          title: field(friend, 'name', 'Friend'))));
+      if (mounted) await _load();
+    } catch (e) {
+      if (mounted) liveNotice(context, e.toString());
+    } finally {
+      if (mounted) setState(() => openingFriend = false);
+    }
+  }
+
+  String _when(dynamic value) {
+    final date = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
+    if (date == null) return '';
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return 'Now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}d';
+    return '${date.day}/${date.month}';
+  }
+
+  Widget _friendStrip() {
+    final visible = friends.where((f) =>
+      field(f, 'name').toLowerCase().contains(query.toLowerCase())).toList()
+      ..sort((a, b) {
+        final first = online[field(a, 'id')] == true ? 0 : 1;
+        final second = online[field(b, 'id')] == true ? 0 : 1;
+        return first.compareTo(second);
+      });
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(18, 7, 12, 7),
+        child: Row(children: [
+          const Expanded(child: Text('Your people',
+            style: TextStyle(fontSize: 15,
+              fontWeight: FontWeight.w900, color: BlinkColors.ink))),
+          if (presenceAvailable)
+            Text('${visible.where((f) => online[field(f, 'id')] == true).length} active',
+              style: const TextStyle(color: Color(0xFF24855B),
+                fontWeight: FontWeight.w800, fontSize: 11))
+          else
+            const Text('Friends', style: TextStyle(
+              color: BlinkColors.muted, fontSize: 11)),
+        ]),
+      ),
+      SizedBox(height: 112,
+        child: friendsLoading
+          ? const Center(child: CircularProgressIndicator(
+              strokeWidth: 2, color: BlinkColors.orange))
+          : ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 11),
+              children: [
+                SizedBox(width: 79, child: InkWell(
+                  borderRadius: BorderRadius.circular(19),
+                  onTap: () => Navigator.push(context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const LiveNewChatScreen()))
+                    .then((_) => _refreshAll()),
+                  child: Column(children: [
+                    Container(
+                      width: 60, height: 60,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(22),
+                        color: BlinkColors.orangeSoft,
+                        border: Border.all(color: const Color(0xFFFFCFB4))),
+                      child: const Icon(Icons.add_comment_rounded,
+                        color: BlinkColors.orangeDark, size: 27)),
+                    const SizedBox(height: 7),
+                    const Text('New chat', style: TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w800)),
+                  ]),
+                )),
+                for (final friend in visible)
+                  SizedBox(width: 80, child: InkWell(
+                    onTap: openingFriend ? null : () => _openFriend(friend),
+                    borderRadius: BorderRadius.circular(19),
+                    child: Column(children: [
+                      SizedBox(width: 62, height: 65, child: Stack(children: [
+                        Container(
+                          width: 60, height: 60,
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: online[field(friend, 'id')] == true
+                                ? const Color(0xFF22B573) : const Color(0xFFFFD6C1),
+                              width: 2)),
+                          child: liveAvatar(friend, radius: 27),
+                        ),
+                        if (presenceAvailable)
+                          Positioned(right: 1, bottom: 3, child: Container(
+                            width: 15, height: 15,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: online[field(friend, 'id')] == true
+                                ? const Color(0xFF27C77C)
+                                : const Color(0xFFB4B9BC),
+                              border: Border.all(color: Colors.white, width: 2)),
+                          )),
+                      ])),
+                      const SizedBox(height: 3),
+                      Text(field(friend, 'name', 'Friend').split(' ').first,
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11.5,
+                          color: BlinkColors.ink, fontWeight: FontWeight.w800)),
+                      Text(!presenceAvailable ? 'Status —'
+                        : online[field(friend, 'id')] == true ? 'Active' : 'Offline',
+                        maxLines: 1, style: const TextStyle(
+                          color: BlinkColors.muted, fontSize: 9.5)),
+                    ]),
+                  )),
+              ],
+            ),
+      ),
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = conversations.where((item) {
+      final c = obj(item);
       final person = obj(c['otherUser']);
-      final name = c['isGroup']==true ? field(c,'groupName') : field(person,'name');
+      final name = c['isGroup'] == true
+        ? field(c, 'groupName') : field(person, 'name');
       return name.toLowerCase().contains(query.toLowerCase());
     }).toList();
+
+    final unreadTotal = conversations.fold<int>(0, (sum, item) {
+      final n = obj(item)['unreadCount'];
+      return sum + (n is num ? n.toInt() : 0);
+    });
+
     return Scaffold(
       drawer: const BlinkFullDrawer(),
-      // Hide the tab bar while the search keyboard is open; otherwise the
-      // remaining message-list area collapses on small screens.
       bottomNavigationBar: MediaQuery.viewInsetsOf(context).bottom > 0
-          ? null : const BlinkBottomBar(active: 'inbox'),
-      appBar: AppBar(title: const BlinkBrandedTitle('Inbox'), actions: [
+        ? null : const BlinkBottomBar(active: 'inbox'),
+      appBar: AppBar(title: const BlinkBrandedTitle('Chats'), actions: [
         IconButton(
           tooltip: 'New chat',
           icon: const Icon(Icons.edit_square),
           onPressed: () => Navigator.push(context, MaterialPageRoute<void>(
-            builder: (_) => const LiveNewChatScreen())).then((_) => _load()),
+            builder: (_) => const LiveNewChatScreen())).then((_) => _refreshAll()),
         ),
         PopupMenuButton<String>(
           tooltip: 'More Inbox actions',
@@ -56,7 +266,7 @@ class _LiveInboxState extends State<LiveInboxScreen> {
               Navigator.push(context, MaterialPageRoute<void>(
                 builder: (_) => const LiveCreateGroupScreen())).then((_) => _load());
             } else if (value == 'refresh') {
-              _load();
+              _refreshAll();
             }
           },
           itemBuilder: (_) => const [
@@ -65,56 +275,152 @@ class _LiveInboxState extends State<LiveInboxScreen> {
           ],
         ),
       ]),
-      body: Column(children:[
-        if(MediaQuery.viewInsetsOf(context).bottom == 0)
-          const BlinkFeatureHero(
-            eyebrow:'PRIVATE BY DESIGN',
-            title:'Conversations, closer.',
-            subtitle:'Your people, groups and every shared moment in one place.',
-            icon:Icons.forum_rounded,
-            mood:BlinkMood.community,
-            margin:EdgeInsets.fromLTRB(13,11,13,0),
+      body: Column(children: [
+        if (MediaQuery.viewInsetsOf(context).bottom == 0) ...[
+          const SizedBox(height: 6),
+          _friendStrip(),
+          const Divider(height: 1, color: Color(0xFFF1E2D7)),
+        ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(13, 11, 13, 8),
+          child: TextField(
+            decoration: InputDecoration(
+              prefixIcon: const Icon(Icons.search_rounded),
+              hintText: 'Search messages and people',
+              filled: true,
+              fillColor: const Color(0xFFFFF2E9),
+              contentPadding: const EdgeInsets.symmetric(vertical: 11),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(17),
+                borderSide: BorderSide.none)),
+            onChanged: (v) => setState(() => query = v),
           ),
-        Padding(padding:const EdgeInsets.all(14),child:TextField(
-          decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search conversations'),
-          onChanged:(v)=>setState(()=>query=v),
-        )),
-        Expanded(child:loading?const Center(child:CircularProgressIndicator()):
-          error!=null?liveError(error,_load):
-          RefreshIndicator(onRefresh:_load,child:ListView.builder(
-            itemCount:rows.isEmpty?1:rows.length,
-            itemBuilder:(context,i){
-              if(rows.isEmpty)return const ListTile(title:Text('No conversations yet'),subtitle:Text('Start chatting with a Blink friend.'));
-              final c=obj(rows[i]);final other=obj(c['otherUser']);final group=c['isGroup']==true;
-              final name=group?field(c,'groupName','Group'):field(other,'name','Friend');
-              final last=obj(c['lastMessage']);final body=field(last,'body');
-              final preview=last['unsentAt']!=null?'Message removed':
-                body.startsWith('🎬 Reel by')?'🎬 Shared a Reel':
-                body.isNotEmpty?body:last['mediaKey']!=null?'Media attachment':'New conversation';
-              final unread=(c['unreadCount'] is num)
-                ?(c['unreadCount'] as num).toInt():0;
-              return Padding(
-                padding:const EdgeInsets.symmetric(horizontal:12),
-                child:BlinkProListCard(
-                  title:name,
-                  subtitle:preview,
-                  eyebrow:group?'GROUP CONVERSATION':'BLINK PRIVATE INBOX',
-                  icon:group?Icons.groups_2_outlined:Icons.forum_outlined,
-                  leading:group?const Icon(Icons.groups_2_rounded,
-                    color:BlinkColors.orangeDark):liveAvatar(other),
-                  badges:[
-                    if(unread>0)BlinkInfoPill('$unread unread',
-                      icon:Icons.mark_email_unread_outlined,highlight:true),
-                    if(group)const BlinkInfoPill('Group',icon:Icons.people_outline),
-                  ],
-                  onTap:()=>Navigator.push(context,MaterialPageRoute<void>(
-                    builder:(_)=>LiveChatScreen(
-                      conversationId:field(c,'id'),title:name))).then((_){_load();}),
-                ),
-              );
-            },
-          )),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 5, 16, 10),
+          child: Row(children: [
+            const Expanded(child: Text('Recent chats',
+              style: TextStyle(fontSize: 17,
+                fontWeight: FontWeight.w900, color: BlinkColors.ink))),
+            if (unreadTotal > 0) Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(color: BlinkColors.orangeSoft,
+                borderRadius: BorderRadius.circular(15)),
+              child: Text('$unreadTotal unread',
+                style: const TextStyle(fontSize: 11,
+                  color: BlinkColors.orangeDark, fontWeight: FontWeight.w900)),
+            ),
+          ]),
+        ),
+        Expanded(child: loading
+          ? const Center(child: CircularProgressIndicator(color: BlinkColors.orange))
+          : error != null ? liveError(error, _refreshAll)
+          : RefreshIndicator(onRefresh: _refreshAll,
+              child: ListView.builder(
+                itemCount: rows.isEmpty ? 1 : rows.length,
+                itemBuilder: (context, i) {
+                  if (rows.isEmpty) {
+                    return Padding(padding: const EdgeInsets.all(35),
+                      child: Column(children: [
+                        const Icon(Icons.mark_chat_unread_outlined,
+                          size: 52, color: BlinkColors.orange),
+                        const SizedBox(height: 12),
+                        const Text('No conversations yet',
+                          style: TextStyle(fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 5),
+                        const Text('Tap a friend above to start chatting.',
+                          style: TextStyle(color: BlinkColors.muted)),
+                      ]));
+                  }
+                  final c = obj(rows[i]);
+                  final group = c['isGroup'] == true;
+                  final other = obj(c['otherUser']);
+                  final name = group
+                    ? field(c, 'groupName', 'Group')
+                    : field(other, 'name', 'Friend');
+                  final last = obj(c['lastMessage']);
+                  final body = field(last, 'body');
+                  final preview = last['unsentAt'] != null
+                    ? 'Message removed'
+                    : body.startsWith('🎬 Reel by') ? '🎬 Shared a Reel'
+                    : body.isNotEmpty ? body
+                    : last['mediaKey'] != null ? 'Media attachment'
+                    : 'Start a conversation';
+                  final number = c['unreadCount'];
+                  final unread = number is num ? number.toInt() : 0;
+                  final isOnline = !group && presenceAvailable &&
+                    online[field(other, 'id')] == true;
+                  return Material(
+                    color: unread > 0
+                      ? const Color(0xFFFFF5ED) : Colors.transparent,
+                    child: InkWell(
+                      onTap: () => Navigator.push(context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => LiveChatScreen(
+                            conversationId: field(c, 'id'), title: name)))
+                        .then((_) => _refreshAll()),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(15, 10, 16, 11),
+                        child: Row(children: [
+                          SizedBox(width: 57, height: 57, child: Stack(children: [
+                            group ? CircleAvatar(radius: 27,
+                              backgroundColor: BlinkColors.orangeSoft,
+                              child: const Icon(Icons.groups_rounded,
+                                color: BlinkColors.orangeDark, size: 27))
+                              : liveAvatar(other, radius: 27),
+                            if (isOnline) Positioned(right: 1, bottom: 1,
+                              child: Container(width: 15, height: 15,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFF20C774),
+                                  border: Border.all(color: Colors.white, width: 2)))),
+                          ])),
+                          const SizedBox(width: 12),
+                          Expanded(child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name, maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 14.5,
+                                  color: BlinkColors.ink,
+                                  fontWeight: unread > 0
+                                    ? FontWeight.w900 : FontWeight.w800)),
+                              const SizedBox(height: 5),
+                              Text(preview, maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 12,
+                                  color: unread > 0
+                                    ? BlinkColors.ink : BlinkColors.muted,
+                                  fontWeight: unread > 0
+                                    ? FontWeight.w700 : FontWeight.w400)),
+                            ],
+                          )),
+                          const SizedBox(width: 7),
+                          Column(mainAxisSize: MainAxisSize.min, children: [
+                            Text(_when(last['createdAt'] ?? c['updatedAt']),
+                              style: const TextStyle(
+                                color: BlinkColors.muted, fontSize: 10.5)),
+                            if (unread > 0) ...[
+                              const SizedBox(height: 7),
+                              Container(
+                                constraints: const BoxConstraints(minWidth: 22),
+                                padding: const EdgeInsets.all(5),
+                                decoration: const BoxDecoration(
+                                  color: BlinkColors.orange,
+                                  shape: BoxShape.circle),
+                                child: Text(unread > 99 ? '99+' : '$unread',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(color: Colors.white,
+                                    fontSize: 10, fontWeight: FontWeight.w900)),
+                              ),
+                            ],
+                          ]),
+                        ]),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            )),
       ]),
     );
   }
