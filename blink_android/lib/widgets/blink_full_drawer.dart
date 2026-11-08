@@ -136,12 +136,13 @@ class _DrawerLink extends StatelessWidget {
       : BlinkColors.orangeDark;
     return Padding(
     padding: const EdgeInsets.symmetric(vertical: 3),
-    child: Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
+    child: Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(17),
-        border: Border.all(color: accent.withValues(alpha: .10)),
+        side: BorderSide(color: accent.withValues(alpha: .10)),
       ),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
       dense: true,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
