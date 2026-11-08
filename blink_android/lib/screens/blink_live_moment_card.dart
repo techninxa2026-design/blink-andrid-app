@@ -48,6 +48,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
   late final AnimationController _loveController;
   final GlobalKey _likeActionKey = GlobalKey(debugLabel: 'Blink Moment Like');
   Offset? _loveTapPoint;
+  Offset? _loveDestination;
 
   @override
   void initState() {
@@ -128,8 +129,12 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
   /// Double tapping any Moment media gives ❤️, never toggles it OFF.
   /// The normal heart button intentionally retains the web's toggle behavior.
   Future<void> _doubleTapLove() async {
-    if (!widget.active) return;
-    if (!_taughtLove && mounted) setState(() => _taughtLove = true);
+    if (!widget.active || !mounted) return;
+    final destination = _likeControlPosition();
+    setState(() {
+      _taughtLove = true;
+      _loveDestination = destination;
+    });
     _loveController.forward(from: 0);
     if (_busy || _activity?['myReaction'] == '❤️') return;
 
@@ -179,27 +184,35 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     }
   }
 
-  /// The particle destination is measured from the actual Like control,
-  /// not approximated using a hard-coded screen height. It remains accurate
-  /// on short phones, large fonts and when the system insets change.
-  Widget _loveBurst() => Positioned.fill(
-    child: LayoutBuilder(builder: (context, space) {
-      final host = this.context.findRenderObject();
-      final like = _likeActionKey.currentContext?.findRenderObject();
-      Offset? target;
-      if (host is RenderBox && like is RenderBox &&
-          host.hasSize && like.hasSize) {
-        target = host.globalToLocal(
-          like.localToGlobal(like.size.center(Offset.zero)));
+  /// Measure the Like control after its frame has been laid out, at gesture
+  /// time. Never call localToGlobal() from a LayoutBuilder layout callback.
+  Offset _likeControlPosition() {
+    final fallback = Offset(
+      MediaQuery.sizeOf(context).width - 41,
+      MediaQuery.sizeOf(context).height * .33,
+    );
+    try {
+      final root = context.findRenderObject();
+      final target = _likeActionKey.currentContext?.findRenderObject();
+      if (root is RenderBox && target is RenderBox &&
+          root.hasSize && target.hasSize) {
+        return root.globalToLocal(
+          target.localToGlobal(target.size.center(Offset.zero)));
       }
-      return BlinkHeartFlight(
-        progress: _loveController,
-        origin: _loveTapPoint ??
-          Offset(space.maxWidth / 2, space.maxHeight / 2),
-        destination: target ??
-          Offset(space.maxWidth - 37, space.maxHeight * .35),
-      );
-    }),
+    } catch (error) {
+      debugPrint('Blink love target calculation: $error');
+    }
+    return fallback;
+  }
+
+  Widget _loveBurst() => Positioned.fill(
+    child: LayoutBuilder(builder: (context, space) => BlinkHeartFlight(
+      progress: _loveController,
+      origin: _loveTapPoint ??
+        Offset(space.maxWidth * .5, space.maxHeight * .5),
+      destination: _loveDestination ??
+        Offset(space.maxWidth - 41, space.maxHeight * .33),
+    )),
   );
 
   Future<void> _reaction() async {
