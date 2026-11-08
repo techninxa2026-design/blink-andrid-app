@@ -598,8 +598,22 @@ class _FullExchangeThreadState extends State<FullExchangeThread> {
         : RefreshIndicator(onRefresh: _load, child: ListView(
           padding: const EdgeInsets.all(12),
           children: [
-            if (messages.isEmpty) const ListTile(title: Text('No private messages yet.')),
-            ...messages.map((m) => Card(child: ListTile(
+            BlinkSectionBand(
+              eyebrow: 'PRIVATE CONVERSATION',
+              title: 'Negotiation thread',
+              subtitle: messages.length.toString() + ' messages',
+              mood: BlinkMood.exchange,
+              icon: Icons.forum_outlined,
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 15)),
+            if (messages.isEmpty)
+              const BlinkExperienceState(
+                title: 'Start negotiating',
+                subtitle: 'Send a thoughtful introduction or a price offer.',
+                icon: Icons.handshake_outlined,
+                mood: BlinkMood.exchange),
+            ...messages.map((m) => BlinkProCard(
+              mood: BlinkMood.exchange,
+              child: ListTile(
               title: Text(field(m['sender'], 'name', 'Member')),
               subtitle: Text(field(m, 'text')),
             ))),
