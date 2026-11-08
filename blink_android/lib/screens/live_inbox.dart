@@ -8,6 +8,7 @@ import '../core/live_api.dart';
 import '../core/blink_auth_api.dart';
 import '../core/theme.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 import '../widgets/blink_full_drawer.dart';
 import 'voice_message.dart';
 
@@ -447,11 +448,24 @@ class _LiveNewChatState extends State<LiveNewChatScreen> {
   @override Widget build(BuildContext context)=>Scaffold(
     appBar:AppBar(title:const BlinkBrandedTitle('Message a friend')),
     body:Column(children:[
+      const BlinkSectionBand(
+        eyebrow: 'START A CONNECTION',
+        title: 'Choose a friend',
+        subtitle: 'Pick someone and start a private Blink conversation.',
+        mood: BlinkMood.community,
+        icon: Icons.forum_outlined),
       Padding(padding:const EdgeInsets.all(12),child:TextField(decoration:const InputDecoration(
         hintText:'Find a friend',prefixIcon:Icon(Icons.search)),onChanged:(v)=>setState(()=>search=v))),
       if(error!=null)liveError(error,_load),
       Expanded(child:ListView(padding:const EdgeInsets.all(12),
-        children:friends.where((u)=>field(u,'name').toLowerCase().contains(
+        children:[
+          if(friends.isEmpty)
+            const BlinkExperienceState(
+              title: 'Your future conversations start here',
+              subtitle: 'Add a friend first, then start messaging.',
+              icon: Icons.forum_outlined,
+              mood: BlinkMood.community),
+          ...friends.where((u)=>field(u,'name').toLowerCase().contains(
           search.toLowerCase())).map((u)=>BlinkProListCard(
           leading:liveAvatar(u),icon:Icons.person_outline,
           eyebrow:'START A CONVERSATION',
@@ -459,7 +473,9 @@ class _LiveNewChatState extends State<LiveNewChatScreen> {
           subtitle:field(u,'bio','Blink friend'),
           trailing:const Icon(Icons.chat_bubble_outline,color:BlinkColors.orangeDark),
           onTap:busy?null:()=>_start(u),
-        )).toList())),
+        )),
+        ],
+      )),
     ]),
   );
 }
@@ -848,7 +864,32 @@ class _LiveChatState extends State<LiveChatScreen>{
     );
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    appBar:AppBar(title:BlinkBrandedTitle(widget.title),actions:[
+    appBar:AppBar(title:Row(children:[
+      SizedBox(width: 38, height: 38, child:
+        conversation['isGroup'] == true
+          ? const CircleAvatar(
+              backgroundColor: BlinkColors.orangeSoft,
+              child: Icon(Icons.groups_rounded,
+                color: BlinkColors.orangeDark, size: 19))
+          : liveAvatar(conversation['otherUser'], radius: 18)),
+      const SizedBox(width: 9),
+      Expanded(child:Column(
+        mainAxisSize:MainAxisSize.min,
+        crossAxisAlignment:CrossAxisAlignment.start,
+        children:[
+          Text(widget.title, maxLines:1,
+            overflow:TextOverflow.ellipsis,
+            style:const TextStyle(fontSize:16.5,
+              fontWeight:FontWeight.w900,color:BlinkColors.ink)),
+          Text(conversation['isGroup']==true
+            ? 'Group conversation'
+            : 'Private Blink chat',
+            maxLines:1, overflow:TextOverflow.ellipsis,
+            style:const TextStyle(fontSize:10.5,
+              color:BlinkColors.muted)),
+        ],
+      )),
+    ]),actions:[
       PopupMenuButton<String>(tooltip:'Conversation options',
         onSelected:_conversationAction,itemBuilder:(_)=>[
           const PopupMenuItem(value:'search',child:Text('Search messages')),
@@ -878,7 +919,17 @@ class _LiveChatState extends State<LiveChatScreen>{
       if(error!=null)liveError(error,()=>_load()),
       Expanded(child:loading?const Center(child:CircularProgressIndicator()):
         RefreshIndicator(onRefresh:_load,child:ListView.builder(
-          itemCount:messages.length,itemBuilder:(_,i)=>_message(obj(messages[i]))))),
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount:messages.isEmpty ? 1 : messages.length,
+          itemBuilder:(_,i)=>messages.isEmpty
+            ? const BlinkExperienceState(
+                title: 'Start this conversation',
+                subtitle: 'Say hello, share a moment or send a voice message.',
+                icon: Icons.chat_bubble_outline_rounded,
+                mood: BlinkMood.community)
+            : BlinkReveal(
+                delay: Duration(milliseconds: (i % 5) * 32),
+                child: _message(obj(messages[i]))))),
       SafeArea(top:false,child:Container(
         margin:const EdgeInsets.fromLTRB(9,7,9,10),
         padding:const EdgeInsets.fromLTRB(4,5,5,5),
@@ -902,11 +953,20 @@ class _LiveChatState extends State<LiveChatScreen>{
               border:InputBorder.none,
               enabledBorder:InputBorder.none,
               focusedBorder:InputBorder.none))),
-          Container(
-            decoration:const BoxDecoration(
-              color:BlinkColors.orange,shape:BoxShape.circle),
-            child:IconButton(tooltip:'Send',onPressed:busy?null:_send,
-              icon:const Icon(Icons.arrow_upward_rounded,color:Colors.white)),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: input,
+            builder: (context, value, _) => AnimatedContainer(
+              duration: BlinkMotion.duration(context, ms: 180),
+              decoration: BoxDecoration(
+                color: busy || value.text.trim().isEmpty
+                  ? const Color(0xFFFFCCB0) : BlinkColors.orange,
+                shape: BoxShape.circle),
+              child: IconButton(
+                tooltip: 'Send',
+                onPressed: busy || value.text.trim().isEmpty ? null : _send,
+                icon: const Icon(Icons.arrow_upward_rounded,
+                  color: Colors.white)),
+            ),
           ),
         ]),
       )),
