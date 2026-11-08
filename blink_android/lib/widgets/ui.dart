@@ -1434,46 +1434,60 @@ class _BlinkChipsState extends State<BlinkChips> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 4),
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: List.generate(
-          widget.labels.length,
-              (i) => Padding(
+        children: List.generate(widget.labels.length, (i) {
+          final selected = i == current;
+          return Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () {
-                setState(() => current = i);
-                widget.onChanged?.call(i);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(
-                  milliseconds: 160,
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 9,
-                ),
-                decoration: BoxDecoration(
-                  color: i == current
-                      ? BlinkColors.orange
-                      : const Color(0xFFF4F4F4),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Text(
-                  widget.labels[i],
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: i == current
-                        ? Colors.white
-                        : const Color(0xFF6D6F76),
+            child: Semantics(
+              button: true,
+              selected: selected,
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () {
+                    if (current == i) return;
+                    setState(() => current = i);
+                    widget.onChanged?.call(i);
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: AnimatedContainer(
+                    duration: BlinkMotion.duration(context, ms: 200),
+                    curve: Curves.easeOutCubic,
+                    constraints: const BoxConstraints(minHeight: 46),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 17, vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: selected ? const LinearGradient(
+                        colors: [BlinkColors.orange, BlinkColors.orangeDark])
+                        : null,
+                      color: selected ? null : const Color(0xFFFFF1E8),
+                      border: Border.all(
+                        color: selected
+                          ? const Color(0xFFFF9B67)
+                          : const Color(0xFFFFD6C2)),
+                      borderRadius: BorderRadius.circular(20)),
+                    child: AnimatedDefaultTextStyle(
+                      duration: BlinkMotion.duration(context, ms: 170),
+                      style: TextStyle(
+                        color: selected ? Colors.white : BlinkColors.orangeDark,
+                        fontSize: 11.7,
+                        fontWeight: selected
+                          ? FontWeight.w900 : FontWeight.w700),
+                      child: Text(widget.labels[i],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        }),
       ),
     );
   }
