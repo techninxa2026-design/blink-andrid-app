@@ -134,7 +134,7 @@ class BlinkScreen extends StatelessWidget {
       drawer: const BlinkFullDrawer(),
       appBar: AppBar(
         title: logoTitle
-            ? const BlinkLogo()
+            ? BlinkBrandedTitle(title)
             : Text(
           title,
           style: const TextStyle(
@@ -600,49 +600,58 @@ class SectionHeading extends StatelessWidget {
   final String? subtitle;
   final Widget? action;
 
-  const SectionHeading(
-      this.title, {
-        super.key,
-        this.subtitle,
-        this.action,
-      });
+  const SectionHeading(this.title, {
+    super.key,
+    this.subtitle,
+    this.action,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 17, 18, 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -.45,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: BlinkColors.muted,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (action != null) action!,
-        ],
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(17, 18, 17, 14),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+      Container(
+        width: 4, height: subtitle == null ? 43 : 65,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter, end: Alignment.bottomCenter,
+            colors: [BlinkColors.orange, Color(0xFFFFB17E)]),
+          borderRadius: BorderRadius.circular(4)),
       ),
-    );
-  }
+      const SizedBox(width: 11),
+      Expanded(child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.auto_awesome_rounded, color: BlinkColors.orange,
+              size: 11),
+            SizedBox(width: 5),
+            Text('YOUR BLINK SPACE',
+              style: TextStyle(color: BlinkColors.orangeDark,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.3, fontSize: 9)),
+          ]),
+          const SizedBox(height: 4),
+          Text(title,
+            maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 21,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -.55, color: BlinkColors.ink)),
+          if (subtitle != null) ...[
+            const SizedBox(height: 3),
+            Text(subtitle!, maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: BlinkColors.muted, fontSize: 11.5, height: 1.4)),
+          ],
+        ],
+      )),
+      if (action != null) ...[
+        const SizedBox(width: 7),
+        action!,
+      ],
+    ]),
+  );
 }
 
 // ========================================
@@ -1131,42 +1140,13 @@ class BlinkCreateLayout extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(17),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [
-                        Color(0xFFFFF0E4), Color(0xFFFFFAF6),
-                      ]),
-                      borderRadius: BorderRadius.circular(19),
-                      border: Border.all(color: BlinkColors.line),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 48, height: 48,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(icon, color: BlinkColors.orange, size: 25),
-                        ),
-                        const SizedBox(width: 13),
-                        Expanded(child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(title, maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 19, fontWeight: FontWeight.w900,
-                                color: BlinkColors.ink)),
-                            const SizedBox(height: 4),
-                            Text(subtitle, style: const TextStyle(
-                              fontSize: 12, color: BlinkColors.muted)),
-                          ],
-                        )),
-                      ],
-                    ),
+                  BlinkFeatureHero(
+                    margin: EdgeInsets.zero,
+                    eyebrow: 'CREATE ON BLINK',
+                    title: title,
+                    subtitle: subtitle,
+                    icon: icon,
+                    mood: BlinkMood.studio,
                   ),
                   const SizedBox(height: 16),
                   content,
@@ -1300,8 +1280,19 @@ class BlinkFormSection extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(heading, style: const TextStyle(fontWeight: FontWeight.w900,
-          fontSize: 15, color: BlinkColors.ink)),
+        Row(children:[
+          Container(width:29,height:29,
+            decoration:BoxDecoration(
+              color:BlinkColors.orangeSoft,
+              borderRadius:BorderRadius.circular(10)),
+            child:const Icon(Icons.tune_rounded,
+              size:17,color:BlinkColors.orangeDark)),
+          const SizedBox(width:9),
+          Expanded(child:Text(heading,
+            style:const TextStyle(
+              fontSize:15, fontWeight:FontWeight.w900,
+              color:BlinkColors.ink))),
+        ]),
         if (helper != null) ...[
           const SizedBox(height: 3),
           Text(helper!, style: const TextStyle(
