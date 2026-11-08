@@ -134,6 +134,9 @@ void main() {
       await tester.tapAt(mediaPoint);
       await tester.pump(const Duration(milliseconds: 75));
       await tester.tapAt(mediaPoint);
+      // The first frame starts the AnimationController ticker; the second
+      // frame advances it. A single pump may still report opacity=0.
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 180));
 
       final heart = find.byKey(
