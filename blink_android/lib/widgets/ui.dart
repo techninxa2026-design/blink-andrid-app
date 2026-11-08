@@ -1181,7 +1181,7 @@ class BlinkProListCard extends StatelessWidget {
             if (eyebrow != null && eyebrow!.isNotEmpty) ...[
               Text(eyebrow!.toUpperCase(), maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 10, letterSpacing: 0.9,
+                style: TextStyle(fontSize: 10, letterSpacing: 0.9,
                   fontWeight: FontWeight.w800,
                   color: accent)),
               const SizedBox(height: 5),
