@@ -36,7 +36,8 @@ void main() {
                 bio: 'An introduction that should wrap and remain readable '
                   'on smaller screens with larger system text.',
                 avatar: CircleAvatar(child: Icon(Icons.person)),
-                stats: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                stats: Wrap(alignment: WrapAlignment.spaceEvenly,
+                  spacing: 12, runSpacing: 9,
                   children: [
                     Text('240 Followers'),
                     Text('12 Friends'),
