@@ -16,6 +16,7 @@ import '../core/blink_original_music.dart';
 import '../core/nav.dart';
 import '../core/theme.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 
 /// Full camera + gallery + authenticated upload to the existing Blink API.
 class BlinkRealCaptureScreen extends StatefulWidget {
@@ -829,7 +830,9 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
   }
 
   Widget _modeButton(String title, bool selected, bool left, VoidCallback pressed) {
-    return GestureDetector(onTap: pressed, child: Container(
+    return GestureDetector(onTap: pressed, child: AnimatedContainer(
+      duration: BlinkMotion.duration(context, ms: 220),
+      curve: Curves.easeOutCubic,
       padding: const EdgeInsets.symmetric(horizontal: 27, vertical: 11),
       decoration: BoxDecoration(
         gradient:selected ? const LinearGradient(
@@ -981,6 +984,21 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
                 style: FilledButton.styleFrom(backgroundColor: BlinkColors.orange))),
             ])),
           ] else ...[
+            AnimatedSwitcher(
+              duration: BlinkMotion.duration(context, ms: 240),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: .95, end: 1).animate(animation),
+                  child: child)),
+              child: Text(_videoMode
+                  ? '✦  BLINK VIDEO STUDIO' : '✦  BLINK PHOTO STUDIO',
+                key: ValueKey(_videoMode),
+                style: const TextStyle(color: Color(0xFFFFCDB5),
+                  fontSize: 10, letterSpacing: 1.5,
+                  fontWeight: FontWeight.w900)),
+            ),
+            const SizedBox(height: 12),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               _modeButton('Photo', !_videoMode, true, () => _changeMode(false)),
               _modeButton('Video', _videoMode, false, () => _changeMode(true)),
@@ -988,7 +1006,12 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
             const SizedBox(height: 25),
             Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
               IconButton(onPressed: _pickerActive ? null : _gallery, icon: const Icon(Icons.photo_library_outlined, color: Colors.white, size: 28)),
-              GestureDetector(onTap:_shoot,child:Container(
+              GestureDetector(onTap:_shoot,child:AnimatedScale(
+                scale: _recording ? 1.055 : 1,
+                duration: BlinkMotion.duration(context, ms: 240),
+                curve: Curves.easeOutBack,
+                child: AnimatedContainer(
+                duration: BlinkMotion.duration(context, ms: 240),
                 width:84,height:84,padding:const EdgeInsets.all(6),
                 decoration:BoxDecoration(
                   shape:BoxShape.circle,
@@ -1008,13 +1031,24 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
                   child:Icon(_recording?Icons.stop_rounded:
                     (_videoMode?Icons.videocam_rounded:Icons.camera_alt_rounded),
                     color:Colors.white,size:30)),
-              )),
+              ))),
               IconButton(onPressed: _toggleFlash,
                 icon: Icon(_flash ? Icons.flash_on_rounded : Icons.flash_off_rounded, color: Colors.white, size: 28)),
             ]),
             const SizedBox(height: 19),
-            Text(_recording ? 'Recording… tap again to stop' : (_videoMode ? 'Tap to start recording' : 'Tap to capture'),
-              style: const TextStyle(color: Colors.white70, fontSize: 11)),
+            AnimatedSwitcher(
+              duration: BlinkMotion.duration(context, ms: 220),
+              child: Text(
+                _recording ? '●  Recording · Tap to stop'
+                  : (_videoMode ? 'Tap to record your Reel or Moment'
+                    : 'Tap to capture your Moment'),
+                key: ValueKey(_recording.toString() + _videoMode.toString()),
+                style: TextStyle(
+                  color: _recording
+                    ? const Color(0xFFFF7D94)
+                    : Colors.white70,
+                  fontSize: 11, fontWeight: FontWeight.w700)),
+            ),
           ],
           if (_error != null) Padding(padding: const EdgeInsets.all(12),
             child: Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white))),
