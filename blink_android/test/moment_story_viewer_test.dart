@@ -147,6 +147,9 @@ void main() {
         find.ancestor(of: flight, matching: find.byType(BlinkHeartFlight)).first);
       expect(burst.progress.value, greaterThan(0));
       expect(burst.progress.value, lessThan(1));
+      expect(burst.origin.dx, closeTo(mediaPoint.dx, 18));
+      // The particles move to the right-side Like action, not a random spot.
+      expect(burst.destination.dx, greaterThan(210));
       expect(tester.takeException(), isNull);
     },
   );
