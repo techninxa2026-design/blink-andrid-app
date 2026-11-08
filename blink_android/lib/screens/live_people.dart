@@ -253,6 +253,15 @@ class _FriendsState extends State<LiveFriendsScreen>{
           title:field(user,'name'),
           subtitle:field(user,'bio','Your Blink friend'),
           badges:const [BlinkInfoPill('Friends',icon:Icons.verified_rounded,highlight:true)],
+          footer:Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: () => openBlinkFriendChat(
+                context, field(user,'id'), field(user,'name')),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+              label: const Text('Message'),
+            ),
+          ),
           onTap:()=>Navigator.push(context,MaterialPageRoute<void>(
             builder:(_)=>LivePublicProfileScreen(userId:field(user,'id')))),
           trailing:IconButton(tooltip:'Unfriend',
@@ -281,8 +290,24 @@ class _RequestsState extends State<LiveRequestsScreen>{
     catch(e){if(mounted)setState((){error=e.toString();loading=false;});}
   }
   Future<void> _respond(dynamic request,String answer)async{
-    try{await LiveApi.call('POST','/friends/requests/${Uri.encodeComponent(field(request,'id'))}/$answer');await _load();}
-    catch(e){if(mounted)liveNotice(context,e.toString());}
+    try {
+      final result = obj(await LiveApi.call('POST',
+        '/friends/requests/${Uri.encodeComponent(field(request,'id'))}/$answer'));
+      await _load();
+      if (!mounted || answer != 'accept') return;
+      final sender = obj(obj(request)['sender']);
+      final friendId = field(result,'friendId',field(sender,'id'));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:const Text('Friend request accepted. You can now message.'),
+        action:friendId.isEmpty ? null : SnackBarAction(
+          label:'MESSAGE',
+          onPressed:()=>openBlinkFriendChat(
+            context,friendId,field(sender,'name','Blink friend')),
+        ),
+      ));
+    } catch(e) {
+      if(mounted)liveNotice(context,e.toString());
+    }
   }
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Friend Requests')),body:
     loading?const Center(child:CircularProgressIndicator()):error!=null?liveError(error,_load):
@@ -950,10 +975,21 @@ class _PublicState extends State<LivePublicProfileScreen> {
                         child: const Text('Decline')),
                     ]),
                   if (relationship == 'FRIENDS')
-                    OutlinedButton.icon(
-                      onPressed: _busy ? null : () => _friendAction('remove'),
-                      icon: const Icon(Icons.people_alt_outlined),
-                      label: const Text('Friends · Remove')),
+                    Wrap(spacing: 9, runSpacing: 8, children: [
+                      FilledButton.icon(
+                        onPressed: _busy ? null
+                          : () => openBlinkFriendChat(
+                            context, widget.userId,
+                            field(p,'name','Blink friend')),
+                        icon: const Icon(Icons.chat_bubble_outline_rounded),
+                        label: const Text('Message'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null
+                          : () => _friendAction('remove'),
+                        icon: const Icon(Icons.person_remove_outlined),
+                        label: const Text('Remove friend')),
+                    ]),
                   const SizedBox(height: 20),
                   _GalleryHeading(title: 'Public Moments', count: _moments.length,
                     onViewAll: null),
