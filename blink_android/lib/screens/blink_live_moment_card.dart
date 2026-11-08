@@ -30,7 +30,8 @@ class BlinkLiveMomentCard extends StatefulWidget {
   State<BlinkLiveMomentCard> createState() => _BlinkLiveMomentCardState();
 }
 
-class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
+class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
+    with SingleTickerProviderStateMixin {
   Map<String, dynamic>? _activity;
   VideoPlayerController? _video;
   BlinkOriginalPlayer? _soundtrack;
@@ -40,9 +41,43 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
   // Activity and media failures are independent: valid Moments stay visible.
   String? _videoError;
 
+  // Instagram-style double-tap feedback is deliberately separate from the
+  // backend reaction state, so the heart animation runs immediately.
+  late final AnimationController _loveController;
+  late final Animation<double> _loveScale;
+  late final Animation<double> _loveOpacity;
+  Offset? _loveTapPoint;
+
   @override
   void initState() {
     super.initState();
+    _loveController = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 840));
+    _loveScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: .40, end: 1.16)
+          .chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 55,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.16, end: 1.0)
+          .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 45,
+      ),
+    ]).animate(_loveController);
+    _loveOpacity = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0, end: 1)
+          .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 16,
+      ),
+      TweenSequenceItem(tween: ConstantTween<double>(1), weight: 57),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1, end: 0)
+          .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 27,
+      ),
+    ]).animate(_loveController);
     _loadActivity();
     _loadSaved();
     if (widget.moment.mediaType == 'video') _initVideo();
@@ -113,6 +148,99 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  /// Double tapping any Moment media gives ❤️, never toggles it OFF.
+  /// The normal heart button intentionally retains the web's toggle behavior.
+  Future<void> _doubleTapLove() async {
+    if (!widget.active) return;
+    _loveController.forward(from: 0);
+    if (_busy || _activity?['myReaction'] == '❤️') return;
+
+    final previous = _activity == null
+        ? null : Map<String, dynamic>.from(_activity!);
+    final priorEmoji = (_activity?['myReaction'] ?? '').toString();
+    final total = _activity?['reactionTotal'];
+    final count = total is num ? total.toInt()
+        : int.tryParse(total?.toString() ?? '') ?? 0;
+
+    // Show the selected ❤️ and updated count immediately, then reconcile
+    // with Blink's existing POST /moments/:id/react endpoint.
+    setState(() {
+      _busy = true;
+      _activity = {
+        if (_activity != null) ..._activity!,
+        'myReaction': '❤️',
+        'reactionTotal': count + (priorEmoji.isEmpty ? 1 : 0),
+      };
+    });
+
+    try {
+      // If metadata wasn't loaded yet, check the real reaction first:
+      // Blink's API uses a toggle, and repeated double taps must not unlove.
+      if (previous == null) {
+        try {
+          final latest = await BlinkHomeApi.activity(widget.moment.id);
+          if (!mounted) return;
+          if ((latest['myReaction'] ?? '').toString() == '❤️') {
+            setState(() => _activity = latest);
+            return;
+          }
+        } catch (error) {
+          debugPrint('Moment love metadata unavailable: $error');
+        }
+      }
+      await BlinkHomeApi.react(widget.moment.id, '❤️');
+      if (mounted) await _loadActivity();
+    } catch (error) {
+      if (mounted) {
+        setState(() => _activity = previous);
+        _notify('Could not love this Moment: '
+          '${BlinkHomeApi.momentActionError(error)}');
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// A large white heart pops exactly where the user double-tapped,
+  /// fades away, and never absorbs swipes or action-rail taps.
+  Widget _loveBurst() => Positioned.fill(
+    child: IgnorePointer(
+      child: LayoutBuilder(builder: (context, space) {
+        const dimension = 124.0;
+        final point = _loveTapPoint ?? Offset(
+          space.maxWidth / 2, space.maxHeight / 2);
+        final maxX = space.maxWidth > dimension
+          ? space.maxWidth - dimension : 0.0;
+        final maxY = space.maxHeight > dimension
+          ? space.maxHeight - dimension : 0.0;
+        return Stack(children: [
+          Positioned(
+            left: (point.dx - dimension / 2).clamp(0.0, maxX).toDouble(),
+            top: (point.dy - dimension / 2).clamp(0.0, maxY).toDouble(),
+            child: ScaleTransition(
+              scale: _loveScale,
+              child: FadeTransition(
+                opacity: _loveOpacity,
+                child: const Icon(
+                  Icons.favorite_rounded,
+                  key: ValueKey('blink-moment-double-tap-heart'),
+                  size: dimension,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(color: Color(0xCCFF5900),
+                      blurRadius: 24, offset: Offset(0, 8)),
+                    Shadow(color: Color(0x88000000),
+                      blurRadius: 9, offset: Offset(0, 4)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ]);
+      }),
+    ),
+  );
 
   Future<void> _reaction() async {
     if (_busy) return;
@@ -466,6 +594,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
 
   @override
   void dispose() {
+    _loveController.dispose();
     _video?.dispose();
     _soundtrack?.dispose();
     super.dispose();
@@ -535,15 +664,13 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
             : const Icon(Icons.videocam_off_outlined,
                 color: Colors.white54, size: 46)),
         if (video != null && video.value.isInitialized)
-          Positioned.fill(child: GestureDetector(
-            onTap: _togglePlayback,
-            behavior: HitTestBehavior.translucent,
-            child: Center(child: IgnorePointer(child: AnimatedOpacity(
+          Positioned.fill(child: IgnorePointer(
+            child: Center(child: AnimatedOpacity(
               duration: const Duration(milliseconds: 160),
               opacity: video.value.isPlaying ? 0 : 1,
               child: const Icon(Icons.play_circle_fill_rounded,
                 color: Colors.white, size: 72),
-            ))),
+            )),
           )),
       ] else
         Image.network(
@@ -562,6 +689,16 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard> {
             stops: [0, .33, 1],
           )),
       )),
+      // Handle one-tap video play/pause and double-tap love in the SAME
+      // gesture recognizer. This keeps vertical PageView swipes available.
+      Positioned.fill(child: GestureDetector(
+        key: const ValueKey('blink-moment-immersive-media'),
+        behavior: HitTestBehavior.translucent,
+        onTap: widget.moment.mediaType == 'video' ? _togglePlayback : null,
+        onDoubleTapDown: (details) => _loveTapPoint = details.localPosition,
+        onDoubleTap: _doubleTapLove,
+      )),
+      _loveBurst(),
       SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(15, 56, 15, 28),
