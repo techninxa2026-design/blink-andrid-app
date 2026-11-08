@@ -715,32 +715,42 @@ class BlinkProCard extends StatelessWidget {
       gradient: const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Colors.white, Color(0xFFFFFAF6), Color(0xFFFFF3EC)],
-        stops: [0.0, 0.70, 1.0],
+        colors: [Color(0xFFFFFFFF), Color(0xFFFFFAF6), Color(0xFFFFF0E5)],
       ),
-      borderRadius: BorderRadius.circular(23),
-      border: Border.all(color: const Color(0xFFFFDAC6), width: 1),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x12A85618),
-          blurRadius: 21,
-          offset: Offset(0, 9),
-        ),
-        BoxShadow(
-          color: Color(0x09000000),
-          blurRadius: 5,
-          offset: Offset(0, 2),
-        ),
-      ],
+      borderRadius: BorderRadius.circular(25),
+      border: Border.all(color: const Color(0xFFFFDCC5), width: 1.2),
     ),
     clipBehavior: Clip.antiAlias,
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(padding: padding, child: child),
+    child: Stack(children: [
+      Positioned(
+        right: -28, top: -46,
+        child: IgnorePointer(child: Container(
+          width: 132, height: 132,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0x33FF9E62), width: 19),
+          ),
+        )),
       ),
-    ),
+      Positioned(
+        left: 0, top: 0, bottom: 0,
+        child: IgnorePointer(child: Container(
+          width: 4,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              colors: [Color(0xFFFF5900), Color(0xFFFFBC8C)]),
+          ),
+        )),
+      ),
+      Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(padding: padding, child: child),
+        ),
+      ),
+    ]),
   );
 }
 
