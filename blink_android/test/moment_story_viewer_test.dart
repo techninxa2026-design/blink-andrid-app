@@ -153,4 +153,44 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('Moment UI leaves media unobstructed and supports expanding captions',
+    (tester) async {
+      tester.view.physicalSize = const Size(280, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final detailed = BlinkMoment(
+        id: 'caption-design',
+        senderId: 'creator',
+        mediaUrl: 'https://example.com/portrait.jpg',
+        mediaType: 'photo',
+        createdAt: DateTime.utc(2026, 11, 7),
+        author: 'Blink creator',
+        caption: 'A longer Moment caption should remain readable without '
+          'hiding most of the photograph. This text deliberately exceeds '
+          'the compact preview so visitors can choose to read more.',
+      );
+      await tester.pumpWidget(MaterialApp(
+        home: BlinkMomentViewer(
+          moments: [detailed],
+          viewerId: 'other-member',
+        ),
+      ));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('blink-moment-viewer-progress')),
+        findsOneWidget);
+      expect(find.text('BLINK MOMENT'), findsNothing);
+      expect(find.text('SWIPE TO EXPLORE'), findsNothing);
+      expect(find.text('Read more'), findsOneWidget);
+      expect(find.byTooltip('Save Moment'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Read more'));
+      await tester.pump();
+      expect(find.text('Show less'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
 }
