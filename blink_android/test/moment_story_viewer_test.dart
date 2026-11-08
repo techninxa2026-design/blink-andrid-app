@@ -97,7 +97,55 @@ void main() {
         expect(find.byTooltip('Share'), findsOneWidget);
         expect(find.byTooltip('React'), findsOneWidget);
         expect(find.byTooltip('Close Moments'), findsOneWidget);
+        final viewer = tester.widget<PageView>(
+          find.byKey(const ValueKey('blink-moment-story-viewer')));
+        expect(viewer.scrollDirection, Axis.vertical);
         expect(tester.takeException(), isNull);
       },
     );
+
+  testWidgets('tap a grid Moment, swipe up/down and double-tap to love',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      await tester.pumpWidget(MaterialApp(
+        home: BlinkMomentViewer(
+          moments: moments,
+          viewerId: 'some-other-member',
+        ),
+      ));
+      await tester.pump();
+      expect(find.text('1 / 2'), findsOneWidget);
+      final pages = find.byKey(const ValueKey('blink-moment-story-viewer'));
+      await tester.drag(pages, const Offset(0, -500));
+      await tester.pumpAndSettle();
+      expect(find.text('2 / 2'), findsOneWidget);
+      await tester.drag(pages, const Offset(0, 500));
+      await tester.pumpAndSettle();
+      expect(find.text('1 / 2'), findsOneWidget);
+
+      // The media owns the double tap; single-tap is not required to react.
+      // Use the left-center photo area, away from the action rail.
+      const mediaPoint = Offset(114, 295);
+      await tester.tapAt(mediaPoint);
+      await tester.pump(const Duration(milliseconds: 75));
+      await tester.tapAt(mediaPoint);
+      // The first frame starts the AnimationController ticker; the second
+      // frame advances it. A single pump may still report opacity=0.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 180));
+
+      final heart = find.byKey(
+        const ValueKey('blink-moment-double-tap-heart'));
+      expect(heart, findsOneWidget);
+      final fade = tester.widget<FadeTransition>(
+        find.ancestor(of: heart, matching: find.byType(FadeTransition)).first);
+      expect(fade.opacity.value, greaterThan(0));
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
