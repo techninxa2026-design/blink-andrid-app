@@ -929,7 +929,7 @@ class _LiveChatState extends State<LiveChatScreen>{
                 mood: BlinkMood.community)
             : BlinkReveal(
                 delay: Duration(milliseconds: (i % 5) * 32),
-                child: _message(obj(messages[i]))))),
+                child: _message(obj(messages[i])))))),
       SafeArea(top:false,child:Container(
         margin:const EdgeInsets.fromLTRB(9,7,9,10),
         padding:const EdgeInsets.fromLTRB(4,5,5,5),
