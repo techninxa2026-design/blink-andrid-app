@@ -857,6 +857,119 @@ class BlinkFeatureHero extends StatelessWidget {
   }
 }
 
+
+class BlinkProfileMasthead extends StatelessWidget {
+  const BlinkProfileMasthead({
+    super.key,
+    required this.name,
+    required this.avatar,
+    this.bio,
+    this.cover,
+    this.stats,
+    this.action,
+    this.mood = BlinkMood.community,
+  });
+
+  final String name;
+  final String? bio;
+  final Widget avatar;
+  final Widget? cover;
+  final Widget? stats;
+  final Widget? action;
+  final BlinkMood mood;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = BlinkMoodColors.primary(mood);
+    final palette = BlinkMoodColors.gradient(mood);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(27),
+        border: Border.all(color: accent.withValues(alpha: .22)),
+        boxShadow: [
+          BoxShadow(color: accent.withValues(alpha: .10),
+            blurRadius: 26, offset: const Offset(0, 11)),
+        ]),
+      clipBehavior: Clip.antiAlias,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Stack(clipBehavior: Clip.none, children: [
+          SizedBox(
+            height: 155,
+            child: Stack(fit: StackFit.expand, children: [
+              DecoratedBox(decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  colors: palette))),
+              if (cover != null) cover!,
+              Positioned(
+                right: -39, top: -69,
+                child: IgnorePointer(child: Container(
+                  width: 200, height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: .17), width: 34)),
+                ))),
+              const Positioned(top: 16, left: 18,
+                child: Text('✦  BLINK IDENTITY',
+                  style: TextStyle(color: Colors.white,
+                    fontSize: 10, letterSpacing: 1.35,
+                    fontWeight: FontWeight.w900))),
+            ]),
+          ),
+          Positioned(
+            bottom: -45, left: 19,
+            child: Container(
+              width: 98, height: 98,
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: accent, width: 2),
+                boxShadow: const [BoxShadow(color: Color(0x33000000),
+                  blurRadius: 12, offset: Offset(0, 5))]),
+              child: ClipOval(child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(width: 100, height: 100, child: avatar))),
+            ),
+          ),
+        ]),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 51, 20, 19),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name, maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: BlinkColors.ink,
+                  fontSize: 24, letterSpacing: -.6,
+                  fontWeight: FontWeight.w900)),
+              if (bio != null && bio!.isNotEmpty) ...[
+                const SizedBox(height: 7),
+                Text(bio!, maxLines: 3, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: BlinkColors.muted, fontSize: 12.5, height: 1.4)),
+              ],
+              if (stats != null) ...[
+                const SizedBox(height: 17),
+                const Divider(height: 1),
+                const SizedBox(height: 13),
+                stats!,
+              ],
+              if (action != null) ...[
+                const SizedBox(height: 14),
+                action!,
+              ],
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
 // ========================================
 // PREMIUM CARD DESIGN SYSTEM
 // ========================================
