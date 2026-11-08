@@ -409,145 +409,123 @@ class _BlinkChatPainter extends CustomPainter {
 // =====================================================
 
 class BlinkHomeCheckins extends StatelessWidget {
-  final int activeCount;
+  const BlinkHomeCheckins({super.key, this.activeCount = 0});
 
-  const BlinkHomeCheckins({
-    super.key,
-    this.activeCount = 0,
-  });
+  final int activeCount;
 
   @override
   Widget build(BuildContext context) {
-    return BlinkReveal(child: Container(
-      margin: const EdgeInsets.fromLTRB(
-        14,
-        13,
-        14,
-        8,
-      ),
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.white, Color(0xFFFFF0E5)]),
-        borderRadius: BorderRadius.circular(23),
-        border: Border.all(
-          color: const Color(0xFFFFD2B9),
-          width: 1.2,
+    return BlinkReveal(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(13, 9, 13, 0),
+        padding: const EdgeInsets.fromLTRB(13, 12, 12, 10),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.white, Color(0xFFFFF5EC)],
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFFFFD7BE)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0CC96B36),
+              blurRadius: 18,
+              offset: Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFAC68), Color(0xFFEF672A)]),
+                  borderRadius: BorderRadius.circular(15)),
+                child: const Icon(Icons.auto_awesome_rounded,
+                  color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 11),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Check-Ins',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: BlinkColors.ink,
+                        fontSize: 16,
+                        letterSpacing: -.2,
+                        fontWeight: FontWeight.w900)),
+                    SizedBox(height: 2),
+                    Text('Share what is happening.',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: BlinkColors.muted, fontSize: 11)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFE8D9),
+                  borderRadius: BorderRadius.circular(15)),
+                child: Text('$activeCount ACTIVE',
+                  style: const TextStyle(
+                    color: BlinkColors.orangeDark,
+                    fontSize: 9.2,
+                    letterSpacing: .5,
+                    fontWeight: FontWeight.w900)),
+              ),
+            ]),
+            const SizedBox(height: 9),
+            Row(children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => go(context, '/checkin/create'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: BlinkColors.orangeSoft,
+                    foregroundColor: BlinkColors.orangeDark,
+                    elevation: 0,
+                    minimumSize: const Size(0, 41),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13)),
+                  ),
+                  icon: const Icon(Icons.edit_note_rounded, size: 19),
+                  label: const Text('Write a note',
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w900)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: () => go(context, '/checkins'),
+                style: TextButton.styleFrom(
+                  foregroundColor: BlinkColors.orangeDark,
+                  minimumSize: const Size(0, 41),
+                  padding: const EdgeInsets.symmetric(horizontal: 9)),
+                icon: const Icon(Icons.arrow_outward_rounded, size: 15),
+                label: const Text('See all',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800)),
+              ),
+            ]),
+          ],
         ),
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final heading = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Wrap(
-                spacing: 7,
-                runSpacing: 3,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    '🧡',
-                    style: TextStyle(
-                      fontSize: 20,
-                    ),
-                  ),
-
-                  SizedBox(width: 7),
-
-                  Text(
-                    'Check-Ins',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                      color: BlinkColors.ink,
-                    ),
-                  ),
-                ],
-              ),
-
-              SizedBox(height: 5),
-
-              Text(
-                "What's happening now?",
-                style: TextStyle(
-                  fontSize: 12,
-                  color: BlinkColors.muted,
-                ),
-              ),
-            ],
-          );
-
-          final seeAll = TextButton(
-            onPressed: () => go(
-              context,
-              '/checkins',
-            ),
-            child: Text(
-              '$activeCount active · See all →',
-              style: const TextStyle(
-                fontSize: 11,
-                color: BlinkColors.orange,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          );
-
-          final writeNote = TextButton(
-            onPressed: () => go(
-              context,
-              '/checkin/create',
-            ),
-            style: TextButton.styleFrom(
-              backgroundColor: _softOrange,
-              foregroundColor: const Color(0xFFD74A00),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 12,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-            ),
-            child: const Text(
-              '+ Write note',
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 12,
-              ),
-            ),
-          );
-
-          // Mobile layout prevents overlapping labels.
-          if (constraints.maxWidth < 430) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                heading,
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [writeNote, seeAll],
-                ),
-              ],
-            );
-          }
-
-          // Wider screen layout.
-          return Row(
-            children: [
-              heading,
-              const SizedBox(width: 24),
-              writeNote,
-              const Spacer(),
-              seeAll,
-            ],
-          );
-        },
-      ),
-    ));
+    );
   }
 }
