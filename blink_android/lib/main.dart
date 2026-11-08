@@ -7,6 +7,7 @@ import 'core/nav.dart';
 import 'core/blink_auth_guard.dart';
 import 'core/blink_auth_api.dart';
 import 'core/live_api.dart';
+import 'calls/blink_call_host.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -96,6 +97,9 @@ class _BlinkAppState extends State<BlinkApp> with WidgetsBindingObserver {
       debugShowCheckedModeBanner: false,
       theme: blinkTheme(),
       themeMode: ThemeMode.light,
+      builder: (context, child) => BlinkCallHost(
+        child: child ?? const SizedBox.shrink(),
+      ),
       initialRoute: '/',
       onGenerateRoute: (settings) {
         final route = settings.name ?? '/';
