@@ -736,7 +736,7 @@ class BlinkFeatureHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = BlinkMoodColors.gradient(mood);
-    return Container(
+    return BlinkReveal(child: Container(
       margin: margin,
       constraints: const BoxConstraints(minHeight: 158),
       decoration: BoxDecoration(
@@ -816,7 +816,7 @@ class BlinkFeatureHero extends StatelessWidget {
             ]),
         ),
       ]),
-    );
+    ));
   }
 }
 
@@ -940,7 +940,7 @@ class BlinkProfileMasthead extends StatelessWidget {
 /// Shared elevated surface used across the real, API-backed Blink modules.
 /// The glass-warm gradient, subtle border and orange shadow are consistent
 /// with the existing Blink Orange design system. Nested actions still work.
-class BlinkProCard extends StatelessWidget {
+class BlinkProCard extends StatefulWidget {
   const BlinkProCard({
     super.key,
     required this.child,
@@ -957,65 +957,80 @@ class BlinkProCard extends StatelessWidget {
   final BlinkMood mood;
 
   @override
+  State<BlinkProCard> createState() => _BlinkProCardState();
+}
+
+class _BlinkProCardState extends State<BlinkProCard> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final accent = BlinkMoodColors.primary(mood);
-    return Container(
-      margin: margin,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: accent.withValues(alpha: .20), width: 1.05),
-        boxShadow: [
-          BoxShadow(color: accent.withValues(alpha: .085),
-            blurRadius: 23, offset: const Offset(0, 10)),
-          const BoxShadow(color: Color(0x08000000),
-            blurRadius: 7, offset: Offset(0, 3)),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(children: [
-        Positioned.fill(child: IgnorePointer(
-          child: DecoratedBox(decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white,
-                Color.lerp(Colors.white, accent, .035)!,
-                Color.lerp(Colors.white, accent, .075)!,
-              ],
-              stops: const [0, .62, 1],
-            ),
-          )),
-        )),
-        Positioned(
-          right: -30, top: -42,
-          child: IgnorePointer(child: Container(
-            width: 94, height: 94,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: accent.withValues(alpha: .085), width: 19)),
-          )),
+    final accent = BlinkMoodColors.primary(widget.mood);
+    final reduced = BlinkMotion.reduced(context);
+    return AnimatedScale(
+      scale: _pressed && !reduced ? .985 : 1,
+      duration: BlinkMotion.duration(context, ms: 150),
+      curve: Curves.easeOutCubic,
+      child: Container(
+        margin: widget.margin,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(23),
+          border: Border.all(color: accent.withValues(alpha: .23), width: 1),
+          boxShadow: [BoxShadow(
+            color: accent.withValues(alpha: .065),
+            blurRadius: 18, offset: const Offset(0, 7)),
+          ],
         ),
-        Positioned(left: 0, top: 0, bottom: 0,
-          child: Container(
-            width: 3.5,
-            decoration: BoxDecoration(
+        clipBehavior: Clip.antiAlias,
+        child: Stack(children: [
+          Positioned.fill(child: IgnorePointer(
+            child: DecoratedBox(decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                colors: [accent, accent.withValues(alpha: .10)]),
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  Color.lerp(Colors.white, accent, .03)!,
+                  Color.lerp(Colors.white, accent, .085)!,
+                ],
+                stops: const [0, .61, 1],
+              ),
+            )),
+          )),
+          Positioned(right: -36, top: -48,
+            child: IgnorePointer(child: Container(
+              width: 103, height: 103,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: accent.withValues(alpha: .09), width: 17)),
+            )),
+          ),
+          Positioned(left: 0, top: 0, bottom: 0,
+            child: IgnorePointer(child: Container(
+              width: 3.5,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [accent, accent.withValues(alpha: .12)])),
+            )),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: widget.onTap,
+              onHighlightChanged: (pressed) {
+                if (widget.onTap != null && _pressed != pressed && mounted) {
+                  setState(() => _pressed = pressed);
+                }
+              },
+              child: Padding(padding: widget.padding, child: widget.child),
             ),
           ),
-        ),
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            child: Padding(padding: padding, child: child),
-          ),
-        ),
-      ]),
+        ]),
+      ),
     );
   }
 }
