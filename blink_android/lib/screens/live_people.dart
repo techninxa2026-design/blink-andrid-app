@@ -369,8 +369,9 @@ class _ProfileState extends State<LiveProfileScreen> {
                       LiveApi.url(field(p,'coverKey')),
                       fit:BoxFit.cover,
                       errorBuilder:(_,__,___)=>const SizedBox.shrink()),
-                    stats:Row(
-                      mainAxisAlignment:MainAxisAlignment.spaceEvenly,
+                    stats:Wrap(
+                      alignment:WrapAlignment.spaceEvenly,
+                      spacing:14,runSpacing:12,
                       children:[
                         _stat(field(p,'followersCount','0'),'Followers'),
                         _stat(field(p,'followingCount','0'),'Following'),
