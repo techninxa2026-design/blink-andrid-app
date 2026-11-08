@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 import '../core/live_api.dart';
+import '../core/inbox_message_sync.dart';
 import '../core/blink_auth_api.dart';
 import '../core/theme.dart';
 import '../widgets/ui.dart';
@@ -543,18 +544,8 @@ class _LiveChatState extends State<LiveChatScreen>
     if (_foreground) _load(silent: true);
   }
 
-  List<dynamic> _mergedMessages(List<dynamic> fresh) {
-    final serverIds = fresh.map((item) => field(item, 'id')).toSet();
-    _confirmed.removeWhere((id, _) => serverIds.contains(id));
-    final combined = <dynamic>[...fresh, ..._confirmed.values];
-    combined.sort((a, b) {
-      final first = field(a, 'createdAt');
-      final second = field(b, 'createdAt');
-      final order = first.compareTo(second);
-      return order != 0 ? order : field(a, 'id').compareTo(field(b, 'id'));
-    });
-    return combined;
-  }
+  List<dynamic> _mergedMessages(List<dynamic> fresh) =>
+      reconcileInboxMessages(fresh, _confirmed);
 
   Future<void> _load({bool silent = false}) async {
     if (_loadingMessages || !_foreground) return;
