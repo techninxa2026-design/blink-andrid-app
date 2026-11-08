@@ -70,23 +70,24 @@ ThemeData blinkTheme() {
     cardTheme: CardThemeData(
       color: const Color(0xFFFFFDFB),
       surfaceTintColor: Colors.transparent,
-      elevation: 2,
-      shadowColor: const Color(0x1AFF5900),
+      elevation: 0,
+      shadowColor: Colors.transparent,
       margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-        side: const BorderSide(color: Color(0xFFFFDFCC)),
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: Color(0xFFFFE4D5), width: 1.2),
       ),
     ),
+    splashFactory: InkSparkle.splashFactory,
     dividerTheme: const DividerThemeData(color: BlinkColors.line, thickness: 1),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFFF8F8F8),
+      fillColor: const Color(0xFFFFF4EE),
       contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
       hintStyle: const TextStyle(color: BlinkColors.muted, fontSize: 13),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(17),
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
@@ -98,8 +99,8 @@ ThemeData blinkTheme() {
       style: FilledButton.styleFrom(
         backgroundColor: BlinkColors.orange,
         foregroundColor: Colors.white,
-        minimumSize: const Size(0, 48),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        minimumSize: const Size(0, 52),
+        textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
