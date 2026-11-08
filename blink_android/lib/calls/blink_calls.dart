@@ -392,19 +392,22 @@ class BlinkCalls extends ChangeNotifier {
   }
 
   StateError _mediaFailure() {
+    // Counts are safe for troubleshooting (no private IPs or SDP exposed).
+    final progress = 'ICE candidates sent: $_sentCandidates, '
+        'received: $_receivedCandidates.';
     if (_candidateRelayFailures >= 3) {
-      return StateError('ICE signaling failed. Check the Blink server WebSocket.');
+      return StateError('ICE signaling failed. Check the Blink server WebSocket. $progress');
     }
     if (!_turnConfigured) {
       return StateError(
         'No network path found. Blink has no TURN relay configured. '
         'The API administrator must set CALL_TURN_URLS and '
-        'CALL_TURN_SHARED_SECRET.',
+        'CALL_TURN_SHARED_SECRET. $progress',
       );
     }
     return StateError(
       'No working media path. Check TURN server credentials, '
-      'UDP/TCP connectivity and relay firewall ports.',
+      'UDP/TCP connectivity and relay firewall ports. $progress',
     );
   }
 
