@@ -123,7 +123,15 @@ class _FullExchangeScreenState extends State<FullExchangeScreen> {
         : RefreshIndicator(onRefresh: _load, child: ListView(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
           children: [
-             const Padding(padding: EdgeInsets.all(28),
+            const BlinkFeatureHero(
+              eyebrow:'SKILLS · SERVICES · POSSIBILITIES',
+              title:'Make a better exchange.',
+              subtitle:'Connect over real skills, negotiate privately and discover your next collaboration.',
+              icon:Icons.handshake_rounded,
+              mood:BlinkMood.exchange,
+              margin:EdgeInsets.fromLTRB(0,0,0,18),
+            ),
+            if (posts.isEmpty) const Padding(padding: EdgeInsets.all(28),
               child: Center(child: Text('No Exchange posts found.'))),
             ...posts.map((raw) {
               final p = obj(raw), own = field(p, 'authorId') == userId;
