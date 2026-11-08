@@ -82,6 +82,12 @@ class _FullExchangeScreenState extends State<FullExchangeScreen> {
           onPressed: () => _openEditor()),
     ]),
     body: Column(children: [
+      const BlinkFeatureHero(eyebrow: 'THE BLINK EXCHANGE',
+        title: 'Make it happen',
+        subtitle: 'Ideas, services and collaborations in motion.',
+        icon: Icons.handshake_rounded,
+        accent: Color(0xFF313C69), secondary: Color(0xFF6F82C9)),
+
       Padding(padding: const EdgeInsets.all(12), child: Column(children: [
         TextField(controller: search, textInputAction: TextInputAction.search,
           decoration: InputDecoration(hintText: 'Search services, skills and requests',
