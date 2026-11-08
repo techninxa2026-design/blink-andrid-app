@@ -820,9 +820,14 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
 // Preserves the existing Blink sections and destinations.
 // ============================================================
 
-class ExploreScreen extends StatelessWidget {
+class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
+  @override
+  State<ExploreScreen> createState() => _ExploreScreenState();
+}
 
+class _ExploreScreenState extends State<ExploreScreen> {
+  String _query = '';
   @override
   Widget build(BuildContext context) {
     const items = <_ExploreItem>[
@@ -908,6 +913,9 @@ class ExploreScreen extends StatelessWidget {
       ),
     ];
 
+    final visible = items.where((item) =>
+      item.name.toLowerCase().contains(_query.toLowerCase()) ||
+      item.subtitle.toLowerCase().contains(_query.toLowerCase())).toList();
     return BlinkScreen(
       title: 'Explore',
       active: 'explore',
@@ -928,93 +936,131 @@ class ExploreScreen extends StatelessWidget {
             subtitle: 'Every space has something for you',
           ),
 
-          const BlinkSearchBox(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(15, 1, 15, 13),
+            child: TextField(
+              textInputAction: TextInputAction.search,
+              onChanged: (text) => setState(() => _query = text.trim()),
+              decoration: InputDecoration(
+                hintText: 'Find a Blink experience…',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _query.isEmpty
+                  ? const Icon(Icons.tune_rounded, size: 19)
+                  : IconButton(
+                    tooltip: 'Clear search',
+                    onPressed: () => setState(() => _query = ''),
+                    icon: const Icon(Icons.close_rounded)),
+              ),
+            ),
+          ),
 
           Padding(
             padding: const EdgeInsets.fromLTRB(15, 7, 15, 18),
             child: LayoutBuilder(builder: (context, constraints) => GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: items.length,
+              itemCount: visible.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 // Fixed aspect ratios truncate cards at large accessibility
                 // sizes. Give subtitles enough room instead of overflow.
-                mainAxisExtent: 136 +
-                  34 * MediaQuery.textScalerOf(context).scale(1.0),
+                mainAxisExtent: 148 +
+                  43 * MediaQuery.textScalerOf(context).scale(1.0),
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
               ),
               itemBuilder: (context, index) {
-                final tile = items[index];
+                final tile = visible[index];
 
-                return Material(
-                  color:Colors.transparent,
-                  child:InkWell(
-                    borderRadius:BorderRadius.circular(22),
-                    onTap:()=>go(context,tile.route),
-                    child:Container(
-                      padding:const EdgeInsets.all(11),
-                      decoration:BoxDecoration(
-                        gradient:LinearGradient(
-                          begin:Alignment.topLeft,end:Alignment.bottomRight,
-                          colors:[Colors.white,Color.lerp(tile.background,
-                            Colors.white,.23)!]),
-                        borderRadius:BorderRadius.circular(22),
-                        border:Border.all(color:const Color(0xFFFFDBC7)),
-                        boxShadow:const [
-                          BoxShadow(color:Color(0x12AF5918),blurRadius:17,
-                            offset:Offset(0,7)),
-                        ],
+                final dark = index % 4 == 0 || index % 4 == 3;
+                final accent = tile.iconColor;
+                final topColor = dark
+                  ? Color.lerp(accent, const Color(0xFF1A1929), .56)!
+                  : Colors.white;
+                final bottomColor = dark
+                  ? Color.lerp(accent, const Color(0xFF282434), .36)!
+                  : Color.lerp(tile.background, Colors.white, .19)!;
+                return BlinkReveal(
+                  delay: Duration(milliseconds: 40 * (index % 4)),
+                  child: BlinkPressable(
+                    semanticLabel: 'Open ' + tile.name,
+                    onTap: () => go(context, tile.route),
+                    child: Container(
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [topColor, bottomColor]),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(26),
+                          topRight: Radius.circular(12),
+                          bottomLeft: Radius.circular(12),
+                          bottomRight: Radius.circular(26)),
+                        border: Border.all(
+                          color: accent.withValues(alpha: dark ? .5 : .19),
+                          width: 1.1),
                       ),
-
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color:Colors.white,
-                            borderRadius:BorderRadius.circular(16),
-                            border:Border.all(color:const Color(0xFFFFD8C5)),
-                            boxShadow:const [
-                              BoxShadow(color:Color(0x12000000),blurRadius:9,
-                                offset:Offset(0,3)),
+                      child: Stack(children: [
+                        Positioned(right: -35, top: -30,
+                          child: IgnorePointer(child: Container(
+                            width: 108, height: 108,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: dark
+                                  ? const Color(0x28FFFFFF)
+                                  : accent.withValues(alpha: .085),
+                                width: 18)),
+                          ))),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(13, 13, 12, 13),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(children: [
+                                Container(
+                                  width: 49, height: 49,
+                                  decoration: BoxDecoration(
+                                    color: dark
+                                      ? const Color(0x2BFFFFFF)
+                                      : accent.withValues(alpha: .11),
+                                    border: Border.all(color: dark
+                                      ? const Color(0x48FFFFFF)
+                                      : accent.withValues(alpha: .18)),
+                                    borderRadius: BorderRadius.circular(17)),
+                                  child: Icon(tile.icon,
+                                    color: dark ? Colors.white : accent,
+                                    size: 25),
+                                ),
+                                const Spacer(),
+                                Icon(Icons.north_east_rounded,
+                                  color: dark ? Colors.white70 : accent,
+                                  size: 17),
+                              ]),
+                              const Spacer(),
+                              Text(tile.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: dark ? Colors.white : BlinkColors.ink,
+                                  fontSize: 15.5,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -.25)),
+                              const SizedBox(height: 6),
+                              Text(tile.subtitle,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: dark
+                                    ? const Color(0xE5FFFFFF)
+                                    : BlinkColors.muted,
+                                  fontSize: 11.3, height: 1.35)),
                             ],
                           ),
-                          child: Icon(
-                            tile.icon,
-                            color: tile.iconColor,
-                            size: 25,
-                          ),
                         ),
-                        const SizedBox(height: 11),
-                        Text(
-                          tile.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: BlinkColors.ink,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          tile.subtitle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 10.5,
-                            color: Color(0xFF686868),
-                          ),
-                        ),
-                      ],
+                      ]),
                     ),
-                  ),
                   ),
                 );
               },
