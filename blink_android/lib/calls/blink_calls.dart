@@ -6,6 +6,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 import '../core/blink_auth_api.dart';
 import '../core/live_api.dart';
+import 'blink_call_audio_policy.dart';
 
 /// Blink's signed-in one-to-one WebRTC session manager.
 /// The NestJS server carries only authenticated signaling, never media.
@@ -43,6 +44,7 @@ class BlinkCalls extends ChangeNotifier {
   String error = '';
   bool muted = false;
   bool cameraOff = false;
+  bool speakerOn = false;
   bool connected = false;
   bool _prepared = false;
   bool _remoteSet = false;
@@ -271,6 +273,32 @@ class BlinkCalls extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Let the user switch speaker/earpiece during an active call. Voice
+  /// defaults to earpiece; video defaults to speakerphone. Wired/Bluetooth
+  /// output remains under Android/WebRTC device routing where available.
+  Future<void> toggleSpeaker() async {
+    if (kIsWeb || _local == null || status == 'idle') return;
+    final next = !speakerOn;
+    try {
+      await Helper.setSpeakerphoneOn(next);
+      if (_local == null || status == 'idle') return;
+      speakerOn = next;
+      notifyListeners();
+    } catch (error) {
+      // Audio-route errors must not tear down the ongoing media session.
+      debugPrint('Blink audio route unavailable: $error');
+    }
+  }
+
+  Future<void> _applyAudioRoute() async {
+    if (kIsWeb || status == 'idle') return;
+    try {
+      await Helper.setSpeakerphoneOn(speakerOn);
+    } catch (error) {
+      debugPrint('Blink could not set call audio route: $error');
+    }
+  }
+
   Future<void> _prepare(String id) async {
     if (!_renderersInitialized) {
       await localRenderer.initialize();
@@ -287,15 +315,22 @@ class BlinkCalls extends ChangeNotifier {
       return urls.any((url) => url.startsWith('turn:') || url.startsWith('turns:'));
     });
     final config = <String, dynamic>{'iceServers': servers};
-    final local = await navigator.mediaDevices.getUserMedia({
-      'audio': {
-        'echoCancellation': true,
-        'noiseSuppression': true,
-      },
-      'video': isVideo
-          ? {'facingMode': 'user', 'width': 720, 'height': 1280}
-          : false,
-    });
+    final videoCall = isVideo;
+    speakerOn = BlinkCallAudioPolicy.defaultSpeaker(video: videoCall);
+    // Flutter WebRTC requires this BEFORE opening an Android microphone
+    // session, otherwise audio may be captured/routed in media playback mode.
+    if (!kIsWeb) {
+      try {
+        await Helper.setAndroidAudioConfiguration(
+          AndroidAudioConfiguration.communication,
+        );
+      } catch (error) {
+        debugPrint('Blink Android communication audio mode unavailable: $error');
+      }
+    }
+    final local = await navigator.mediaDevices.getUserMedia(
+      BlinkCallAudioPolicy.captureConstraints(video: videoCall),
+    );
     if (id != callId) {
       for (final track in local.getTracks()) {track.stop();}
       await local.dispose();
@@ -307,6 +342,9 @@ class BlinkCalls extends ChangeNotifier {
       // Foreground service is started only after Android's permission flow
       // successfully grants microphone/camera capture.
       await _native.invokeMethod<void>('startCall', {'video': isVideo});
+      // The foreground service and microphone startup can change routing.
+      // Prefer the private earpiece for voice calls to avoid loudspeaker echo.
+      await _applyAudioRoute();
     }
 
     final peer = await createPeerConnection(config);
@@ -326,6 +364,11 @@ class BlinkCalls extends ChangeNotifier {
         _remote = event.streams.first;
         remoteRenderer.srcObject = _remote;
         notifyListeners();
+      }
+      if (event.track.kind == 'audio') {
+        // WebRTC may reset the audio output once the remote track arrives.
+        // Reapply the selected route without altering the microphone stream.
+        unawaited(_applyAudioRoute());
       }
     };
     peer.onIceCandidate = (candidate) {
@@ -580,6 +623,7 @@ class BlinkCalls extends ChangeNotifier {
     peerName = '';
     muted = false;
     cameraOff = false;
+    speakerOn = false;
     _turnConfigured = false;
     _isCaller = false;
     _restartAttempted = false;
