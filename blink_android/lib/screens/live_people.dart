@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/ui.dart';
 import '../widgets/blink_motion.dart';
@@ -7,57 +8,210 @@ import '../core/live_api.dart';
 import '../core/blink_home_api.dart';
 import '../core/blink_auth_api.dart';
 import 'blink_moment_story_gallery.dart';
+import 'live_inbox.dart';
 import '../core/theme.dart';
+
+/// Uses the same authenticated one-to-one Inbox route on every platform.
+Future<void> openBlinkFriendChat(
+  BuildContext context, String friendId, String friendName,
+) async {
+  if (friendId.isEmpty) return;
+  try {
+    final opened = obj(await LiveApi.call('POST', '/inbox/conversations',
+      {'friendId': friendId}));
+    final conversationId = field(opened, 'conversationId');
+    if (conversationId.isEmpty) {
+      throw const LiveApiError('Conversation unavailable. Try again.');
+    }
+    if (!context.mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => LiveChatScreen(
+        conversationId: conversationId,
+        title: friendName.isEmpty ? 'Blink friend' : friendName),
+    ));
+  } catch (error) {
+    if (context.mounted) liveNotice(context, error.toString());
+  }
+}
 
 class LiveDiscoverPeopleScreen extends StatefulWidget{
   const LiveDiscoverPeopleScreen({super.key});
   @override State<LiveDiscoverPeopleScreen> createState()=>_DiscoverState();
 }
 class _DiscoverState extends State<LiveDiscoverPeopleScreen>{
-  List<dynamic> users=[];String query='';String? error;bool loading=true;
-  @override void initState(){super.initState();_load();}
-  Future<void> _load()async{
-    try{final rows=arr(await LiveApi.call('GET','/friends/search?q=${Uri.encodeQueryComponent(query)}'));
-      if(mounted)setState((){users=rows;loading=false;error=null;});}
-    catch(e){if(mounted)setState((){error=e.toString();loading=false;});}
+  List<dynamic> users = [];
+  String query = '';
+  String? error;
+  bool loading = true;
+  final Set<String> _friends = <String>{};
+  final Set<String> _outgoing = <String>{};
+  final Set<String> _incoming = <String>{};
+  final Set<String> _requestBusy = <String>{};
+  Timer? _searchTimer;
+  int _searchGeneration = 0;
+
+  @override
+  void initState() { super.initState(); _load(); }
+
+  @override
+  void dispose() {
+    _searchTimer?.cancel();
+    _searchGeneration++;
+    super.dispose();
   }
-  Future<void> _request(String id)async{
-    try{await LiveApi.call('POST','/friends/requests',{'receiverId':id});if(mounted)liveNotice(context,'Friend request sent');}
-    catch(e){if(mounted)liveNotice(context,e.toString());}
+
+  Future<void> _load() async {
+    final generation = ++_searchGeneration;
+    final search = query.trim();
+    try {
+      final data = await Future.wait([
+        LiveApi.call('GET','/friends/search?q=${Uri.encodeQueryComponent(search)}'),
+        LiveApi.call('GET','/friends'),
+        LiveApi.call('GET','/friends/requests/incoming'),
+        LiveApi.call('GET','/friends/requests/outgoing'),
+      ]);
+      if (!mounted || generation != _searchGeneration) return;
+      setState(() {
+        users = arr(data[0]);
+        _friends..clear()..addAll(arr(data[1]).map(
+          (row) => field(obj(row)['user'], 'id')));
+        _incoming..clear()..addAll(arr(data[2]).map(
+          (row) => field(obj(row)['sender'], 'id')));
+        _outgoing..clear()..addAll(arr(data[3]).map(
+          (row) => field(obj(row)['receiver'], 'id')));
+        loading = false;
+        error = null;
+      });
+    } catch(e) {
+      if (mounted && generation == _searchGeneration) {
+        setState(() {error = e.toString(); loading = false;});
+      }
+    }
   }
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Discover People'),actions:[
-    IconButton(icon:const Icon(Icons.people),tooltip:'My friends',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveFriendsScreen()))),
-    IconButton(icon:const Icon(Icons.person_add_alt),tooltip:'Requests',onPressed:()=>Navigator.push(context,MaterialPageRoute<void>(builder:(_)=>const LiveRequestsScreen()))),
-  ]),body:Column(children:[
-    const BlinkFeatureHero(
-      eyebrow:'FIND YOUR PEOPLE',
-      title:'Good people. Great connections.',
-      subtitle:'Discover your community and make the next meaningful introduction.',
-      icon:Icons.people_alt_rounded,
-      mood:BlinkMood.community,
-      margin:EdgeInsets.fromLTRB(13,11,13,0),
-    ),
-    Padding(padding:const EdgeInsets.all(14),child:TextField(decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'Search Blink members'),onChanged:(v)=>query=v,onSubmitted:(_)=>_load())),
-    Expanded(child:loading?const Center(child:CircularProgressIndicator()):
-      error!=null?liveError(error,_load):
-      RefreshIndicator(onRefresh:_load,child:ListView.builder(itemCount:users.length,itemBuilder:(_,i){
-        final user=users[i];return Padding(
-          padding:const EdgeInsets.symmetric(horizontal:12),
-          child:BlinkProListCard(
-            leading:liveAvatar(user),icon:Icons.person_search_rounded,
-            eyebrow:'DISCOVER BLINK MEMBERS',
-            title:field(user,'name'),
-            subtitle:field(user,'bio','Blink member'),
-            badges:const [BlinkInfoPill('Community member',icon:Icons.people_alt_outlined)],
-            onTap:()=>Navigator.push(context,MaterialPageRoute<void>(
-              builder:(_)=>LivePublicProfileScreen(userId:field(user,'id')))),
-            trailing:IconButton(tooltip:'Send friend request',
-              icon:const Icon(Icons.person_add_alt,color:BlinkColors.orange),
-              onPressed:()=>_request(field(user,'id'))),
+
+  void _search(String value) {
+    query = value;
+    _searchTimer?.cancel();
+    _searchTimer = Timer(const Duration(milliseconds: 300), _load);
+  }
+
+  Future<void> _request(String id) async {
+    if (id.isEmpty || _requestBusy.contains(id)) return;
+    setState(() => _requestBusy.add(id));
+    try {
+      await LiveApi.call('POST','/friends/requests',{'receiverId':id});
+      if (mounted) {
+        setState(() => _outgoing.add(id));
+        liveNotice(context,'Friend request sent');
+      }
+    } catch(e) {
+      if (mounted) liveNotice(context,e.toString());
+    } finally {
+      if (mounted) setState(() => _requestBusy.remove(id));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const BlinkBrandedTitle('Discover People'), actions: [
+      IconButton(icon:const Icon(Icons.people),
+        tooltip:'My friends',onPressed:() async {
+          await Navigator.push(context,MaterialPageRoute<void>(
+            builder:(_)=>const LiveFriendsScreen()));
+          if (mounted) _load();
+        }),
+      IconButton(icon:const Icon(Icons.person_add_alt),
+        tooltip:'Requests',onPressed:() async {
+          await Navigator.push(context,MaterialPageRoute<void>(
+            builder:(_)=>const LiveRequestsScreen()));
+          if (mounted) _load();
+        }),
+    ]),
+    body: Column(children: [
+      const BlinkFeatureHero(
+        eyebrow:'FIND YOUR PEOPLE',
+        title:'Good people. Great connections.',
+        subtitle:'Discover your community and make the next meaningful introduction.',
+        icon:Icons.people_alt_rounded,
+        mood:BlinkMood.community,
+        margin:EdgeInsets.fromLTRB(13,11,13,0),
+      ),
+      Padding(padding:const EdgeInsets.all(14),
+        child:TextField(
+          decoration:const InputDecoration(
+            prefixIcon:Icon(Icons.search),hintText:'Search Blink members'),
+          onChanged:_search,
+          onSubmitted:(_) => _load(),
+        )),
+      Expanded(child:loading
+        ? const Center(child:CircularProgressIndicator())
+        : error!=null ? liveError(error,_load)
+        : RefreshIndicator(onRefresh:_load,
+          child:ListView.builder(
+            physics:const AlwaysScrollableScrollPhysics(),
+            itemCount:users.isEmpty ? 1 : users.length,
+            itemBuilder:(_,i) {
+              if (users.isEmpty) return const BlinkExperienceState(
+                title:'No members found',
+                subtitle:'Try a different name to find someone.',
+                icon:Icons.person_search_rounded,
+                mood:BlinkMood.community);
+              final user = users[i];
+              final id = field(user,'id');
+              final friend = _friends.contains(id);
+              final pending = _outgoing.contains(id);
+              final received = _incoming.contains(id);
+              return Padding(
+                padding:const EdgeInsets.symmetric(horizontal:12),
+                child:BlinkProListCard(
+                  leading:liveAvatar(user),
+                  icon:friend ? Icons.forum_outlined : Icons.person_search_rounded,
+                  eyebrow: friend ? 'BLINK FRIEND' : 'DISCOVER BLINK MEMBERS',
+                  title:field(user,'name'),
+                  subtitle:field(user,'bio','Blink member'),
+                  badges: [
+                    BlinkInfoPill(
+                      friend ? 'Friends' : pending ? 'Request sent'
+                        : received ? 'Request received' : 'Community member',
+                      icon: friend ? Icons.verified_rounded
+                        : pending ? Icons.schedule_rounded
+                        : received ? Icons.mark_email_unread_outlined
+                        : Icons.people_alt_outlined,
+                      highlight:friend),
+                  ],
+                  onTap:()=>Navigator.push(context,MaterialPageRoute<void>(
+                    builder:(_)=>LivePublicProfileScreen(userId:id)))
+                      .then((_) { if (mounted) _load(); }),
+                  trailing:IconButton(
+                    tooltip: friend ? 'Message friend'
+                      : pending ? 'Request pending'
+                      : received ? 'Review friend request' : 'Send friend request',
+                    icon:Icon(
+                      friend ? Icons.chat_bubble_outline_rounded
+                        : pending ? Icons.schedule_rounded
+                        : received ? Icons.mark_email_unread_outlined
+                        : Icons.person_add_alt_rounded,
+                      color:BlinkColors.orange),
+                    onPressed: pending || _requestBusy.contains(id)
+                      ? null
+                      : friend
+                        ? () => openBlinkFriendChat(context,id,field(user,'name'))
+                        : received
+                          ? () async {
+                            await Navigator.push(context, MaterialPageRoute<void>(
+                              builder: (_) => const LiveRequestsScreen()));
+                            if (mounted) _load();
+                          }
+                          : () => _request(id),
+                  ),
+                ),
+              );
+            },
           ),
-        );
-      }))),
-  ]));
+        ),
+      ),
+    ]),
+  );
 }
 
 class LiveFriendsScreen extends StatefulWidget{
