@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../widgets/ui.dart';
+import '../widgets/blink_motion.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import '../core/blink_auth_api.dart';
@@ -62,6 +63,10 @@ class _FullTaskDetailState extends State<FullTaskDetail> {
     final owner=myId.isNotEmpty&&field(task,'creatorId')==myId;
     final locked=saved.isNotEmpty&&field(saved,'status','DRAFT')!='DRAFT';
     final steps=arr(saved['steps']).map(obj).toList();
+    final totalSteps = arr(task['checklists']).fold<int>(0,
+      (count, group) => count + arr(obj(group)['items']).length);
+    final doneSteps = selected.length.clamp(0, totalSteps);
+    final progress = totalSteps == 0 ? 0.0 : doneSteps / totalSteps;
     return Scaffold(appBar:AppBar(title:const BlinkBrandedTitle('Creator Task')),
       body:loading?const Center(child:CircularProgressIndicator(color:BlinkColors.orange))
         :error.isNotEmpty?liveError(error,_load)
@@ -98,8 +103,53 @@ class _FullTaskDetailState extends State<FullTaskDetail> {
             badges:[BlinkInfoPill('${field(saved,'earnedBp','0')} BP approved',
               icon:Icons.stars_rounded,highlight:true)],
           ),
-          const Divider(height:30),
-          Text('Named checklists',style:Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 12),
+          BlinkProCard(
+            mood: BlinkMood.rewards,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  const Icon(Icons.fact_check_outlined,
+                    size: 20, color: Color(0xFFB1721D)),
+                  const SizedBox(width: 9),
+                  const Expanded(child: Text('Your checklist progress',
+                    style: TextStyle(fontWeight: FontWeight.w900))),
+                  Text(doneSteps.toString() + ' / ' +
+                    totalSteps.toString(),
+                    style: const TextStyle(
+                      color: Color(0xFFB1721D),
+                      fontWeight: FontWeight.w900)),
+                ]),
+                const SizedBox(height: 13),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: progress),
+                  duration: BlinkMotion.duration(context, ms: 460),
+                  curve: Curves.easeOutCubic,
+                  builder: (_, value, __) => ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: value,
+                      minHeight: 8,
+                      color: BlinkColors.orange,
+                      backgroundColor: BlinkColors.orangeSoft)),
+                ),
+                const SizedBox(height: 9),
+                Text(locked
+                  ? 'Submission locked for verification'
+                  : 'Complete the required steps before submitting.',
+                  style: const TextStyle(fontSize: 11.5,
+                    color: BlinkColors.muted)),
+              ],
+            ),
+          ),
+          const BlinkSectionBand(
+            eyebrow: 'STEP BY STEP',
+            title: 'Challenge checklist',
+            subtitle: 'Follow the real requirements and attach evidence',
+            mood: BlinkMood.rewards,
+            icon: Icons.checklist_rounded,
+            padding: EdgeInsets.fromLTRB(1, 8, 1, 15)),
           ...arr(task['checklists']).map((rawGroup){
             final group=obj(rawGroup);
             return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
