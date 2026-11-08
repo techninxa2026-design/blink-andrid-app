@@ -576,7 +576,8 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
       if (widget.showCheckins)
         BlinkHomeCheckins(activeCount: _checkinCount),
       BlinkReveal(child: Container(
-        margin: const EdgeInsets.fromLTRB(13, 12, 13, 12),
+        margin: EdgeInsets.fromLTRB(13, widget.showCheckins ? 8 : 12,
+          13, widget.showCheckins ? 7 : 12),
         clipBehavior: Clip.antiAlias,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -601,7 +602,8 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
             child: IgnorePointer(child: Icon(Icons.auto_awesome_rounded,
               size: 142, color: Color(0x1CFFFFFF)))),
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 19, 17, 18),
+            padding: EdgeInsets.fromLTRB(17, widget.showCheckins ? 15 : 19,
+              16, widget.showCheckins ? 15 : 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -625,10 +627,10 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
                         color: Color(0xFFFFE3D4),
                         fontWeight: FontWeight.w700)),
                 ]),
-                const SizedBox(height: 13),
+                SizedBox(height: widget.showCheckins ? 10 : 13),
                 const Text('Your world, right now.',
                   maxLines: 2, overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 24,
+                  style: TextStyle(fontSize: 22.5,
                     letterSpacing: -.7, height: 1.1,
                     color: Colors.white,
                     fontWeight: FontWeight.w900)),
@@ -637,7 +639,7 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
                   maxLines: 2, overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 11.7,
                     height: 1.35, color: Color(0xFFFFE5D9))),
-                const SizedBox(height: 15),
+                SizedBox(height: widget.showCheckins ? 12 : 15),
                 Wrap(spacing: 8, runSpacing: 9, children: [
                   FilledButton.icon(
                     onPressed: () => go(context, '/capture'),
@@ -663,14 +665,52 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
           ),
         ]),
       )),
-      BlinkSectionBand(
-        eyebrow: _mine ? 'YOUR COLLECTION' : 'THE COMMUNITY',
-        title: _mine ? 'Your Moments' : 'Discover Moments',
-        subtitle: _mine ? 'Everything you have shared'
-          : 'People, places and stories from across Blink',
-        mood: BlinkMood.studio,
-        icon: Icons.auto_awesome_rounded,
-      ),
+      if (widget.showCheckins)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 12, 17, 7),
+          child: Row(children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('YOUR BLINK WORLD',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      letterSpacing: 1.3,
+                      color: BlinkColors.orangeDark,
+                      fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 3),
+                  Text(_mine ? 'My Moments' : 'Explore Moments',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: BlinkColors.ink,
+                      fontSize: 19,
+                      letterSpacing: -.45,
+                      fontWeight: FontWeight.w900)),
+                ],
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _refresh,
+              icon: const Icon(Icons.refresh_rounded, size: 17),
+              label: const Text('Refresh'),
+              style: TextButton.styleFrom(
+                foregroundColor: BlinkColors.orangeDark,
+                minimumSize: const Size(0, 40),
+                padding: const EdgeInsets.symmetric(horizontal: 8)),
+            ),
+          ]),
+        )
+      else
+        BlinkSectionBand(
+          eyebrow: _mine ? 'YOUR COLLECTION' : 'THE COMMUNITY',
+          title: _mine ? 'Your Moments' : 'Discover Moments',
+          subtitle: _mine ? 'Everything you have shared'
+            : 'People, places and stories from across Blink',
+          mood: BlinkMood.studio,
+          icon: Icons.auto_awesome_rounded,
+        ),
       BlinkChips(
         key: ValueKey('moments-' + (_mine ? 'mine' : 'public')),
         initial: _mine ? 1 : 0,
