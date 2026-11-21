@@ -13,6 +13,7 @@ import 'package:video_player/video_player.dart';
 import '../core/blink_home_api.dart';
 import '../core/reel_cover.dart';
 import '../core/blink_original_music.dart';
+import 'blink_vector_lenses.dart';
 import '../core/nav.dart';
 import '../core/theme.dart';
 import '../widgets/ui.dart';
@@ -411,67 +412,20 @@ class _BlinkRealCaptureScreenState extends State<BlinkRealCaptureScreen> with Wi
     }
   }
 
+  /// ML Kit locates the face; Blink's vector painter draws at native
+  /// capture resolution, including in the exported photo RepaintBoundary.
   Widget _faceEffects() {
-    if (_lens == 'none' || _videoMode) return const SizedBox.shrink();
-    return LayoutBuilder(builder: (context, constraints) {
-      final face = _faceBounds;
-      if (face == null) return const SizedBox.shrink();
-      final width = constraints.maxWidth;
-      final height = constraints.maxHeight;
-      final cx = face.center.dx * width;
-      final top = face.top * height;
-      final faceWidth = face.width * width;
-      final size = (faceWidth * 0.62).clamp(42.0, 150.0);
-      Widget sticker(String symbol, double x, double y, double factor) =>
-        Positioned(
-          left: x - size * factor / 2,
-          top: y - size * factor / 2,
-          child: IgnorePointer(child: Text(symbol,
-            style: TextStyle(fontSize: size * factor, shadows: const [
-              Shadow(blurRadius: 12, color: Color(0x66000000)),
-            ]))),
-        );
-      switch (_lens) {
-        case 'cat':
-          return Stack(children: [
-            sticker('🐱', cx, top - size * .25, 1.1),
-          ]);
-        case 'dog':
-          return Stack(children: [
-            sticker('🐶', cx, top - size * .24, 1.1),
-          ]);
-        case 'butterfly':
-          return Stack(children: [
-            sticker('🦋', cx - faceWidth * .5, top + size * .35, .85),
-            sticker('🦋', cx + faceWidth * .5, top + size * .35, .85),
-          ]);
-        case 'heart':
-          return Stack(children: [
-            sticker('💖', cx, top - size * .45, .9),
-            sticker('✨', cx + faceWidth * .42, top + size * .2, .48),
-          ]);
-        case 'crown':
-          return Stack(children: [sticker('👑', cx, top - size * .3, 1.3)]);
-        case 'glasses':
-          return Stack(children: [sticker('😎', cx, top + size * .43, .95)]);
-        case 'cyber':
-          return Stack(children: [
-            sticker('⚡', cx - faceWidth * .52, top + size * .18, .85),
-            sticker('⚡', cx + faceWidth * .52, top + size * .18, .85),
-          ]);
-        case 'blush':
-          return Stack(children: [
-            sticker('🌸', cx - faceWidth * .33, top + size * .93, .5),
-            sticker('🌸', cx + faceWidth * .33, top + size * .93, .5),
-          ]);
-        case 'party':
-          return Stack(children: [
-            sticker('🎉', cx, top - size * .37, 1.1),
-            sticker('✨', cx + faceWidth * .5, top + size * .3, .55),
-          ]);
-      }
+    final bounds = _faceBounds;
+    if (_lens == 'none' || _videoMode || bounds == null) {
       return const SizedBox.shrink();
-    });
+    }
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: CustomPaint(
+          painter: BlinkVectorLens(face: bounds, lens: _lens),
+        ),
+      ),
+    );
   }
 
   Widget _lensPicker() => SizedBox(
