@@ -593,15 +593,20 @@ class _SecretsState extends State<LiveSecretsScreen>{
             mood:BlinkMood.studio,
             margin:EdgeInsets.fromLTRB(0,0,0,18),
           ),
-          if(points!=null)BlinkProCard(child:Row(children:[
-            const Icon(Icons.stars_rounded,color:BlinkColors.orange,size:28),
-            const SizedBox(width:12),
-            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Text('$points BP',style:Theme.of(context).textTheme.titleLarge),
-              const Text('Your verified Blink Points',style:TextStyle(color:BlinkColors.muted)),
-            ])),
-            if(reward!=null)BlinkInfoPill('+$reward BP per correct guess',
-              icon:Icons.verified_rounded,highlight:true),
+          if(points!=null)BlinkProCard(child:Column(
+            crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Row(children:[
+              const Icon(Icons.stars_rounded,color:BlinkColors.orange,size:28),
+              const SizedBox(width:12),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text('$points BP',style:Theme.of(context).textTheme.titleLarge),
+                const Text('Your verified Blink Points',style:TextStyle(color:BlinkColors.muted)),
+              ])),
+            ]),
+            if(reward!=null)Padding(
+              padding:const EdgeInsets.only(top:12),
+              child:Wrap(children:[BlinkInfoPill('+$reward BP per correct guess',
+                icon:Icons.verified_rounded,highlight:true)])),
           ])),
           const SizedBox(height:12),
           BlinkAdaptiveSegments<String>(segments:const [
