@@ -10,7 +10,7 @@ class BlinkFullDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     return Drawer(
       width: MediaQuery.sizeOf(context).width * .86,
-      backgroundColor: BlinkColors.canvas,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       child: SafeArea(
         child: Column(
           children: [
@@ -154,8 +154,9 @@ class _DrawerLink extends StatelessWidget {
           borderRadius: BorderRadius.circular(12)),
         child: Icon(icon, size: 20, color: accent),
       ),
-      title: Text(title, style: const TextStyle(
-        color: BlinkColors.ink, fontSize: 13, fontWeight: FontWeight.w700)),
+      title: Text(title, style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 13, fontWeight: FontWeight.w700)),
       trailing: selected
         ? Icon(Icons.circle_rounded, size: 10, color: accent)
         : Icon(Icons.chevron_right_rounded, size: 17, color: accent),

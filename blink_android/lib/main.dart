@@ -96,7 +96,8 @@ class _BlinkAppState extends State<BlinkApp> with WidgetsBindingObserver {
       title: 'Blink — Your people. Your moments.',
       debugShowCheckedModeBanner: false,
       theme: blinkTheme(),
-      themeMode: ThemeMode.light,
+      darkTheme: blinkDarkTheme(),
+      themeMode: blinkAppearance.mode,
       builder: (context, child) => BlinkCallHost(
         child: child ?? const SizedBox.shrink(),
       ),

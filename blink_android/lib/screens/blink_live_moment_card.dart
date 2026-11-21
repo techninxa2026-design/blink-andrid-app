@@ -326,7 +326,7 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
-      backgroundColor: BlinkColors.surface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       showDragHandle: false,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -559,8 +559,8 @@ class _BlinkLiveMomentCardState extends State<BlinkLiveMomentCard>
     } else {
       await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => Scaffold(
-          backgroundColor: BlinkColors.canvas,
-           appBar: AppBar(backgroundColor: BlinkColors.surface, foregroundColor: BlinkColors.orangeDark),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+           appBar: AppBar(backgroundColor: Theme.of(context).colorScheme.surface, foregroundColor: BlinkColors.orangeDark),
           body: Center(child: InteractiveViewer(child: Image.network(
             BlinkHomeApi.mediaUrl(widget.moment.mediaUrl),
             errorBuilder: (_, __, ___) => const Text(
@@ -1372,8 +1372,8 @@ class _MomentVideoFullscreenState extends State<_MomentVideoFullscreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: BlinkColors.canvas,
-           appBar: AppBar(backgroundColor: BlinkColors.surface, foregroundColor: BlinkColors.orangeDark),
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+           appBar: AppBar(backgroundColor: Theme.of(context).colorScheme.surface, foregroundColor: BlinkColors.orangeDark),
     body: Center(child: _error != null
       ? Text(_error!, style: const TextStyle(color: Colors.white))
       : !_controller.value.isInitialized
