@@ -54,11 +54,12 @@ class BlinkBrandedTitle extends StatelessWidget {
     children: [
       const BlinkLogo(fontSize: 23, maxWidth: 72),
       const SizedBox(width: 10),
-      Container(width: 1, height: 20, color: BlinkColors.line),
+      Container(width: 1, height: 20, color: Theme.of(context).dividerColor),
       const SizedBox(width: 10),
       Flexible(child: Text(page, overflow: TextOverflow.ellipsis,
-        maxLines: 1, style: const TextStyle(
-          fontWeight: FontWeight.w800, fontSize: 15, color: BlinkColors.ink))),
+        maxLines: 1, style: TextStyle(
+          fontWeight: FontWeight.w800, fontSize: 15,
+          color: Theme.of(context).colorScheme.onSurface))),
     ],
   );
 }
@@ -621,15 +622,18 @@ class BlinkPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final standard = color == Colors.white;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final surface = Theme.of(context).colorScheme.surface;
     return Container(
       decoration: BoxDecoration(
-        color: standard ? null : color,
-        gradient: standard ? const LinearGradient(
+        color: standard && dark ? surface : standard ? null : color,
+        gradient: standard && !dark ? const LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
           colors: [Colors.white, Color(0xFFFFFAF7)]) : null,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: standard ? const Color(0xFFFFDDC8) : BlinkColors.line,
+          color: dark ? Theme.of(context).colorScheme.outline
+              : standard ? const Color(0xFFFFDDC8) : BlinkColors.line,
           width: 1.15,
         ),
       ),
@@ -781,7 +785,7 @@ class BlinkProfileMasthead extends StatelessWidget {
     return BlinkReveal(child: Container(
       margin: const EdgeInsets.only(bottom: 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(27),
         border: Border.all(color: accent.withValues(alpha: .22)),
         boxShadow: [
@@ -838,8 +842,8 @@ class BlinkProfileMasthead extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(name, maxLines: 2, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: BlinkColors.ink,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 24, letterSpacing: -.6,
                   fontWeight: FontWeight.w900)),
               if (bio != null && bio!.isNotEmpty) ...[
@@ -899,6 +903,7 @@ class _BlinkProCardState extends State<BlinkProCard> {
   @override
   Widget build(BuildContext context) {
     final accent = BlinkMoodColors.primary(widget.mood);
+    final surface = Theme.of(context).colorScheme.surface;
     final reduced = BlinkMotion.reduced(context);
     return AnimatedScale(
       scale: _pressed && !reduced ? .985 : 1,
@@ -907,7 +912,7 @@ class _BlinkProCardState extends State<BlinkProCard> {
       child: Container(
         margin: widget.margin,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: surface,
           borderRadius: BorderRadius.circular(23),
           border: Border.all(color: accent.withValues(alpha: .23), width: 1),
           boxShadow: [BoxShadow(
@@ -923,9 +928,9 @@ class _BlinkProCardState extends State<BlinkProCard> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.white,
-                  Color.lerp(Colors.white, accent, .03)!,
-                  Color.lerp(Colors.white, accent, .085)!,
+                  surface,
+                  Color.lerp(surface, accent, .03)!,
+                  Color.lerp(surface, accent, .085)!,
                 ],
                 stops: const [0, .61, 1],
               ),
@@ -985,10 +990,11 @@ class BlinkInfoPill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
     decoration: BoxDecoration(
-      color: highlight ? BlinkColors.orangeSoft : Colors.white,
+      color: highlight ? BlinkColors.orangeSoft
+        : Theme.of(context).colorScheme.surface,
       border: Border.all(
-        color: highlight
-          ? const Color(0xFFFFC7A7) : const Color(0xFFF0E3DB)),
+        color: highlight ? const Color(0xFFFFC7A7)
+          : Theme.of(context).colorScheme.outline),
       borderRadius: BorderRadius.circular(30),
     ),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1004,10 +1010,11 @@ class BlinkInfoPill extends StatelessWidget {
           maxLines: 1,
           softWrap: false,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w800,
-            color: BlinkColors.ink,
+            color: highlight ? BlinkColors.ink
+              : Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
@@ -1086,8 +1093,9 @@ class BlinkProListCard extends StatelessWidget {
               const SizedBox(height: 5),
             ],
             Text(title, maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w900,
-                fontSize: 16, height: 1.23, color: BlinkColors.ink)),
+              style: TextStyle(fontWeight: FontWeight.w900,
+                fontSize: 16, height: 1.23,
+                color: Theme.of(context).colorScheme.onSurface)),
             if (subtitle != null && subtitle!.trim().isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(subtitle!.trim(), maxLines: 3,
@@ -1149,7 +1157,7 @@ class BlinkCreateLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: BlinkColors.canvas,
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     resizeToAvoidBottomInset: true,
     appBar: AppBar(title: BlinkBrandedTitle(title)),
     body: SafeArea(
@@ -1189,9 +1197,10 @@ class BlinkCreateLayout extends StatelessWidget {
       top: false,
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: BlinkColors.line)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(top: BorderSide(
+            color: Theme.of(context).dividerColor)),
         ),
         child: Center(
           heightFactor: 1,
