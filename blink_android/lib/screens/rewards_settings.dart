@@ -18,14 +18,29 @@ class _WalletState extends State<WalletScreen> {
   String? balance;
   String? error;
   bool loading = true;
+  bool historyAvailable = false;
+  List<Map<String,dynamic>> history = [];
   @override
   void initState() { super.initState(); _load(); }
   Future<void> _load() async {
     try {
       final profile = obj(await LiveApi.call('GET', '/profile/me'));
+      // Older servers may not yet have the authenticated reward-history
+      // endpoint. Never hide the real balance if that optional call fails.
+      List<Map<String,dynamic>> received = [];
+      bool available = false;
+      try {
+        final result = obj(await LiveApi.call('GET', '/profile/me/bp-activity'));
+        received = arr(result['items']).map((x) => obj(x)).toList();
+        available = true;
+      } catch (exception) {
+        debugPrint('Blink BP reward activity unavailable: $exception');
+      }
       if (!mounted) return;
       setState(() {
         balance = profile['blinkPoints']?.toString();
+        history = received;
+        historyAvailable = available;
         error = null;
         loading = false;
       });
@@ -111,12 +126,30 @@ class _WalletState extends State<WalletScreen> {
             subtitle: 'Your BP balance is stored on your Blink account and confirmed by the server.',
             badges: [BlinkInfoPill('Account secured',icon:Icons.verified_outlined,highlight:true)],
           ),
-          const BlinkProListCard(
+          BlinkProListCard(
             icon: Icons.receipt_long_outlined,
             eyebrow: 'REWARDS ACTIVITY',
-            title: 'Transaction history',
-            subtitle: 'An itemized ledger is not available from the current Blink API.',
+            title: 'Recorded Blink rewards',
+            subtitle: !historyAvailable
+              ? 'Reward activity is not supported by the connected server yet.'
+              : history.isEmpty
+                ? 'No recorded reward events yet.'
+                : 'Actual approved task rewards, correct Secret guesses and Moment BP gifts.',
           ),
+          if(historyAvailable)...history.map((item) {
+            final amount = num.tryParse(field(item, 'amount', '0')) ?? 0;
+            final date = DateTime.tryParse(field(item,'createdAt'));
+            final when = date == null ? '' :
+              '${date.toLocal().year}-${date.toLocal().month.toString().padLeft(2, '0')}-${date.toLocal().day.toString().padLeft(2, '0')}';
+            return BlinkProListCard(
+              icon:Icons.stars_outlined,
+              eyebrow: field(item,'type').replaceAll('_',' '),
+              title:field(item,'description','Blink reward'),
+              subtitle:when,
+              badges:[BlinkInfoPill('+${amount.toStringAsFixed(amount%1==0?0:2)} BP',
+                icon:Icons.verified_outlined,highlight:true)],
+            );
+          }),
         ],
       ),
     ),
