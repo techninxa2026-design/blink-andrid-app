@@ -154,7 +154,7 @@ class _DrawerLink extends StatelessWidget {
           borderRadius: BorderRadius.circular(12)),
         child: Icon(icon, size: 20, color: accent),
       ),
-      title: Text(title, style: const TextStyle(
+      title: Text(title, style: TextStyle(
         color: Theme.of(context).colorScheme.onSurface,
             fontSize: 13, fontWeight: FontWeight.w700)),
       trailing: selected
