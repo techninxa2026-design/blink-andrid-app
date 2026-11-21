@@ -627,7 +627,7 @@ class _ProfileState extends State<LiveProfileScreen> {
   Widget build(BuildContext context) {
     final p = _profile ?? <String, dynamic>{};
     return Scaffold(
-      backgroundColor: BlinkColors.canvas,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const BlinkBrandedTitle('My Profile'), actions: [
         IconButton(
           tooltip: 'Edit profile',
@@ -749,8 +749,8 @@ class _GalleryHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(children: [
-    Expanded(child: Text(title, style: const TextStyle(
-      color: BlinkColors.ink, fontSize: 19, fontWeight: FontWeight.w900))),
+    Expanded(child: Text(title, style: TextStyle(
+      color: Theme.of(context).colorScheme.onSurface, fontSize: 19, fontWeight: FontWeight.w900))),
     Text('$count', style: const TextStyle(
       color: BlinkColors.orangeDark, fontWeight: FontWeight.bold)),
     const SizedBox(width: 6),
@@ -1009,7 +1009,7 @@ class _PublicState extends State<LivePublicProfileScreen> {
     final p = _profile ?? <String, dynamic>{};
     final relationship = field(p, 'relationship');
     return Scaffold(
-      backgroundColor: BlinkColors.canvas,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: BlinkBrandedTitle(field(p, 'name', 'Blink Profile'))),
       body: _loading
         ? const Center(child: CircularProgressIndicator(color: BlinkColors.orange))
