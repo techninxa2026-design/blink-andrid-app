@@ -323,27 +323,46 @@ class _NotificationsState extends State<NotificationsScreen> {
   );
 }
 
-/// Single, consistent branded theme (no dark-mode toggle for now).
+/// Matches Web's saved light/dark appearance while keeping Blink Orange.
 class AppearanceScreen extends StatelessWidget {
   const AppearanceScreen({super.key});
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const BlinkBrandedTitle('Appearance')),
-    body: ListView(padding: const EdgeInsets.all(16), children: const [
-      BlinkFeatureHero(
-        eyebrow:'THE COLOR OF BLINK',
-        title:'Bold. Warm. Yours.',
-        subtitle:'A signature orange experience, built to keep every moment recognizable.',
-        icon:Icons.palette_rounded,mood:BlinkMood.studio,
-        margin:EdgeInsets.fromLTRB(0,0,0,18),
-      ),
-      BlinkProListCard(
-        icon:Icons.light_mode_rounded,
-        eyebrow:'CURRENT APPEARANCE',
-        title:'Blink Orange · Light',
-        subtitle:'Active across Blink. Dark-mode switching is not yet available.',
-        badges:[BlinkInfoPill('ACTIVE',icon:Icons.check_circle_outline,highlight:true)],
-      ),
-    ]),
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: blinkAppearance,
+    builder: (context, _) => Scaffold(
+      appBar: AppBar(title: const BlinkBrandedTitle('Appearance')),
+      body: ListView(padding: const EdgeInsets.all(16), children: [
+        const BlinkFeatureHero(
+          eyebrow:'THE COLOR OF BLINK',
+          title:'Bold. Warm. Yours.',
+          subtitle:'The same Blink Orange identity, now in day and night.',
+          icon:Icons.palette_rounded,mood:BlinkMood.studio,
+          margin:EdgeInsets.fromLTRB(0,0,0,18),
+        ),
+        BlinkProListCard(
+          icon:blinkAppearance.isDark ? Icons.dark_mode_rounded
+              : Icons.light_mode_rounded,
+          eyebrow:'CURRENT APPEARANCE',
+          title:blinkAppearance.isDark ? 'Blink Orange · Dark'
+              : 'Blink Orange · Light',
+          subtitle:'Your choice is saved on this device.',
+          badges:const [BlinkInfoPill('ACTIVE',
+            icon:Icons.check_circle_outline,highlight:true)],
+        ),
+        const SizedBox(height:16),
+        SegmentedButton<ThemeMode>(
+          showSelectedIcon:true,
+          segments:const [
+            ButtonSegment(value:ThemeMode.light,
+              icon:Icon(Icons.light_mode_outlined),label:Text('Light')),
+            ButtonSegment(value:ThemeMode.dark,
+              icon:Icon(Icons.dark_mode_outlined),label:Text('Dark')),
+          ],
+          selected:{blinkAppearance.mode},
+          onSelectionChanged:(values) =>
+            blinkAppearance.choose(values.first),
+        ),
+      ]),
+    ),
   );
 }
