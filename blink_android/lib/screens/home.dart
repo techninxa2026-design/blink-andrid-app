@@ -81,12 +81,12 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BlinkColors.canvas,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
       drawer: const BlinkFullDrawer(),
 
       appBar: AppBar(
-        backgroundColor: BlinkColors.surface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         centerTitle: true,
         elevation: 0,
 
@@ -683,8 +683,8 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
                   Text(_mine ? 'My Moments' : 'Explore Moments',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: BlinkColors.ink,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 19,
                       letterSpacing: -.45,
                       fontWeight: FontWeight.w900)),
@@ -800,8 +800,8 @@ class _BlinkMomentsFeedState extends State<_BlinkMomentsFeed>
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: BlinkColors.ink,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 14,
             ),
           ),
