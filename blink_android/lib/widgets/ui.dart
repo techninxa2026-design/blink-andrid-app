@@ -1334,7 +1334,7 @@ class BlinkFormSection extends StatelessWidget {
           Expanded(child:Text(heading,
             style:const TextStyle(
               fontSize:15, fontWeight:FontWeight.w900,
-              color:BlinkColors.ink))),
+              color:Theme.of(context).colorScheme.onSurface))),
         ]),
         if (helper != null) ...[
           const SizedBox(height: 3),
@@ -1639,10 +1639,10 @@ class _BlinkPostCardState extends State<BlinkPostCard> {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: BlinkColors.line,
+          color: Theme.of(context).dividerColor,
         ),
       ),
       child: Column(
@@ -1679,7 +1679,7 @@ class _BlinkPostCardState extends State<BlinkPostCard> {
                       : Icons.favorite_border_rounded,
                   color: liked
                       ? BlinkColors.orange
-                      : BlinkColors.ink,
+                      : Theme.of(context).colorScheme.onSurface,
                 ),
                 onPressed: () {
                   setState(() => liked = !liked);
