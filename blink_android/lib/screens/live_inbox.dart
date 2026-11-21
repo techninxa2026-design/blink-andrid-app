@@ -170,9 +170,10 @@ class _LiveInboxState extends State<LiveInboxScreen>
       Padding(
         padding: const EdgeInsets.fromLTRB(18, 7, 12, 7),
         child: Row(children: [
-          const Expanded(child: Text('Your people',
+          Expanded(child: Text('Your people',
             style: TextStyle(fontSize: 15,
-              fontWeight: FontWeight.w900, color: BlinkColors.ink))),
+              fontWeight: FontWeight.w900,
+              color: Theme.of(context).colorScheme.onSurface))),
           if (presenceAvailable)
             Text('${visible.where((f) => online[field(f, 'id')] == true).length} active',
               style: const TextStyle(color: Color(0xFFE95F1D),
@@ -1258,7 +1259,7 @@ class _InboxVideoState extends State<_InboxVideoPage>{
     super.dispose();
   }
   @override Widget build(BuildContext context)=>Scaffold(
-    backgroundColor:BlinkColors.canvas,
+    backgroundColor:Theme.of(context).scaffoldBackgroundColor,
     appBar:AppBar(title:const BlinkBrandedTitle('Blink Video')),
     body:Center(child:FutureBuilder<void>(future:ready,builder:(_,snapshot){
       if(snapshot.hasError)return Text('${snapshot.error}');
