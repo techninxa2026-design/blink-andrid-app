@@ -228,96 +228,179 @@ class SettingsScreen extends StatelessWidget {
   );
 }
 
-/// Real alerts from the Inbox and the pending-friend-requests API.
-/// No fake notification records are rendered.
+/// Notifications aggregated only from existing authenticated Blink endpoints.
+/// The NestJS API does not expose a durable, universal notifications ledger:
+/// these are live, actionable items, not fabricated push or read receipts.
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
   @override
   State<NotificationsScreen> createState() => _NotificationsState();
 }
+
 class _NotificationsState extends State<NotificationsScreen> {
-  List<dynamic> incoming = [];
-  List<dynamic> conversations = [];
+  List<Map<String, dynamic>> items = [];
   bool loading = true;
   String? error;
+  int unavailableSources = 0;
+
   @override
   void initState() { super.initState(); _load(); }
-  Future<void> _load() async {
+
+  Future<dynamic> _safeGet(String path) async {
     try {
-      final result = await Future.wait([
-        LiveApi.call('GET','/friends/requests/incoming'),
-        LiveApi.call('GET','/inbox'),
-      ]);
-      if (!mounted) return;
-      setState(() {
-        incoming = arr(result[0]);
-        conversations = arr(result[1]).where((c) =>
-          ((obj(c)['unreadCount'] as num?)?.toInt() ?? 0) > 0).toList();
-        loading = false;
-        error = null;
-      });
-    } catch(e) {
-      if(mounted) setState(() {error = '$e'; loading = false;});
+      return await LiveApi.call('GET', path);
+    } catch (exception) {
+      debugPrint('Blink notifications: $path unavailable: $exception');
+      return null;
     }
   }
+
+  Future<void> _load() async {
+    final result = await Future.wait<dynamic>([
+      _safeGet('/friends/requests/incoming'),
+      _safeGet('/inbox'),
+      _safeGet('/business-match/requests'),
+      _safeGet('/business-match/meetings'),
+      _safeGet('/hearts/incoming'),
+      _safeGet('/irl/invitations'),
+    ]);
+    if (!mounted) return;
+    final unavailable = result.where((x) => x == null).length;
+    if (unavailable == result.length) {
+      setState(() {
+        error = 'Could not connect to any Blink activity service.';
+        loading = false; unavailableSources = unavailable;
+      });
+      return;
+    }
+
+    final next = <Map<String, dynamic>>[];
+    void add(String title, String detail, String route, String category,
+        dynamic timestamp) {
+      next.add({
+        'title': title,
+        'detail': detail,
+        'route': route,
+        'category': category,
+        'createdAt': timestamp?.toString() ?? '',
+      });
+    }
+
+    for (final raw in arr(result[0])) {
+      final request = obj(raw);
+      final sender = obj(request['sender']);
+      add(field(sender, 'name', 'Someone') + ' sent a friend request',
+        'Accept or decline this connection request.',
+        '/people/requests', 'friends', request['createdAt']);
+    }
+    for (final raw in arr(result[1])) {
+      final conversation = obj(raw);
+      final unread = (conversation['unreadCount'] as num?)?.toInt() ?? 0;
+      if (unread <= 0) continue;
+      final who = conversation['isGroup'] == true
+        ? field(conversation, 'groupName', 'Group conversation')
+        : field(conversation['otherUser'], 'name', 'A friend');
+      add('$unread unread message${unread == 1 ? '' : 's'} from $who',
+        'Open Inbox to view and reply.', '/inbox', 'inbox',
+        conversation['updatedAt']);
+    }
+    for (final raw in arr(result[2])) {
+      final request = obj(raw);
+      if (field(request, 'direction') != 'incoming') continue;
+      add('Business connection request',
+        field(request['profile'], 'name', 'A business') +
+          ' wants to connect with you.',
+        '/business', 'business', request['createdAt']);
+    }
+    for (final raw in arr(result[3])) {
+      final meeting = obj(raw);
+      if (field(meeting, 'role') != 'attendee' ||
+          field(meeting, 'status') != 'PENDING') continue;
+      add('Business meeting invitation',
+        field(meeting, 'title', 'Meeting') + ' · ' +
+          field(meeting, 'counterpartName', 'Business partner'),
+        '/business/meetings', 'meeting', meeting['createdAt']);
+    }
+    for (final raw in arr(result[4])) {
+      final heart = obj(raw);
+      if (field(heart, 'status') != 'PENDING') continue;
+      add('Someone sent you a Blink Heart',
+        'A private Heart is waiting for your response.',
+        '/hearts', 'hearts', heart['createdAt']);
+    }
+    final now = DateTime.now();
+    for (final raw in arr(result[5])) {
+      final invitation = obj(raw);
+      final plan = obj(invitation['plan']);
+      final starts = DateTime.tryParse(field(plan, 'startsAt'));
+      if (starts != null && starts.isBefore(now)) continue;
+      add('You are invited to an IRL plan',
+        field(plan, 'title', 'A Blink meetup') + ' · ' +
+          field(plan, 'place', 'Meetup location to be confirmed'),
+        '/irl', 'irl', invitation['createdAt']);
+    }
+    int timeOf(Map<String, dynamic> value) =>
+      DateTime.tryParse(field(value, 'createdAt'))
+        ?.millisecondsSinceEpoch ?? 0;
+    next.sort((a, b) => timeOf(b).compareTo(timeOf(a)));
+    setState(() {
+      items = next; error = null; loading = false;
+      unavailableSources = unavailable;
+    });
+  }
+
+  IconData _icon(String category) => switch(category) {
+    'friends' => Icons.person_add_alt_1_rounded,
+    'inbox' => Icons.mark_chat_unread_rounded,
+    'business' => Icons.handshake_outlined,
+    'meeting' => Icons.event_available_outlined,
+    'hearts' => Icons.favorite_border_rounded,
+    'irl' => Icons.groups_2_outlined,
+    _ => Icons.notifications_active_outlined,
+  };
+
   @override
   Widget build(BuildContext context) => BlinkScreen(
     title: 'Notifications',
-    active: 'people',
-    child: loading ? const Center(child: CircularProgressIndicator())
-      : error != null ? liveError(error,_load)
-      : RefreshIndicator(onRefresh:_load,child: ListView(
+    active: 'explore',
+    child: RefreshIndicator(onRefresh: _load, child: loading
+      ? const Center(child: CircularProgressIndicator())
+      : error != null ? liveError(error, _load)
+      : ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(14),
         children: [
           const BlinkFeatureHero(
             eyebrow:'YOUR BLINK PULSE',
             title:'Stay in the loop.',
-            subtitle:'New conversations, connection requests and what needs your attention.',
+            subtitle:'Real requests, conversations, Hearts and upcoming plans.',
             icon:Icons.notifications_active_outlined,
             mood:BlinkMood.community,
             margin:EdgeInsets.fromLTRB(0,0,0,12),
           ),
-          const SectionHeading('Your updates', subtitle: 'New messages and friend requests'),
-          if (incoming.isEmpty && conversations.isEmpty)
+          SectionHeading('Your updates',
+            subtitle: '${items.length} live items needing your attention'),
+          if (unavailableSources > 0)
+            Padding(padding: const EdgeInsets.symmetric(vertical:10),
+              child: Text(
+                '$unavailableSources activity source${unavailableSources == 1 ? '' : 's'} unavailable. Pull to retry.',
+                style: Theme.of(context).textTheme.bodySmall)),
+          if (items.isEmpty)
             const BlinkExperienceState(
               title: 'All caught up',
-              subtitle: 'No unread messages or pending friend requests.',
+              subtitle: 'No new actionable updates from your connected Blink services.',
               icon: Icons.notifications_none_rounded,
               mood: BlinkMood.community),
-          ...incoming.map((raw) {
-            final r = obj(raw);
-            final user = obj(r['sender']);
-            return BlinkProListCard(
-              leading:liveAvatar(user),
-              icon:Icons.person_add_alt_1,
-              eyebrow:'NEW CONNECTION REQUEST',
-              title:field(user,'name','A member')+' sent a friend request',
-              subtitle:'Review and respond to this request',
-              onTap:()=>go(context,'/people/requests'),
-              badges:const [BlinkInfoPill('Action available',
-                icon:Icons.person_add_alt_1_rounded,highlight:true)],
-            );
-          }),
-          ...conversations.map((raw) {
-            final c=obj(raw);
-            final sender=c['isGroup']==true
-              ? field(c,'groupName','Group')
-              : field(c['otherUser'],'name','Friend');
-            final unread=(c['unreadCount'] as num?)?.toInt() ?? 0;
-            return BlinkProListCard(
-              icon:Icons.mark_email_unread_outlined,
-              eyebrow:'BLINK INBOX',
-              title:'Messages from $sender',
-              subtitle:'Open your conversation and reply',
-              badges:[BlinkInfoPill('$unread unread',
-                icon:Icons.mark_chat_unread_outlined,highlight:true)],
-              onTap:()=>go(context,'/inbox'),
-            );
-          }),
+          ...items.map((item) => BlinkProListCard(
+            title: field(item, 'title'),
+            subtitle: field(item, 'detail'),
+            eyebrow: field(item, 'category').toUpperCase(),
+            icon: _icon(field(item, 'category')),
+            onTap: () => go(context, field(item, 'route')),
+          )),
           const SizedBox(height: 14),
-          const Text('Other activity notifications require a dedicated server notification endpoint.',
-            style: TextStyle(fontSize: 12, color: BlinkColors.muted)),
+          Text('Updates reflect current server data. A permanent event history, read tracking and push delivery require a dedicated server notification service.',
+            style: Theme.of(context).textTheme.bodySmall),
         ],
       )),
   );
