@@ -473,12 +473,23 @@ class LiveSecretsScreen extends StatefulWidget{
 }
 class _SecretsState extends State<LiveSecretsScreen>{
   List<dynamic> secrets=[];String? error;bool loading=true;
+  int? points; int? reward;
   String filter='all';
   @override void initState(){super.initState();_load();}
   Future<void> _load()async{
     try{
-      final rows=arr(await LiveApi.call('GET','/secrets'));
-      if(mounted)setState((){secrets=rows;error=null;loading=false;});
+      final results=await Future.wait<dynamic>([
+        LiveApi.call('GET','/secrets'),
+        LiveApi.call('GET','/secrets/points'),
+      ]);
+      final rows=arr(results[0]);
+      final balance=obj(results[1]);
+      if(mounted)setState((){
+        secrets=rows;
+        points=(balance['points'] as num?)?.toInt();
+        reward=(balance['correctGuessReward'] as num?)?.toInt();
+        error=null;loading=false;
+      });
     }catch(e){if(mounted)setState((){error=e.toString();loading=false;});}
   }
   Future<void> _create([Map<String,dynamic>? existing])async{
@@ -489,6 +500,7 @@ class _SecretsState extends State<LiveSecretsScreen>{
       ?existing['correctIndex'] as int:0;
     bool anonymous=field(existing,'visibility','ANONYMOUS')!='NAMED';
     int hours=24;
+    bool changeRevealTime=false;
     final data=await showDialog<Map<String,dynamic>>(context:context,
       builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>BlinkFormDialog(
         title:edit?'Edit Blink Secret':'Create Blink Secret',
@@ -510,7 +522,14 @@ class _SecretsState extends State<LiveSecretsScreen>{
           SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Anonymous Secret'),value:anonymous,
             activeTrackColor:BlinkColors.orange,
             onChanged:(v)=>update(()=>anonymous=v)),
-          if(!edit)DropdownButtonFormField<int>(initialValue:hours,isExpanded:true,
+          if(edit)SwitchListTile(
+            contentPadding:EdgeInsets.zero,
+            title:const Text('Change answer reveal time'),
+            subtitle:const Text('Reschedule from now, where the server allows editing.'),
+            value:changeRevealTime,
+            activeTrackColor:BlinkColors.orange,
+            onChanged:(v)=>update(()=>changeRevealTime=v)),
+          if(!edit||changeRevealTime)DropdownButtonFormField<int>(initialValue:hours,isExpanded:true,
             decoration:const InputDecoration(labelText:'Reveal answers after'),
             items:const [
               DropdownMenuItem(value:1,child:Text('1 hour')),
@@ -519,7 +538,7 @@ class _SecretsState extends State<LiveSecretsScreen>{
               DropdownMenuItem(value:72,child:Text('72 hours')),
               DropdownMenuItem(value:168,child:Text('7 days')),
             ],onChanged:(v){if(v!=null)update(()=>hours=v);}),
-          if(edit)const Text('The existing reveal time stays unchanged.',
+          if(edit&&!changeRevealTime)const Text('The existing reveal time is preserved.',
             style:TextStyle(fontSize:12,color:BlinkColors.muted)),
         ])),
         actions:[
@@ -535,7 +554,7 @@ class _SecretsState extends State<LiveSecretsScreen>{
             Navigator.pop(ctx,{
               'prompt':prompt.text.trim(),'options':opts,'correctIndex':correct,
               'visibility':anonymous?'ANONYMOUS':'NAMED',
-              if(!edit)'revealAt':DateTime.now().toUtc()
+              if(!edit||changeRevealTime)'revealAt':DateTime.now().toUtc()
                 .add(Duration(hours:hours)).toIso8601String(),
             });
           },child:Text(edit?'Save':'Publish')),
@@ -574,6 +593,17 @@ class _SecretsState extends State<LiveSecretsScreen>{
             mood:BlinkMood.studio,
             margin:EdgeInsets.fromLTRB(0,0,0,18),
           ),
+          if(points!=null)BlinkProCard(child:Row(children:[
+            const Icon(Icons.stars_rounded,color:BlinkColors.orange,size:28),
+            const SizedBox(width:12),
+            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Text('$points BP',style:Theme.of(context).textTheme.titleLarge),
+              const Text('Your verified Blink Points',style:TextStyle(color:BlinkColors.muted)),
+            ])),
+            if(reward!=null)BlinkInfoPill('+$reward BP per correct guess',
+              icon:Icons.verified_rounded,highlight:true),
+          ])),
+          const SizedBox(height:12),
           BlinkAdaptiveSegments<String>(segments:const [
             ButtonSegment(value:'all',label:Text('Explore')),
             ButtonSegment(value:'mine',label:Text('My Secrets')),
