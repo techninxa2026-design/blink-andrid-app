@@ -47,3 +47,27 @@ GitHub Actions runs static analysis, widget tests and a debug APK build on pushe
 ## Review before release
 
 Check that actual device gestures, keyboard insets, image/video playback, authorization, notifications, comment counts, saved state, and all live writes work with the Blink server. A successful widget test does not replace real-device and integration testing.
+
+
+## Web parity update — 21 November 2026
+
+- **Secrets:** the authenticated /secrets/points summary is shown alongside each Secret; authorized editing can optionally reschedule the reveal time using the Web API contract.
+- **Appearance:** genuine light/dark theme selection persists on the device via the same `blink-theme` preference used conceptually by Web. Shared cards, forms, the drawer, and live feed surfaces adapt.
+- **Moments:** the native ML Kit detector now anchors vector-painted versions of Blink's nine face lenses. These remain separate from the Web MediaPipe implementation and need visual acceptance on real devices.
+- **Notifications:** the screen aggregates real unread Inbox conversations, friend requests, business requests/meetings, pending Hearts, and accepted IRL invitations from their existing authenticated endpoints. The server does **not** yet offer persistent notification events, read markers, or push delivery.
+- **BP wallet:** the API's `GET /profile/me/bp-activity` returns *recorded* reward receipts from Creator Task approvals, correct Secret guesses, and Moment BP gifts. Deploy the matching NestJS code first. The balance still loads if this optional endpoint is unavailable.
+
+### Build and deployment requirements
+
+Release builds must use the reachable HTTPS API, for example:
+
+```sh
+flutter pub get
+flutter analyze --no-fatal-infos
+flutter test
+flutter build apk --release --dart-define=BLINK_API_URL=https://YOUR_REAL_API_HOST
+```
+
+Do not distribute a release APK with the default loopback URL or CI's `example.invalid` placeholder. Android release disables cleartext HTTP; debug builds still allow local development HTTP. The existing Gradle `release` configuration currently uses **debug signing** and must be replaced with a private release keystore before production store distribution.
+
+Physical-device acceptance is still necessary for media/gallery formats, AR alignment, dark contrast, WebRTC cross-network calls, background lifecycle, and all server-backed write operations. A passing Flutter widget suite is not a device certification.
