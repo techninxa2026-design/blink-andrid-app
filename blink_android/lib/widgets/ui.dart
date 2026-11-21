@@ -1332,7 +1332,7 @@ class BlinkFormSection extends StatelessWidget {
               size:17,color:BlinkColors.orangeDark)),
           const SizedBox(width:9),
           Expanded(child:Text(heading,
-            style:const TextStyle(
+            style:TextStyle(
               fontSize:15, fontWeight:FontWeight.w900,
               color:Theme.of(context).colorScheme.onSurface))),
         ]),
